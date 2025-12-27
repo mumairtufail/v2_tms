@@ -47,4 +47,9 @@ class Company extends Model
     {
         return $query->where('is_active', true)->where('is_deleted', false);
     }
+
+    public function getRouteKeyName()
+    {
+        return 'slug';
+    }
 }

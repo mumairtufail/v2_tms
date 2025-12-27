@@ -144,9 +144,9 @@ class ItemController extends Controller
     <x-v2-breadcrumb :items="[['label' => 'Items']]" />
 
     <!-- 2. Header with Add Button -->
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <x-page-header title="Items" description="Manage all items" />
-        <a href="{{ route('[module].create') }}" class="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors">
+        <a href="{{ route('[module].create') }}" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
@@ -154,29 +154,29 @@ class ItemController extends Controller
         </a>
     </div>
 
-    <!-- 3. Inline Filters -->
+    <!-- 3. Inline Filters (Responsive Grid) -->
     <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3">
-        <form action="{{ route('[module].index') }}" method="GET" class="flex flex-wrap items-center gap-3">
-            <!-- Search Input -->
-            <div class="flex-1 min-w-[200px]">
-                <div class="relative">
-                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                    </svg>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search..." class="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
-                </div>
+        <form action="{{ route('[module].index') }}" method="GET" class="flex flex-col gap-3 sm:grid sm:grid-cols-12">
+            <!-- Search Input (Full width on mobile, larger on desktop) -->
+            <div class="sm:col-span-6 lg:col-span-8 relative">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Search..." class="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
             </div>
             
             <!-- Filter Dropdowns -->
-            <x-filter-select name="status" :value="request('status')" :options="['active' => 'Active', 'inactive' => 'Inactive']" placeholder="All Status" />
+            <div class="sm:col-span-3 lg:col-span-2">
+                <x-filter-select name="status" :value="request('status')" :options="['active' => 'Active', 'inactive' => 'Inactive']" placeholder="All Status" class="w-full" />
+            </div>
             
-            <!-- Search Button -->
-            <button type="submit" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors">Search</button>
-            
-            <!-- Clear Link -->
-            @if(request()->hasAny(['search', 'status']))
-            <a href="{{ route('[module].index') }}" class="px-3 py-2 text-sm text-gray-500 hover:text-gray-900 dark:hover:text-white">Clear</a>
-            @endif
+            <!-- Buttons (Stacked on mobile) -->
+            <div class="sm:col-span-3 lg:col-span-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <button type="submit" class="w-full sm:w-auto flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors">Search</button>
+                @if(request()->hasAny(['search', 'status']))
+                <a href="{{ route('[module].index') }}" class="px-3 py-2 text-sm text-center text-gray-500 hover:text-gray-900 dark:hover:text-white whitespace-nowrap">Clear</a>
+                @endif
+            </div>
         </form>
     </div>
 
@@ -194,12 +194,15 @@ class ItemController extends Controller
     @endif
 
     <!-- 5. Compact Table with Serial # -->
+    <!-- Note: x-table-container includes min-w-[800px] and overflow-x-auto for mobile responsiveness -->
     <x-table-container>
         <table class="w-full text-sm">
             <thead class="bg-gray-50 dark:bg-gray-800/50">
                 <tr>
                     <th class="w-12 px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">#</th>
                     <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Name</th>
+                    <!-- Hide less critical columns on mobile -->
+                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 hidden md:table-cell">Details</th>
                     <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Status</th>
                     <th class="w-24 px-3 py-2 text-right text-xs font-semibold text-gray-500 dark:text-gray-400">Actions</th>
                 </tr>
@@ -213,6 +216,11 @@ class ItemController extends Controller
                     <!-- Name with Search Highlight -->
                     <td class="px-3 py-2 text-gray-900 dark:text-white">
                         <x-search-highlight :text="$item->name" :search="request('search')" />
+                    </td>
+
+                    <!-- Hidden Column Data -->
+                    <td class="px-3 py-2 text-gray-500 hidden md:table-cell">
+                        {{ $item->details }}
                     </td>
                     
                     <!-- Status Badge -->
@@ -240,7 +248,7 @@ class ItemController extends Controller
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="4" class="px-3 py-6 text-center text-gray-500">No items found</td></tr>
+                <tr><td colspan="5" class="px-3 py-6 text-center text-gray-500">No items found</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -607,3 +615,63 @@ class ItemController extends Controller
 5. **Form Sections**: Use border-t separators between sections
 6. **Equal Buttons**: Use `flex-1` on both Edit/Delete for equal width
 7. **Toast Position**: Bottom-right with slide-up animation
+8. **Use Dynamic Colors**: Always use `primary-*` and `accent-*` classes, never hardcoded colors like `blue-*` or `green-*`
+
+---
+
+## 🎨 Dynamic Color System
+
+Colors are defined in `tailwind.config.js` and can be changed globally.
+
+### Primary Colors (for main UI elements)
+```
+primary-50   → Lightest background
+primary-100  → Light background, borders
+primary-500  → Main color
+primary-600  → Buttons, active states
+primary-700  → Hover states
+```
+
+### Accent Colors (for secondary highlights)
+```
+accent-50 to accent-700 → Secondary elements, badges, icons
+```
+
+### Usage Examples
+
+```blade
+<!-- Buttons -->
+<button class="bg-primary-600 hover:bg-primary-700">Primary Button</button>
+
+<!-- Badges -->
+<span class="bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300">Badge</span>
+
+<!-- Icons -->
+<div class="w-12 h-12 bg-primary-100 dark:bg-primary-900/30">
+    <svg class="text-primary-600 dark:text-primary-400">...</svg>
+</div>
+
+<!-- Links -->
+<a href="#" class="text-primary-600 hover:text-primary-700 dark:text-primary-400">Link</a>
+
+<!-- Focus States -->
+<input class="focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+
+<!-- Avatars -->
+<div class="bg-gradient-to-br from-primary-500 to-primary-700">AB</div>
+```
+
+### ⚠️ NEVER Use Hardcoded Colors
+```blade
+❌ BAD:  bg-blue-600, bg-green-500, text-indigo-600
+✅ GOOD: bg-primary-600, bg-accent-500, text-primary-600
+```
+
+### Exception: Status Colors
+Only use hardcoded colors for semantic status badges:
+```blade
+<!-- These are OK because they convey meaning -->
+<span class="bg-green-100 text-green-700">Active</span>
+<span class="bg-red-100 text-red-700">Inactive</span>
+<span class="bg-yellow-100 text-yellow-700">Pending</span>
+```

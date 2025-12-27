@@ -8,9 +8,9 @@
     <x-v2-breadcrumb :items="[['label' => 'Users']]" />
 
     <!-- Header -->
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <x-page-header title="Users" description="Manage all users across all companies" />
-        <a href="{{ route('admin.users.create') }}" class="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors">
+        <a href="{{ route('admin.users.create') }}" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
@@ -20,22 +20,37 @@
 
     <!-- Filters -->
     <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3">
-        <form action="{{ route('admin.users.index') }}" method="GET" class="flex flex-wrap items-center gap-3">
-            <div class="flex-1 min-w-[200px]">
-                <div class="relative">
-                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                    </svg>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search..." class="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
-                </div>
+        <form action="{{ route('admin.users.index') }}" method="GET" class="flex flex-col gap-3 sm:grid sm:grid-cols-12">
+            <!-- Search -->
+            <div class="sm:col-span-12 lg:col-span-4 relative">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Search..." class="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
             </div>
-            <x-filter-select name="company" :value="request('company')" :options="$companies->toArray()" placeholder="All Companies" />
-            <x-filter-select name="status" :value="request('status')" :options="['active' => 'Active', 'inactive' => 'Inactive']" placeholder="All Status" />
-            <x-filter-select name="role" :value="request('role')" :options="$roles->toArray()" placeholder="All Roles" />
-            <button type="submit" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors">Search</button>
-            @if(request()->hasAny(['search', 'company', 'status', 'role']))
-            <a href="{{ route('admin.users.index') }}" class="px-3 py-2 text-sm text-gray-500 hover:text-gray-900 dark:hover:text-white">Clear</a>
-            @endif
+
+            <!-- Company -->
+            <div class="sm:col-span-4 lg:col-span-2">
+                <x-filter-select name="company" :value="request('company')" :options="$companies->toArray()" placeholder="All Companies" class="w-full" />
+            </div>
+
+            <!-- Status -->
+            <div class="sm:col-span-4 lg:col-span-2">
+                <x-filter-select name="status" :value="request('status')" :options="['active' => 'Active', 'inactive' => 'Inactive']" placeholder="All Status" class="w-full" />
+            </div>
+
+            <!-- Role -->
+            <div class="sm:col-span-4 lg:col-span-2">
+                <x-filter-select name="role" :value="request('role')" :options="$roles->toArray()" placeholder="All Roles" class="w-full" />
+            </div>
+
+            <!-- Buttons -->
+            <div class="sm:col-span-12 lg:col-span-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <button type="submit" class="w-full sm:w-auto flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors">Search</button>
+                @if(request()->hasAny(['search', 'company', 'status', 'role']))
+                <a href="{{ route('admin.users.index') }}" class="px-3 py-2 text-sm text-center text-gray-500 hover:text-gray-900 dark:hover:text-white whitespace-nowrap">Clear</a>
+                @endif
+            </div>
         </form>
     </div>
 
@@ -65,8 +80,8 @@
                 <tr>
                     <th class="w-12 px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">#</th>
                     <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">User</th>
-                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Company</th>
-                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Role</th>
+                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 hidden md:table-cell">Company</th>
+                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 hidden md:table-cell">Role</th>
                     <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Status</th>
                     <th class="w-24 px-3 py-2 text-right text-xs font-semibold text-gray-500 dark:text-gray-400">Actions</th>
                 </tr>
@@ -90,8 +105,8 @@
                             </div>
                         </div>
                     </td>
-                    <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ $user->company->name ?? '-' }}</td>
-                    <td class="px-3 py-2">
+                    <td class="px-3 py-2 text-gray-700 dark:text-gray-300 hidden md:table-cell">{{ $user->company->name ?? '-' }}</td>
+                    <td class="px-3 py-2 hidden md:table-cell">
                         @if($user->roles->first())
                         <span class="px-2 py-0.5 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">{{ $user->roles->first()->name }}</span>
                         @else

@@ -71,6 +71,19 @@ class User extends Authenticatable
         return $this->hasMany(Order::class);
     }
 
+    public function logActivity(string $action, string $description = null, array $data = [])
+    {
+        $this->activityLogs()->create([
+            'action' => $action,
+            'data' => $description ? json_encode(['description' => $description] + $data) : json_encode($data),
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'url' => request()->fullUrl(),
+            'method' => request()->method(),
+            'is_successful' => true,
+        ]);
+    }
+
     // Helper methods
     public function canAccessCompany(Company $company): bool
     {

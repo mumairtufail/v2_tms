@@ -19,6 +19,9 @@ class UserService
             ->when($filters['search'] ?? null, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('f_name', 'like', "%{$search}%")
+                      ->orWhere('l_name', 'like', "%{$search}%")
+                      ->orWhere(DB::raw("CONCAT(f_name, ' ', l_name)"), 'like', "%{$search}%")
                       ->orWhere('email', 'like', "%{$search}%");
                 });
             })
@@ -29,6 +32,9 @@ class UserService
             })
             ->when($filters['status'] ?? null, function ($query, $status) {
                 $query->where('status', $status);
+            })
+            ->when($filters['company_id'] ?? null, function ($query, $companyId) {
+                $query->where('company_id', $companyId);
             })
             ->latest();
 
@@ -42,6 +48,13 @@ class UserService
     {
         DB::beginTransaction();
         try {
+            // Handle name splitting if f_name is not provided
+            if (isset($data['name']) && !isset($data['f_name'])) {
+                $parts = explode(' ', $data['name'], 2);
+                $data['f_name'] = $parts[0];
+                $data['l_name'] = $parts[1] ?? '';
+            }
+
             // Hash password
             $data['password'] = Hash::make($data['password']);
 
@@ -71,6 +84,13 @@ class UserService
     {
         DB::beginTransaction();
         try {
+            // Handle name splitting if f_name is not provided
+            if (isset($data['name']) && !isset($data['f_name'])) {
+                $parts = explode(' ', $data['name'], 2);
+                $data['f_name'] = $parts[0];
+                $data['l_name'] = $parts[1] ?? '';
+            }
+
             // Hash password if provided
             if (!empty($data['password'])) {
                 $data['password'] = Hash::make($data['password']);
@@ -125,7 +145,7 @@ class UserService
     public function getUserById(int $id): User
     {
         return User::with(['roles', 'company', 'activityLogs'])
-            ->withCount(['orders', 'activityLogs'])
+            ->withCount(['activityLogs'])
             ->findOrFail($id);
     }
 

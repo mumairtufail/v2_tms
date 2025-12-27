@@ -42,7 +42,7 @@
         ></div>
 
         <!-- Main Content Wrapper -->
-        <div class="flex-1 flex flex-col min-h-screen lg:ml-64 transition-all duration-200">
+        <div class="flex-1 flex flex-col min-h-screen lg:ml-64 transition-all duration-200 overflow-x-hidden">
             <!-- Top Navbar -->
             @include('v2.partials.navbar')
 

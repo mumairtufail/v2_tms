@@ -20,12 +20,12 @@ Route::get('/', function () {
             return redirect()->route('admin.dashboard');
         }
         
-        $company = app('current.company') ?? Auth::user()->company;
+        $company = Auth::user()->company;
         if ($company) {
             return redirect()->route('v2.dashboard', ['company' => $company->slug]);
         }
     }
-    return view('welcome');
+    return redirect()->route('login');
 });
 
 Route::get('/dashboard', function () {
@@ -33,7 +33,7 @@ Route::get('/dashboard', function () {
         return redirect()->route('admin.dashboard');
     }
     
-    $company = app('current.company') ?? Auth::user()->company;
+    $company = Auth::user()->company;
     if ($company) {
         return redirect()->route('v2.dashboard', ['company' => $company->slug]);
     }

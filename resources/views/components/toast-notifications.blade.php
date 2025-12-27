@@ -26,16 +26,16 @@
     }"
     x-init="
         @if(session('success'))
-            addToast('success', '{{ session('success') }}');
+            addToast('success', @json(session('success')));
         @endif
         @if(session('error'))
-            addToast('error', '{{ session('error') }}');
+            addToast('error', @json(session('error')));
         @endif
         @if(session('warning'))
-            addToast('warning', '{{ session('warning') }}');
+            addToast('warning', @json(session('warning')));
         @endif
         @if(session('info'))
-            addToast('info', '{{ session('info') }}');
+            addToast('info', @json(session('info')));
         @endif
     "
     class="fixed bottom-4 right-4 z-[9999] space-y-3 pointer-events-none"

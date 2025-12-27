@@ -46,8 +46,7 @@
 
     <!-- Users Table -->
     <x-table-container>
-        <div class="overflow-x-auto">
-            <table class="w-full">
+        <table class="w-full">
                 <thead class="bg-gray-50 dark:bg-gray-800/50">
                     <tr>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">User</th>
@@ -147,8 +146,7 @@
                     </tr>
                     @endforelse
                 </tbody>
-            </table>
-        </div>
+        </table>
         
         @if($users->hasPages())
         <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-800">

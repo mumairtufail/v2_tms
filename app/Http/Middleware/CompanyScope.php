@@ -16,15 +16,17 @@ class CompanyScope
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Get company slug from route
-        $companySlug = $request->route('company');
+        // Get company from route
+        $company = $request->route('company');
         
-        if (!$companySlug) {
+        if (!$company) {
             abort(404, 'Company not found in URL');
         }
 
-        // Find company by slug
-        $company = Company::where('slug', $companySlug)->firstOrFail();
+        // If it's a string (slug), find the company
+        if (is_string($company)) {
+            $company = Company::where('slug', $company)->firstOrFail();
+        }
 
         // Check if user has access to this company
         if (!$request->user()->is_super_admin && !$request->user()->canAccessCompany($company)) {
