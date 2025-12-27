@@ -1,0 +1,100 @@
+/* resources/css/custom.css */
+
+@layer components {
+    .btn-primary {
+        @apply flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-lg shadow-blue-500/25;
+    }
+
+    .btn-secondary {
+        @apply flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors border border-gray-700;
+    }
+
+    .form-label {
+        @apply block text-sm font-medium text-gray-300 mb-1;
+    }
+
+    .input {
+        @apply w-full px-4 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition-all;
+    }
+}
+
+/* Sidebar Styles - Using standard CSS for better reliability */
+.sidebar-link {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
+    padding: 0.75rem 1rem !important;
+    color: #9ca3af !important;
+    border-radius: 0.75rem !important;
+    transition: all 0.3s ease-in-out !important;
+    text-decoration: none !important;
+}
+
+.sidebar-link:hover {
+    color: #ffffff !important;
+    background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.sidebar-link-active {
+    color: #ffffff !important;
+    background-color: rgba(37, 99, 235, 0.1) !important;
+    border: 1px solid rgba(59, 130, 246, 0.2) !important;
+    box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.05) !important;
+}
+
+.sidebar-link-active svg {
+    color: #3b82f6 !important;
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Custom Scrollbar - Light mode */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Custom Scrollbar - Dark mode */
+.dark ::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: #374151;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: #4b5563;
+}
+
+/* Dividers */
+.divider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, #e5e7eb, transparent);
+    margin: 1.5rem 0;
+}
+
+.dark .divider {
+    background: linear-gradient(to right, transparent, #1f2937, transparent);
+}

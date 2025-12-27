@@ -1,0 +1,8 @@
+{
+    "name": "QuickBooks Integration",
+    "slug": "quickbooks",
+    "description": "Sync your orders and invoices with QuickBooks Online.",
+    "version": "1.0.0",
+    "author": "TMS Team",
+    "entry_point": "Plugin.php"
+}
