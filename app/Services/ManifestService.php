@@ -32,10 +32,23 @@ class ManifestService
     {
         return DB::transaction(function () use ($companyId, $data) {
             $data['company_id'] = $companyId;
-            if (empty($data['code'])) {
-                $data['code'] = 'MAN-' . strtoupper(uniqid());
+            
+            // Generate a temporary unique placeholder if code is missing, to satisfy unique constraint
+            $isAutoCode = empty($data['code']);
+            if ($isAutoCode) {
+                 $data['code'] = 'TEMP-' . uniqid();
             }
-            return Manifest::create($data);
+            
+            $manifest = Manifest::create($data);
+            
+            // Update with sequential serial number
+            if ($isAutoCode) {
+                $manifest->update([
+                    'code' => 'MAN-' . str_pad($manifest->id, 6, '0', STR_PAD_LEFT)
+                ]);
+            }
+            
+            return $manifest;
         });
     }
 

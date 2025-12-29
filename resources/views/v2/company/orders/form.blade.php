@@ -138,7 +138,7 @@
                                 <th class="px-3 py-2 text-left text-[10px] font-bold text-gray-500 uppercase">Consignee</th>
                                 <th class="px-3 py-2 text-left text-[10px] font-bold text-gray-500 uppercase">Manifest</th>
                                 <th class="px-3 py-2 text-left text-[10px] font-bold text-gray-500 uppercase">Items</th>
-                                <th class="px-3 py-2 text-center text-[10px] font-bold text-gray-500 uppercase">Status</th>
+
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -149,11 +149,9 @@
                                     </td>
                                     <td class="px-3 py-2" x-text="stop.shipper.city ? stop.shipper.city + ', ' + stop.shipper.state : '-'"></td>
                                     <td class="px-3 py-2" x-text="stop.consignee.city ? stop.consignee.city + ', ' + stop.consignee.state : '-'"></td>
-                                    <td class="px-3 py-2" x-text="stop.manifest_id || '-'"></td>
+                                    <td class="px-3 py-2" x-text="manifestsMap[stop.manifest_id] || '-'"></td>
                                     <td class="px-3 py-2" x-text="stop.commodities.length"></td>
-                                    <td class="px-3 py-2 text-center">
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">Draft</span>
-                                    </td>
+
                                 </tr>
                             </template>
                         </tbody>
@@ -502,11 +500,17 @@
                                     <div class="flex items-center gap-2">
                                         <select x-model="massManifestId" class="text-[10px] py-1 rounded border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white">
                                             <option value="" class="text-gray-500 bg-white dark:bg-gray-800">Apply to all...</option>
-                                            @foreach($manifests as $manifest)
-                                                <option value="{{ $manifest->id }}" class="text-black dark:text-white bg-white dark:bg-gray-800">{{ $manifest->manifest_number }}</option>
-                                            @endforeach
+                                            <template x-for="manifest in manifests" :key="manifest.id">
+                                                <option :value="manifest.id" x-text="manifest.code" class="text-black dark:text-white bg-white dark:bg-gray-800"></option>
+                                            </template>
                                         </select>
                                         <button type="button" @click="applyMassManifest()" class="text-[10px] bg-primary-50 text-primary-600 px-2 py-1 rounded hover:bg-primary-100 font-bold transition-colors">Apply</button>
+                                        <button type="button" @click="createPendingManifest()" class="text-[10px] bg-green-50 text-green-600 px-2 py-1 rounded hover:bg-green-100 font-bold transition-colors flex items-center gap-1">
+                                            <span x-show="creatingManifest" class="animate-spin">
+                                                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                            </span>
+                                            <span x-show="!creatingManifest">+ New</span>
+                                        </button>
                                     </div>
                                 </div>
                                 <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
@@ -527,9 +531,9 @@
                                                     <td class="px-3 py-3">
                                                         <select x-model="stop.manifest_id" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-black dark:text-white focus:ring-primary-500 focus:border-primary-500 transition-shadow">
                                                             <option value="" class="text-gray-500 bg-white dark:bg-gray-800">No Manifest</option>
-                                                            @foreach($manifests as $manifest)
-                                                                <option value="{{ $manifest->id }}" class="text-black dark:text-white bg-white dark:bg-gray-800">{{ $manifest->manifest_number }}</option>
-                                                            @endforeach
+                                                            <template x-for="manifest in manifests" :key="manifest.id">
+                                                                <option :value="manifest.id" x-text="manifest.code" class="text-black dark:text-white bg-white dark:bg-gray-800"></option>
+                                                            </template>
                                                         </select>
                                                     </td>
                                                 </tr>
@@ -694,7 +698,11 @@ function orderForm() {
     return {
         stops: @json($stopsData),
         quote: @json($quoteData),
+        manifests: @json($manifests),
+        manifestsMap: @json($manifestsMap ?? []),
         accessorialsList: @json($allAccessorials->pluck('name', 'id')),
+
+        creatingManifest: false,
 
         saving: false,
         submitting: false,
@@ -816,6 +824,37 @@ function orderForm() {
         submitForm() {
             this.submitting = true;
             document.getElementById('orderForm').submit();
+        },
+
+        createPendingManifest() {
+            this.creatingManifest = true;
+            fetch('{{ route("v2.manifests.quick-create", $company->slug) }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    this.manifests.push(data.manifest);
+                    this.manifestsMap[data.manifest.id] = data.manifest.code;
+                    this.massManifestId = data.manifest.id;
+                    
+                    // Auto-assign to all stops
+                    this.applyMassManifest();
+                } else {
+                    alert('Error creating manifest: ' + (data.message || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while creating the manifest.');
+            })
+            .finally(() => {
+                this.creatingManifest = false;
+            });
         }
     }
 }

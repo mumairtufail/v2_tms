@@ -72,6 +72,7 @@ Route::middleware(['auth', CompanyScope::class])->prefix('{company}')->name('v2.
     Route::get('manifests/{manifest}/edit', [\App\Http\Controllers\V2\ManifestController::class, 'edit'])->name('manifests.edit');
     Route::patch('manifests/{manifest}', [\App\Http\Controllers\V2\ManifestController::class, 'update'])->name('manifests.update');
     Route::delete('manifests/{manifest}', [\App\Http\Controllers\V2\ManifestController::class, 'destroy'])->name('manifests.destroy');
+    Route::post('manifests/quick-create', [\App\Http\Controllers\V2\ManifestController::class, 'quickCreate'])->name('manifests.quick-create');
     
     // Manifest Relations
     Route::post('manifests/{manifest}/drivers', [\App\Http\Controllers\V2\ManifestController::class, 'assignDriver'])->name('manifests.drivers.store');

@@ -44,6 +44,33 @@ class ManifestController extends Controller
             ->route('v2.manifests.edit', ['company' => $company->slug, 'manifest' => $manifest->id]);
     }
 
+    public function quickCreate(Request $request, Company $company)
+    {
+        // Default to today and pending status
+        $data = [
+            'start_date' => now()->toDateString(),
+            'status' => 'pending'
+        ];
+        
+        try {
+            $manifest = $this->manifestService->createManifest($company->id, $data);
+            
+            return response()->json([
+                'success' => true,
+                'manifest' => [
+                    'id' => $manifest->id,
+                    'code' => $manifest->code
+                ],
+                'message' => 'Manifest created successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create manifest: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function edit(Company $company, Manifest $manifest)
     {
         $manifest->load(['drivers', 'carriers', 'equipments', 'stops']);

@@ -166,15 +166,33 @@ class OrderController extends Controller
             ];
         });
 
+        // Quote Data
+        $quote = $order->quote ?? new \App\Models\OrderQuote();
         $quoteData = [
-            'service_id' => $order->quote->service_id ?? '',
-            'delivery_start' => $order->quote->delivery_start_date ? $order->quote->delivery_start_date->format('Y-m-d') : '',
-            'delivery_end' => $order->quote->delivery_end_date ? $order->quote->delivery_end_date->format('Y-m-d') : '',
-            'customer_rows' => $order->quote && $order->quote->costs ? $order->quote->costs->where('category', 'quote')->map(fn($c) => ['type' => $c->type ?? 'Freight', 'description' => $c->description, 'cost' => (float)$c->cost])->values()->toArray() : [['type' => 'Freight', 'description' => 'Freight Charge', 'cost' => 0]],
-            'carrier_rows' => $order->quote && $order->quote->costs ? $order->quote->costs->where('category', 'carrier')->map(fn($c) => ['type' => $c->type ?? 'Freight', 'description' => $c->description, 'cost' => (float)$c->cost])->values()->toArray() : []
+            'service_id' => $quote->service_id ?? '',
+            'delivery_start' => $quote->quote_delivery_start ? date('Y-m-d', strtotime($quote->quote_delivery_start)) : '',
+            'delivery_end' => $quote->quote_delivery_end ? date('Y-m-d', strtotime($quote->quote_delivery_end)) : '',
+            'customer_rows' => $quote->costs->where('category', 'customer')->map(fn($c) => [
+                'type' => $c->type ?? 'Freight',
+                'description' => $c->description ?? '',
+                'cost' => $c->cost ?? 0
+            ])->values()->toArray(),
+            'carrier_rows' => $quote->costs->where('category', 'carrier')->map(fn($c) => [
+                'type' => $c->type ?? 'Freight', // Default to Freight if null
+                'description' => $c->description ?? '',
+                'cost' => $c->cost ?? 0
+            ])->values()->toArray(),
         ];
 
-        return view('v2.company.orders.form', compact('company', 'order', 'services', 'allAccessorials', 'manifests', 'stopsData', 'quoteData'));
+        $manifestsMap = $manifests->pluck('code', 'id')->toArray();
+
+        // Default empty row if none exist
+        if (empty($quoteData['customer_rows'])) {
+            $quoteData['customer_rows'][] = ['type' => 'Freight', 'description' => '', 'cost' => 0];
+        }
+        // Carrier rows can be empty initially
+
+        return view('v2.company.orders.form', compact('company', 'order', 'services', 'stopsData', 'allAccessorials', 'manifests', 'quoteData', 'manifestsMap'));
     }
 
     /**
