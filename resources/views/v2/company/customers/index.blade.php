@@ -59,6 +59,7 @@
                     <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 hidden md:table-cell">Email</th>
                     <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 hidden md:table-cell">City/State</th>
                     <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Status</th>
+                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">QuickBooks</th>
                     <th class="w-24 px-3 py-2 text-right text-xs font-semibold text-gray-500 dark:text-gray-400">Actions</th>
                 </tr>
             </thead>
@@ -87,8 +88,26 @@
                         <span class="px-2 py-0.5 text-xs rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">Inactive</span>
                         @endif
                     </td>
+                    <td class="px-3 py-2">
+                        @if($customer->quickbooks_id)
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400" title="ID: {{ $customer->quickbooks_id }}">
+                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                            Synced
+                        </span>
+                        @else
+                        <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">Not Synced</span>
+                        @endif
+                    </td>
                     <td class="px-3 py-2 text-right">
                         <div class="flex items-center justify-end gap-0.5">
+                            @if(!$customer->quickbooks_id && auth()->user()->hasPermission('customers', 'update'))
+                            <form action="{{ route('v2.customers.sync-quickbooks', ['company' => $company->slug, 'customer' => $customer->id]) }}" method="POST" class="inline">
+                                @csrf
+                                <button type="submit" class="p-1 text-gray-400 hover:text-blue-600" title="Sync to QuickBooks">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                </button>
+                            </form>
+                            @endif
                             @if(auth()->user()->hasPermission('customers', 'update'))
                             <a href="{{ route('v2.customers.edit', ['company' => $company->slug, 'customer' => $customer->id]) }}" class="p-1 text-gray-400 hover:text-primary-600" title="Edit">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
@@ -103,7 +122,7 @@
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="6" class="px-3 py-6 text-center text-gray-500">No customers found</td></tr>
+                <tr><td colspan="7" class="px-3 py-6 text-center text-gray-500">No customers found</td></tr>
                 @endforelse
             </tbody>
         </table>

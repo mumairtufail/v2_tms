@@ -7,15 +7,21 @@ use App\Http\Requests\V2\CustomerRequest;
 use App\Models\Company;
 use App\Models\Customer;
 use App\Services\CustomerService;
+use App\Services\PluginService;
+use App\Plugins\QuickBooks\Services\QuickBooksService;
+use App\Plugins\QuickBooks\Services\ApiClient;
+use App\Support\Toast;
 use Illuminate\Http\Request;
 
 class CustomerController extends Controller
 {
     protected $customerService;
+    protected $pluginService;
 
-    public function __construct(CustomerService $customerService)
+    public function __construct(CustomerService $customerService, PluginService $pluginService)
     {
         $this->customerService = $customerService;
+        $this->pluginService = $pluginService;
     }
 
     public function index(Request $request, Company $company)
@@ -60,12 +66,33 @@ class CustomerController extends Controller
             ->with('success', 'Customer updated successfully.');
     }
 
-    public function destroy(Company $company, Customer $customer)
+    public function syncToQuickBooks(Company $company, Customer $customer)
     {
-        $this->customerService->deleteCustomer($customer);
+        try {
+            $config = $this->pluginService->getConfiguration($company->id, 'quickbooks');
+            
+            if (!$config || !($config->is_active ?? false)) {
+                return back()->with('error', 'QuickBooks plugin is not active or configured.');
+            }
 
-        return redirect()
-            ->route('v2.customers.index', ['company' => $company->slug])
-            ->with('success', 'Customer deleted successfully.');
+            $configuration = $config->configuration;
+            $configuration['config_id'] = $config->id; // For token refresh persistence
+
+            $apiClient = new ApiClient($configuration);
+            $qbService = new QuickBooksService($apiClient);
+
+            $qbCustomer = $qbService->createCustomer($customer->toArray());
+
+            if ($qbCustomer && isset($qbCustomer['Id'])) {
+                $customer->update(['quickbooks_id' => $qbCustomer['Id']]);
+                Toast::success('Customer synced to QuickBooks successfully!');
+            } else {
+                Toast::error('Failed to sync customer to QuickBooks.');
+            }
+
+            return back();
+        } catch (\Exception $e) {
+            return back()->with('error', 'QuickBooks sync failed: ' . $e->getMessage());
+        }
     }
 }

@@ -91,6 +91,7 @@ Route::middleware(['auth', CompanyScope::class])->prefix('{company}')->name('v2.
         Route::get('customers/{customer}/edit', [\App\Http\Controllers\V2\CustomerController::class, 'edit'])->name('customers.edit');
         Route::put('customers/{customer}', [\App\Http\Controllers\V2\CustomerController::class, 'update'])->name('customers.update');
         Route::patch('customers/{customer}', [\App\Http\Controllers\V2\CustomerController::class, 'update']);
+        Route::post('customers/{customer}/sync-quickbooks', [\App\Http\Controllers\V2\CustomerController::class, 'syncToQuickBooks'])->name('customers.sync-quickbooks');
     });
     Route::middleware(['permission:customers,delete'])->group(function () {
         Route::delete('customers/{customer}', [\App\Http\Controllers\V2\CustomerController::class, 'destroy'])->name('customers.destroy');

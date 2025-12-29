@@ -21,6 +21,21 @@
         </div>
         
         <div class="flex items-center gap-2">
+            @if(isset($order) && !$order->quickbooks_invoice_id && auth()->user()->hasPermission('orders', 'update'))
+            <form action="{{ route('v2.orders.sync-quickbooks', ['company' => $company->slug, 'order' => $order->id]) }}" method="POST">
+                @csrf
+                <x-secondary-button type="submit" class="border-blue-500 text-blue-600 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-900/20">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    Sync to QuickBooks
+                </x-secondary-button>
+            </form>
+            @elseif(isset($order) && $order->quickbooks_invoice_id)
+            <span class="inline-flex items-center gap-1 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                Invoiced (#{{ $order->quickbooks_invoice_id }})
+            </span>
+            @endif
+
             <x-secondary-button @click="saveDraft()" type="button">
                 <span x-show="saving" class="mr-2">
                     <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>

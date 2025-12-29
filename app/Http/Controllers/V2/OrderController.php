@@ -7,6 +7,9 @@ use App\Models\Company;
 use App\Models\Order;
 use App\Models\Customer;
 use App\Services\OrderService;
+use App\Services\PluginService;
+use App\Plugins\QuickBooks\Services\QuickBooksService;
+use App\Plugins\QuickBooks\Services\ApiClient;
 use App\Support\Toast;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,10 +17,12 @@ use Illuminate\Support\Facades\Auth;
 class OrderController extends Controller
 {
     protected $orderService;
+    protected $pluginService;
 
-    public function __construct(OrderService $orderService)
+    public function __construct(OrderService $orderService, PluginService $pluginService)
     {
         $this->orderService = $orderService;
+        $this->pluginService = $pluginService;
     }
 
     /**
@@ -499,11 +504,30 @@ class OrderController extends Controller
      */
     public function syncToQuickBooks(Company $company, Order $order)
     {
-        // Existing logic from OrderController@syncToQuickBooks
-        // Implementation omitted for brevity in this initial write, will port fully in next steps
         try {
-            // ... QB logic ...
-            Toast::success('Order synced to QuickBooks.');
+            $order->load(['customer', 'quote.costs']);
+            
+            $config = $this->pluginService->getConfiguration($company->id, 'quickbooks');
+            
+            if (!$config || !($config->is_active ?? false)) {
+                return back()->with('error', 'QuickBooks plugin is not active or configured.');
+            }
+
+            $configuration = $config->configuration;
+            $configuration['config_id'] = $config->id; // For token refresh persistence
+
+            $apiClient = new ApiClient($configuration);
+            $qbService = new QuickBooksService($apiClient);
+
+            $qbInvoice = $qbService->createInvoice($order);
+
+            if ($qbInvoice && isset($qbInvoice['Id'])) {
+                $order->update(['quickbooks_invoice_id' => $qbInvoice['Id']]);
+                Toast::success('Order synced to QuickBooks (Invoice created)!');
+            } else {
+                Toast::error('Failed to create invoice in QuickBooks.');
+            }
+
             return back();
         } catch (\Exception $e) {
             return back()->with('error', 'QuickBooks sync failed: ' . $e->getMessage());
