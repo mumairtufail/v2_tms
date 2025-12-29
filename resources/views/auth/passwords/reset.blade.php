@@ -37,7 +37,7 @@
 						<div class="auth-form-wrap pt-xl-0 pt-70">
 							<div class="auth-form w-xl-30 w-lg-55 w-sm-75 w-100">
 								<a class="auth-brand text-center d-block mb-20" href="#">
-									<h2 class="brand-text">TMS</h2>
+									<!-- <h2 class="brand-text">TMS</h2> -->
 								</a>
 								<form method="POST" action="{{ route('password.update') }}">
 									@csrf

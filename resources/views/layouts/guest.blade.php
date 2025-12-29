@@ -40,11 +40,11 @@
         </div>
 
         <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0">
-            <div class="mb-8 transform hover:scale-105 transition-transform duration-300">
+            <!-- <div class="mb-8 transform hover:scale-105 transition-transform duration-300">
                 <a href="/">
                     <x-application-logo class="w-auto h-16" />
                 </a>
-            </div>
+            </div> -->
 
             <div class="w-full sm:max-w-md px-8 py-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-2xl shadow-gray-200/50 dark:shadow-black/50 border border-white/20 dark:border-gray-700/50 overflow-hidden sm:rounded-3xl relative group">
                 <!-- Card Glow Effect -->

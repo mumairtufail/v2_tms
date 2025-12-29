@@ -111,7 +111,8 @@
             </p>
 
             <div class="space-y-1.5">
-                <!-- Dashboard -->
+                <!-- Dashboard - Always show if user has dashboard permission -->
+                @if(auth()->user()->hasPermission('dashboard', 'view'))
                 <a href="{{ $currentCompany ? route('v2.dashboard', ['company' => $companySlug]) : route('admin.dashboard') }}"
                    class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group {{ request()->routeIs('v2.dashboard*') || request()->routeIs('admin.dashboard') ? $activeClasses : $inactiveClasses }}">
                     <div class="w-5 h-5 flex items-center justify-center {{ request()->routeIs('v2.dashboard*') || request()->routeIs('admin.dashboard') ? $activeIconClasses : '' }}">
@@ -121,8 +122,10 @@
                     </div>
                     <span class="font-medium text-[14px]">Dashboard</span>
                 </a>
+                @endif
 
                 <!-- Orders -->
+                @if(auth()->user()->hasPermission('orders', 'view'))
                 <a href="{{ $currentCompany ? route('v2.orders.index', ['company' => $companySlug]) : '#' }}"
                    class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group {{ request()->routeIs('v2.orders.*') ? $activeClasses : $inactiveClasses }}">
                     <div class="w-5 h-5 flex items-center justify-center {{ request()->routeIs('v2.orders.*') ? $activeIconClasses : '' }}">
@@ -132,8 +135,10 @@
                     </div>
                     <span class="font-medium text-[14px]">Orders</span>
                 </a>
+                @endif
 
                 <!-- Manifests -->
+                @if(auth()->user()->hasPermission('manifests', 'view'))
                 <a href="{{ $currentCompany ? route('v2.manifests.index', ['company' => $companySlug]) : '#' }}"
                    class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group {{ request()->routeIs('v2.manifests.*') ? $activeClasses : $inactiveClasses }}">
                     <div class="w-5 h-5 flex items-center justify-center {{ request()->routeIs('v2.manifests.*') ? $activeIconClasses : '' }}">
@@ -143,8 +148,10 @@
                     </div>
                     <span class="font-medium text-[14px]">Manifests</span>
                 </a>
+                @endif
 
                 <!-- Customers -->
+                @if(auth()->user()->hasPermission('customers', 'view'))
                 <a href="{{ $currentCompany ? route('v2.customers.index', ['company' => $companySlug]) : '#' }}"
                    class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group {{ request()->routeIs('v2.customers.*') ? $activeClasses : $inactiveClasses }}">
                     <div class="w-5 h-5 flex items-center justify-center {{ request()->routeIs('v2.customers.*') ? $activeIconClasses : '' }}">
@@ -154,8 +161,10 @@
                     </div>
                     <span class="font-medium text-[14px]">Customers</span>
                 </a>
+                @endif
 
                 <!-- Carriers -->
+                @if(auth()->user()->hasPermission('carriers', 'view'))
                 <a href="{{ $currentCompany ? route('v2.carriers.index', ['company' => $companySlug]) : '#' }}"
                    class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group {{ request()->routeIs('v2.carriers.*') ? $activeClasses : $inactiveClasses }}">
                     <div class="w-5 h-5 flex items-center justify-center {{ request()->routeIs('v2.carriers.*') ? $activeIconClasses : '' }}">
@@ -165,8 +174,10 @@
                     </div>
                     <span class="font-medium text-[14px]">Carriers</span>
                 </a>
+                @endif
 
                 <!-- Equipment -->
+                @if(auth()->user()->hasPermission('equipment', 'view'))
                 <a href="{{ $currentCompany ? route('v2.equipment.index', ['company' => $companySlug]) : '#' }}"
                    class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group {{ request()->routeIs('v2.equipment.*') ? $activeClasses : $inactiveClasses }}">
                     <div class="w-5 h-5 flex items-center justify-center {{ request()->routeIs('v2.equipment.*') ? $activeIconClasses : '' }}">
@@ -176,8 +187,10 @@
                     </div>
                     <span class="font-medium text-[14px]">Equipment</span>
                 </a>
+                @endif
 
-                <!-- Plugins -->
+                <!-- Plugins (Settings permission) -->
+                @if(auth()->user()->hasPermission('settings', 'view'))
                 <a href="{{ $currentCompany ? route('v2.plugins.index', ['company' => $companySlug]) : '#' }}"
                    class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group {{ request()->routeIs('v2.plugins.*') ? $activeClasses : $inactiveClasses }}">
                     <div class="w-5 h-5 flex items-center justify-center {{ request()->routeIs('v2.plugins.*') ? $activeIconClasses : '' }}">
@@ -187,8 +200,10 @@
                     </div>
                     <span class="font-medium text-[14px]">Plugins</span>
                 </a>
+                @endif
 
                 <!-- Users -->
+                @if(auth()->user()->hasPermission('users', 'view'))
                 <a href="{{ $currentCompany ? route('v2.users.index', ['company' => $companySlug]) : '#' }}"
                    class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group {{ request()->routeIs('v2.users.*') ? $activeClasses : $inactiveClasses }}">
                     <div class="w-5 h-5 flex items-center justify-center {{ request()->routeIs('v2.users.*') ? $activeIconClasses : '' }}">
@@ -198,8 +213,10 @@
                     </div>
                     <span class="font-medium text-[14px]">Users</span>
                 </a>
+                @endif
 
                 <!-- Roles & Permissions -->
+                @if(auth()->user()->hasPermission('roles', 'view'))
                 <a href="{{ $currentCompany ? route('v2.roles.index', ['company' => $companySlug]) : '#' }}"
                    class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group {{ request()->routeIs('v2.roles.*') ? $activeClasses : $inactiveClasses }}">
                     <div class="w-5 h-5 flex items-center justify-center {{ request()->routeIs('v2.roles.*') ? $activeIconClasses : '' }}">
@@ -209,6 +226,7 @@
                     </div>
                     <span class="font-medium text-[14px]">Roles & Permissions</span>
                 </a>
+                @endif
             </div>
         </div>
 

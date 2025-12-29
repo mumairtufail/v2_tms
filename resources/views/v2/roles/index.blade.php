@@ -10,12 +10,14 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <x-page-header title="Roles & Permissions" description="Manage user roles and access levels" />
+        @if(auth()->user()->hasPermission('roles', 'create'))
         <button type="button" @click="$dispatch('open-modal', 'create-role-modal')" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
             Add Role
         </button>
+        @endif
     </div>
 
     <!-- Table -->
@@ -48,6 +50,7 @@
                     <td class="px-3 py-2 text-right">
                         <div class="flex items-center justify-end gap-1">
                             <!-- Permissions Button -->
+                            @if(auth()->user()->hasPermission('roles', 'update'))
                             <x-tooltip text="Manage Permissions" position="top">
                                 <button type="button" @click="$dispatch('open-modal', 'permissions-role-{{ $role->id }}')" class="p-1 text-gray-400 hover:text-blue-600">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11.536 19.464a3 3 0 01-.879.879l-2.121 2.121h-3v-3l2.121-2.121a3 3 0 01.879-.879L13.257 14.257A6 6 0 0119.5 13h.002z"/></svg>
@@ -60,13 +63,16 @@
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                 </button>
                             </x-tooltip>
+                            @endif
 
                             <!-- Delete Button -->
+                            @if(auth()->user()->hasPermission('roles', 'delete'))
                             <x-tooltip text="Delete Role" position="top">
                                 <button type="button" @click="$dispatch('open-modal', 'delete-role-{{ $role->id }}')" class="p-1 text-gray-400 hover:text-red-600">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                 </button>
                             </x-tooltip>
+                            @endif
                         </div>
                     </td>
                 </tr>
