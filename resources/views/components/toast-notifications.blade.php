@@ -2,6 +2,22 @@
 {{-- This component renders flash messages (success, error, warning, info) as toast notifications --}}
 {{-- Uses Alpine.js for animations and auto-dismiss functionality --}}
 
+@php
+    $initCode = '';
+    if (session('success')) {
+        $initCode .= "addToast('success', " . json_encode(session('success')) . ");";
+    }
+    if (session('error')) {
+        $initCode .= "addToast('error', " . json_encode(session('error')) . ");";
+    }
+    if (session('warning')) {
+        $initCode .= "addToast('warning', " . json_encode(session('warning')) . ");";
+    }
+    if (session('info')) {
+        $initCode .= "addToast('info', " . json_encode(session('info')) . ");";
+    }
+@endphp
+
 <div 
     x-data="{ 
         toasts: [],
@@ -24,20 +40,7 @@
             }
         }
     }"
-    x-init="
-        @if(session('success'))
-            addToast('success', @json(session('success')));
-        @endif
-        @if(session('error'))
-            addToast('error', @json(session('error')));
-        @endif
-        @if(session('warning'))
-            addToast('warning', @json(session('warning')));
-        @endif
-        @if(session('info'))
-            addToast('info', @json(session('info')));
-        @endif
-    "
+    x-init="{{ $initCode }}"
     class="fixed bottom-4 right-4 z-[9999] space-y-3 pointer-events-none"
     aria-live="polite"
 >

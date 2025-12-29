@@ -24,8 +24,8 @@
     @stack('styles')
 </head>
 <body class="font-sans antialiased bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
-    {{-- Global Toast Notifications --}}
-    <x-ui.toast position="bottom-right" maxToasts="5" />
+    {{-- Global Toast Notifications - Using Session Flash Messages --}}
+    <x-toast-notifications />
     
     <div class="min-h-screen flex">
         

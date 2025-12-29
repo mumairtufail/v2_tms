@@ -132,6 +132,14 @@ return [
             'path' => storage_path('logs/plugins.log'),
             'level' => 'debug',
         ],
+
+        'orders' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/orders.log'),
+            'level' => 'debug',
+            'days' => 30,
+            'replace_placeholders' => true,
+        ],
     ],
 
 ];
