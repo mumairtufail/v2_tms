@@ -28,8 +28,16 @@ Route::middleware(['auth', CompanyScope::class])->prefix('{company}')->name('v2.
     Route::resource('roles', \App\Http\Controllers\V2\RoleController::class);
     Route::put('roles/{role}/permissions', [\App\Http\Controllers\V2\RoleController::class, 'updatePermissions'])->name('roles.update-permissions');
 
-    // Orders (placeholder)
-    // Route::resource('orders', OrderController::class);
+    // Orders
+    Route::get('orders', [\App\Http\Controllers\V2\OrderController::class, 'index'])->name('orders.index');
+    Route::post('orders', [\App\Http\Controllers\V2\OrderController::class, 'store'])->name('orders.store');
+    Route::get('orders/{order}/edit', [\App\Http\Controllers\V2\OrderController::class, 'edit'])->name('orders.edit');
+    Route::patch('orders/{order}', [\App\Http\Controllers\V2\OrderController::class, 'update'])->name('orders.update');
+    Route::delete('orders/{order}', [\App\Http\Controllers\V2\OrderController::class, 'destroy'])->name('orders.destroy');
+    
+    // Order specific actions
+    Route::post('orders/{order}/sync-quickbooks', [\App\Http\Controllers\V2\OrderController::class, 'syncToQuickBooks'])->name('orders.sync-quickbooks');
+    Route::get('orders/search-customers', [\App\Http\Controllers\V2\OrderController::class, 'searchCustomers'])->name('orders.search-customers');
 
     // Manifests (placeholder)
     // Route::resource('manifests', ManifestController::class);

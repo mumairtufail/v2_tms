@@ -123,7 +123,7 @@
                 </a>
 
                 <!-- Orders -->
-                <a href="#"
+                <a href="{{ $currentCompany ? route('v2.orders.index', ['company' => $companySlug]) : '#' }}"
                    class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group {{ request()->routeIs('v2.orders.*') ? $activeClasses : $inactiveClasses }}">
                     <div class="w-5 h-5 flex items-center justify-center {{ request()->routeIs('v2.orders.*') ? $activeIconClasses : '' }}">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
