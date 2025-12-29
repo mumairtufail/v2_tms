@@ -39,8 +39,7 @@ Route::middleware(['auth', CompanyScope::class])->prefix('{company}')->name('v2.
     Route::post('orders/{order}/sync-quickbooks', [\App\Http\Controllers\V2\OrderController::class, 'syncToQuickBooks'])->name('orders.sync-quickbooks');
     Route::get('orders/search-customers', [\App\Http\Controllers\V2\OrderController::class, 'searchCustomers'])->name('orders.search-customers');
 
-    // Manifests (placeholder)
-    // Route::resource('manifests', ManifestController::class);
+
 
     // Customers
     Route::resource('customers', \App\Http\Controllers\V2\CustomerController::class);
@@ -48,8 +47,7 @@ Route::middleware(['auth', CompanyScope::class])->prefix('{company}')->name('v2.
     // Carriers
     Route::resource('carriers', \App\Http\Controllers\V2\CarrierController::class);
 
-    // Drivers (placeholder)
-    // Route::resource('drivers', DriverController::class);
+
 
     // Equipment
     Route::resource('equipment', \App\Http\Controllers\V2\EquipmentController::class);
@@ -96,12 +94,17 @@ Route::middleware(['auth', CompanyScope::class])->prefix('{company}')->name('v2.
     
     Route::get('manifests/{manifest}/carriers/available', [\App\Http\Controllers\V2\ManifestController::class, 'availableCarriers'])->name('manifests.carriers.available');
     Route::post('manifests/{manifest}/carriers/sync', [\App\Http\Controllers\V2\ManifestController::class, 'syncCarriers'])->name('manifests.carriers.sync');
+    Route::post('manifests/{manifest}/cost-estimates', [\App\Http\Controllers\V2\ManifestController::class, 'addCostEstimates'])->name('manifests.cost-estimates.store');
 
     // Profile
     Route::get('profile', [\App\Http\Controllers\V2\ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('profile', [\App\Http\Controllers\V2\ProfileController::class, 'update'])->name('profile.update');
     Route::delete('profile', [\App\Http\Controllers\V2\ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Settings (placeholder)
-    // Route::get('settings', [SettingsController::class, 'index'])->name('settings');
+
+
+    // Bulk Actions
+    Route::post('orders/bulk-delete', [\App\Http\Controllers\V2\OrderController::class, 'bulkDestroy'])->name('orders.bulk-destroy');
+    Route::post('manifests/bulk-delete', [\App\Http\Controllers\V2\ManifestController::class, 'bulkDestroy'])->name('manifests.bulk-destroy');
+
 });

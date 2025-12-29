@@ -27,10 +27,10 @@ class Manifest extends Model
         return $this->belongsTo(Company::class);
     }
 
-    // Relationship to orders
+    // Relationship to orders (via stops, so we capture any order that has stops on this manifest)
     public function orders()
     {
-        return $this->hasMany(Order::class);
+        return $this->belongsToMany(Order::class, 'order_stops', 'manifest_id', 'order_id')->distinct();
     }
 
     // Many-to-many relationship with drivers through manifest_drivers
@@ -73,5 +73,10 @@ class Manifest extends Model
     public function manifestDrivers()
     {
         return $this->hasMany(ManifestDriver::class);
+    }
+    // Relationship to order stops
+    public function orderStops()
+    {
+        return $this->hasMany(OrderStop::class);
     }
 }

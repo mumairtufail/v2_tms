@@ -89,7 +89,14 @@ class OrderController extends Controller
         
         $services = \App\Models\Service::all();
         $allAccessorials = \App\Models\Accessorial::orderBy('name')->get();
+        // Create manifests map
         $manifests = \App\Models\Manifest::where('company_id', $company->id)->get();
+        
+        // If query param 'type' is present, temporarily override order type for view
+        // Ideally, if it's a draft, we might want to save it, but display override is sufficient for the UI tab switch
+        if (request()->has('type')) {
+            $order->order_type = request('type');
+        }
 
         // Prepare data for Alpine.js Form
         $stopsData = $order->stops->map(function($stop) {
@@ -170,8 +177,8 @@ class OrderController extends Controller
         $quote = $order->quote ?? new \App\Models\OrderQuote();
         $quoteData = [
             'service_id' => $quote->service_id ?? '',
-            'delivery_start' => $quote->quote_delivery_start ? date('Y-m-d', strtotime($quote->quote_delivery_start)) : '',
-            'delivery_end' => $quote->quote_delivery_end ? date('Y-m-d', strtotime($quote->quote_delivery_end)) : '',
+            'delivery_start' => $quote->delivery_start_date ? date('Y-m-d', strtotime($quote->delivery_start_date)) : '',
+            'delivery_end' => $quote->delivery_end_date ? date('Y-m-d', strtotime($quote->delivery_end_date)) : '',
             'customer_rows' => $quote->costs->where('category', 'customer')->map(fn($c) => [
                 'type' => $c->type ?? 'Freight',
                 'description' => $c->description ?? '',
@@ -411,7 +418,7 @@ class OrderController extends Controller
         foreach ($quoteData['customer_rows'] ?? [] as $row) {
             if (!empty($row['description']) || (!empty($row['cost']) && $row['cost'] != 0)) {
                 $quote->costs()->create([
-                    'category' => 'quote',
+                    'category' => 'customer',
                     'type' => $row['type'] ?? 'Freight',
                     'description' => $row['description'] ?? '',
                     'cost' => $row['cost'] ?? 0,
@@ -449,6 +456,28 @@ class OrderController extends Controller
 
         Toast::success("Order {$orderNumber} deleted successfully.");
         return redirect()->route('v2.orders.index', $company->slug);
+    }
+
+    /**
+     * Bulk delete orders.
+     */
+    public function bulkDestroy(Request $request, Company $company)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:orders,id'
+        ]);
+
+        $ids = $request->input('ids');
+        $count = count($ids);
+
+        // Ensure orders belong to the company
+        Order::where('company_id', $company->id)
+            ->whereIn('id', $ids)
+            ->delete();
+
+        Toast::success("{$count} order(s) deleted successfully.");
+        return back();
     }
 
     /**

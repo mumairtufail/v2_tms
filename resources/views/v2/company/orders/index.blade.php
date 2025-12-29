@@ -3,19 +3,33 @@
 @section('title', 'Orders')
 
 @section('content')
-<div class="space-y-4" x-data="{}">
+<div class="space-y-4" x-data="{ selected: [], allSelected: false }">
     <!-- 1. Breadcrumb -->
     <x-v2-breadcrumb :items="[['label' => 'Orders']]" />
 
     <!-- 2. Header with Add Button -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <x-page-header title="Orders" description="Manage and track all transport orders" />
-        <button @click="$dispatch('open-modal', 'create-order')" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            Create Order
-        </button>
+        <div class="flex items-center gap-3">
+            <template x-if="selected.length > 0">
+                <form id="bulk-delete-orders-form" action="{{ route('v2.orders.bulk-destroy', $company->slug) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete ' + selected.length + ' order(s)? This action cannot be undone.');">
+                    @csrf
+                    <template x-for="id in selected" :key="id">
+                        <input type="hidden" name="ids[]" :value="id">
+                    </template>
+                    <button type="submit" class="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 font-medium rounded-lg transition-colors flex items-center gap-2 text-xs">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        Delete Selected (<span x-text="selected.length"></span>)
+                    </button>
+                </form>
+            </template>
+            <button @click="$dispatch('open-modal', 'create-order')" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Create Order
+            </button>
+        </div>
     </div>
 
     <!-- 3. Inline Filters -->
@@ -78,6 +92,11 @@
         <table class="w-full text-sm">
             <thead class="bg-gray-50 dark:bg-gray-800/50">
                 <tr>
+                    <th class="w-4 px-4 py-3 text-left border-b border-gray-200 dark:border-gray-800">
+                        <input type="checkbox" 
+                            @change="allSelected = !allSelected; selected = allSelected ? [{{ $orders->pluck('id')->implode(', ') }}] : []" 
+                            class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                    </th>
                     <th class="w-12 px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">#</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Order Details</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Customer</th>
@@ -89,6 +108,9 @@
             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                 @forelse($orders as $index => $order)
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors group">
+                    <td class="px-4 py-2 align-top">
+                        <input type="checkbox" value="{{ $order->id }}" x-model="selected" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                    </td>
                     <td class="px-4 py-2 text-gray-500 align-top">{{ $orders->firstItem() + $index }}</td>
                     
                     <td class="px-4 py-2 align-top">
@@ -261,7 +283,7 @@
                         <div class="flex gap-3">
                             <svg class="w-5 h-5 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             <div class="text-xs text-blue-700 dark:text-blue-300">
-                                <p class="font-bold mb-1">Voyage Type: Sequence</p>
+                                <p class="font-bold mb-1">Order Type: Sequence</p>
                                 <p>This will create a multi-stop order draft. You can add more legs in the next step.</p>
                             </div>
                         </div>

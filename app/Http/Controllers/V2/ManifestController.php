@@ -101,6 +101,28 @@ class ManifestController extends Controller
         return redirect()->route('v2.manifests.index', $company);
     }
 
+    public function bulkDestroy(Request $request, Company $company)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:manifests,id'
+        ]);
+
+        $ids = $request->input('ids');
+        $count = 0;
+
+        foreach ($ids as $id) {
+            $manifest = Manifest::where('company_id', $company->id)->find($id);
+            if ($manifest) {
+                $this->manifestService->deleteManifest($manifest);
+                $count++;
+            }
+        }
+
+        Toast::success("{$count} manifest(s) deleted successfully.");
+        return back();
+    }
+
     public function assignDriver(Request $request, Company $company, Manifest $manifest)
     {
         $request->validate(['driver_id' => 'required|exists:users,id']);
@@ -265,5 +287,33 @@ class ManifestController extends Controller
             'success' => true,
             'message' => 'Carriers synced successfully'
         ]);
+    }
+
+    /**
+     * Add cost estimates to a manifest from order processing.
+     */
+    public function addCostEstimates(Request $request, Company $company, Manifest $manifest)
+    {
+        $validated = $request->validate([
+            'cost_estimates' => 'required|array',
+            'cost_estimates.*.type' => 'nullable|string',
+            'cost_estimates.*.description' => 'nullable|string',
+            'cost_estimates.*.cost' => 'nullable|numeric',
+        ]);
+
+        foreach ($validated['cost_estimates'] as $estimate) {
+            // Only add if it has a cost or description
+            if (!empty($estimate['cost']) || !empty($estimate['description'])) {
+                $manifest->costEstimates()->create([
+                    'type' => $estimate['type'] ?? 'Freight',
+                    'description' => $estimate['description'] ?? '',
+                    'qty' => 1,
+                    'rate' => $estimate['cost'] ?? 0,
+                    'est_cost' => $estimate['cost'] ?? 0,
+                ]);
+            }
+        }
+
+        return response()->json(['success' => true, 'message' => 'Cost estimates added successfully']);
     }
 }

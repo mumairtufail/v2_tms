@@ -15,7 +15,7 @@ class ManifestService
     public function getManifests(int $companyId, array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         $query = Manifest::where('company_id', $companyId)
-            ->with(['drivers', 'carriers', 'equipments', 'stops']);
+            ->with(['drivers', 'carriers', 'equipments', 'stops', 'orders']);
 
         if (!empty($filters['search'])) {
             $query->where('code', 'like', '%' . $filters['search'] . '%');

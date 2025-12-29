@@ -123,7 +123,7 @@
                         <div class="p-1.5 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                         </div>
-                        <h3 class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Voyage Legs (Stops)</h3>
+                        <h3 class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Legs (Stops)</h3>
                         <span class="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-500 rounded text-xs" x-text="stops.length + ' Legs'"></span>
                     </div>
                 </div>
@@ -517,16 +517,17 @@
                                     <table class="w-full text-xs">
                                         <thead class="bg-gray-100 dark:bg-gray-800">
                                             <tr>
-                                                <th class="px-3 py-2 text-left text-gray-700 dark:text-gray-200">Stop</th>
-                                                <th class="px-3 py-2 text-left text-gray-700 dark:text-gray-200">Manifest</th>
+                                                <th class="px-3 py-2 text-left text-gray-700 dark:text-gray-200 text-[10px] uppercase font-bold w-1/3">Stop</th>
+                                                <th class="px-3 py-2 text-left text-gray-700 dark:text-gray-200 text-[10px] uppercase font-bold">Manifest</th>
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                                             <template x-for="(stop, sIdx) in stops" :key="sIdx">
                                                 <tr class="bg-white dark:bg-gray-900">
-                                                    <td class="px-3 py-3">
-                                                        <div class="font-bold text-gray-900 dark:text-white" x-text="'Stop ' + (sIdx + 1)"></div>
-                                                        <div class="text-[10px] text-gray-500 dark:text-gray-400" x-text="(stop.shipper.city || '-') + ' → ' + (stop.consignee.city || '-')"></div>
+                                                    <td class="px-3 py-2">
+                                                        <div class="font-bold text-gray-900 dark:text-white text-xs" x-text="'Stop ' + (sIdx + 1)"></div>
+                                                        <div class="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[150px]" 
+                                                             x-text="(stop.shipper.city || 'No Location') + ' → ' + (stop.consignee.city || 'No Location')"></div>
                                                     </td>
                                                     <td class="px-3 py-3">
                                                         <select x-model="stop.manifest_id" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-black dark:text-white focus:ring-primary-500 focus:border-primary-500 transition-shadow">
@@ -788,11 +789,31 @@ function orderForm() {
         },
 
         applyMassManifest() {
-            if (!this.massManifestId) return;
-            this.stops.forEach(stop => {
-                stop.manifest_id = this.massManifestId;
+            if (!this.massManifestId) {
+                // If checking for "Apply to all..." which is empty
+                return;
+            }
+            
+            console.log('Applying manifest ID:', this.massManifestId);
+            
+            // Normalize target ID to ensure it matches the types in the options
+            let targetId = this.massManifestId;
+            
+            // If the manifests array is available, find the matching ID to use its exact type
+            if (this.manifests && this.manifests.length) {
+                const match = this.manifests.find(m => m.id == targetId);
+                if (match) {
+                    targetId = match.id;
+                }
+            } else if (!isNaN(targetId) && targetId !== '') {
+                targetId = Number(targetId);
+            }
+            
+            // Use map to create a new array, forcing Alpine to react
+            this.stops = this.stops.map(stop => {
+                // Return a new object to ensure deep reactivity
+                return { ...stop, manifest_id: targetId };
             });
-            {{-- Optional: Show a subtle confirmation --}}
         },
 
         calculateTotal(rows) {
@@ -821,8 +842,34 @@ function orderForm() {
             this.showProcessModal = true;
         },
 
-        submitForm() {
+        async submitForm() {
             this.submitting = true;
+            
+            // Check if we need to sync costs to manifest
+            if (this.massManifestId && this.quote.carrier_rows.length > 0) {
+                try {
+                    console.log('Syncing costs to manifest:', this.massManifestId);
+                    // Use company slug from PHP
+                    const companySlug = '{{ $company->slug }}';
+                    const response = await fetch(`/v2/${companySlug}/manifests/${this.massManifestId}/cost-estimates`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({
+                            cost_estimates: this.quote.carrier_rows
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        console.warn('Failed to sync costs to manifest');
+                    }
+                } catch (e) {
+                    console.error('Error syncing costs:', e);
+                }
+            }
+
             document.getElementById('orderForm').submit();
         },
 
@@ -839,7 +886,9 @@ function orderForm() {
             .then(data => {
                 if(data.success) {
                     this.manifests.push(data.manifest);
-                    this.manifestsMap[data.manifest.id] = data.manifest.code;
+                    // Ensure manifestsMap is reactive
+                    this.manifestsMap = { ...this.manifestsMap, [data.manifest.id]: data.manifest.code };
+                    
                     this.massManifestId = data.manifest.id;
                     
                     // Auto-assign to all stops

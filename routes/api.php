@@ -20,26 +20,9 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::get('orders', [OrderController::class, 'getOrders'])->name('orders.list');
-Route::get('column-preferences', [OrderController::class, 'getColumnPreferences']);
-Route::post('column-preferences', [OrderController::class, 'saveColumnPreferences']);
+
 
 // Customer search API
 Route::get('customers/search', [App\Http\Controllers\Api\CustomerController::class, 'search']);
-
-// Manifest routes moved to web.php for proper authentication
-
 Route::get('/customers/{customer}', [App\Http\Controllers\Api\CustomerController::class, 'viewcustomers']);
 
-// Customer search for order creation
-// Route::post('/customers/search', [App\Http\Controllers\CustomerController::class, 'searchCustomers']);
-
-
-   // Dashboard API Routes for real-time updates
-    Route::prefix('dashboard')->name('dashboard.')->group(function () {
-        Route::get('/stats-api', [CompanyController::class, 'getStatsApi'])->name('stats.api');
-        Route::get('/chart-data-api', [CompanyController::class, 'getChartDataApi'])->name('chart.api');
-        Route::get('/order-status-api', [CompanyController::class, 'getOrderStatusApi'])->name('order-status.api');
-        Route::get('/equipment-status-api', [CompanyController::class, 'getEquipmentStatusApi'])->name('equipment.api');
-        Route::get('/refresh', [CompanyController::class, 'refreshDashboard'])->name('refresh');
-    });
