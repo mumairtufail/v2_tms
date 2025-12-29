@@ -36,7 +36,7 @@ class Manifest extends Model
     // Many-to-many relationship with drivers through manifest_drivers
     public function drivers()
     {
-        return $this->belongsToMany(CompanyUser::class, 'manifest_drivers', 'manifest_id', 'driver_id');
+        return $this->belongsToMany(User::class, 'manifest_drivers', 'manifest_id', 'driver_id');
     }
 
     // Many-to-many relationship with carriers through manifest_carriers  

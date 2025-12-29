@@ -21,6 +21,7 @@ class CarrierController extends Controller
     public function index(Request $request, Company $company)
     {
         $carriers = $this->carrierService->getCarriers([
+            'company_id' => $company->id,
             'search' => $request->search,
             'status' => $request->status,
         ]);
@@ -35,7 +36,10 @@ class CarrierController extends Controller
 
     public function store(CarrierRequest $request, Company $company)
     {
-        $this->carrierService->createCarrier($request->validated());
+        $data = $request->validated();
+        $data['company_id'] = $company->id;
+        
+        $this->carrierService->createCarrier($data);
 
         return redirect()
             ->route('v2.carriers.index', ['company' => $company->slug])

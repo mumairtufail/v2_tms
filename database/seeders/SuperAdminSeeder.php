@@ -94,7 +94,7 @@ class SuperAdminSeeder extends Seeder
             'name' => 'Super Admin',
             'f_name' => 'Super',
             'l_name' => 'Admin',
-            'password' => Hash::make('password'),
+            'password' => Hash::make('123456'),
             'is_super_admin' => true,
             'company_id' => $systemCompany->id,
             'is_active' => true,

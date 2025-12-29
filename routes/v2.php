@@ -58,6 +58,36 @@ Route::middleware(['auth', CompanyScope::class])->prefix('{company}')->name('v2.
     Route::get('plugins/quickbooks/connect', [\App\Http\Controllers\V2\PluginController::class, 'connectQuickBooks'])->name('plugins.quickbooks.connect');
     Route::get('plugins/quickbooks/callback', [\App\Http\Controllers\V2\PluginController::class, 'callbackQuickBooks'])->name('plugins.quickbooks.callback');
 
+    // Manifests
+    Route::get('manifests', [\App\Http\Controllers\V2\ManifestController::class, 'index'])->name('manifests.index');
+    Route::post('manifests', [\App\Http\Controllers\V2\ManifestController::class, 'store'])->name('manifests.store');
+    Route::get('manifests/{manifest}/edit', [\App\Http\Controllers\V2\ManifestController::class, 'edit'])->name('manifests.edit');
+    Route::patch('manifests/{manifest}', [\App\Http\Controllers\V2\ManifestController::class, 'update'])->name('manifests.update');
+    Route::delete('manifests/{manifest}', [\App\Http\Controllers\V2\ManifestController::class, 'destroy'])->name('manifests.destroy');
+    
+    // Manifest Relations
+    Route::post('manifests/{manifest}/drivers', [\App\Http\Controllers\V2\ManifestController::class, 'assignDriver'])->name('manifests.drivers.store');
+    Route::delete('manifests/{manifest}/drivers/{driver}', [\App\Http\Controllers\V2\ManifestController::class, 'removeDriver'])->name('manifests.drivers.destroy');
+    
+    Route::post('manifests/{manifest}/carriers', [\App\Http\Controllers\V2\ManifestController::class, 'assignCarrier'])->name('manifests.carriers.store');
+    Route::delete('manifests/{manifest}/carriers/{carrier}', [\App\Http\Controllers\V2\ManifestController::class, 'removeCarrier'])->name('manifests.carriers.destroy');
+    
+    Route::post('manifests/{manifest}/equipment', [\App\Http\Controllers\V2\ManifestController::class, 'assignEquipment'])->name('manifests.equipment.store');
+    Route::delete('manifests/{manifest}/equipment/{equipment}', [\App\Http\Controllers\V2\ManifestController::class, 'removeEquipment'])->name('manifests.equipment.destroy');
+    
+    Route::post('manifests/{manifest}/stops', [\App\Http\Controllers\V2\ManifestController::class, 'addStop'])->name('manifests.stops.store');
+    Route::delete('manifests/{manifest}/stops/{stop}', [\App\Http\Controllers\V2\ManifestController::class, 'removeStop'])->name('manifests.stops.destroy');
+    
+    // Manifest Modal API Endpoints
+    Route::get('manifests/{manifest}/drivers/available', [\App\Http\Controllers\V2\ManifestController::class, 'availableDrivers'])->name('manifests.drivers.available');
+    Route::post('manifests/{manifest}/drivers/sync', [\App\Http\Controllers\V2\ManifestController::class, 'syncDrivers'])->name('manifests.drivers.sync');
+    
+    Route::get('manifests/{manifest}/equipment/available', [\App\Http\Controllers\V2\ManifestController::class, 'availableEquipment'])->name('manifests.equipment.available');
+    Route::post('manifests/{manifest}/equipment/sync', [\App\Http\Controllers\V2\ManifestController::class, 'syncEquipment'])->name('manifests.equipment.sync');
+    
+    Route::get('manifests/{manifest}/carriers/available', [\App\Http\Controllers\V2\ManifestController::class, 'availableCarriers'])->name('manifests.carriers.available');
+    Route::post('manifests/{manifest}/carriers/sync', [\App\Http\Controllers\V2\ManifestController::class, 'syncCarriers'])->name('manifests.carriers.sync');
+
     // Profile
     Route::get('profile', [\App\Http\Controllers\V2\ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('profile', [\App\Http\Controllers\V2\ProfileController::class, 'update'])->name('profile.update');
