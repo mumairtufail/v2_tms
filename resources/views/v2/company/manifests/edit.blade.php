@@ -190,7 +190,6 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                 </svg>
                 Stops
-                <span class="ml-1 px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-700">{{ $manifest->stops->count() }}</span>
             </button>
             <button @click="activeTab = 'documents'" 
                     :class="{ 'border-primary-500 text-primary-600 dark:text-primary-400': activeTab === 'documents', 
