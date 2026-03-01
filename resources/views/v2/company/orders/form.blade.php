@@ -21,21 +21,6 @@
         </div>
         
         <div class="flex items-center gap-2">
-            @if(isset($order) && !$order->quickbooks_invoice_id && auth()->user()->hasPermission('orders', 'update'))
-            <form action="{{ route('v2.orders.sync-quickbooks', ['company' => $company->slug, 'order' => $order->id]) }}" method="POST">
-                @csrf
-                <x-secondary-button type="submit" class="border-blue-500 text-blue-600 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-900/20">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                    Sync to QuickBooks
-                </x-secondary-button>
-            </form>
-            @elseif(isset($order) && $order->quickbooks_invoice_id)
-            <span class="inline-flex items-center gap-1 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                Invoiced (#{{ $order->quickbooks_invoice_id }})
-            </span>
-            @endif
-
             <x-secondary-button @click="saveDraft()" type="button">
                 <span x-show="saving" class="mr-2">
                     <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -125,8 +110,8 @@
                         <input type="text" name="customer_po_number" value="{{ old('customer_po_number', $order->customer_po_number) }}" class="mt-1 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md" placeholder="PO Number">
                     </div>
                     <div>
-                        <label class="block text-[10px] font-medium text-gray-400 uppercase">Special Instructions</label>
-                        <textarea name="special_instructions" class="mt-1 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md" rows="1">{{ old('special_instructions', $order->special_instructions) }}</textarea>
+                        <label class="block text-[10px] font-medium text-gray-400 uppercase">Container Number</label>
+                        <input type="text" name="container_number" value="{{ old('container_number', $order->container_number) }}" class="mt-1 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md" placeholder="e.g. MSCU1234567">
                     </div>
                 </div>
             </div>
@@ -271,8 +256,11 @@
                                                 </div>
                                                 <div class="space-y-4">
                                                     <div>
-                                                        <label class="block text-[10px] uppercase text-gray-400 font-bold mb-1">Container Number</label>
-                                                        <input type="text" x-model="stop.billing.container_number" placeholder="Container Number" class="block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md">
+                                                        <label class="block text-[10px] uppercase text-gray-400 font-bold mb-1">Container Number <span class="text-red-500">*</span></label>
+                                                        <input type="text" x-model="stop.billing.container_number" placeholder="Container Number (required)"
+                                                               :class="stop._containerError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 dark:border-gray-700'"
+                                                               class="block w-full text-sm dark:bg-gray-800 dark:text-gray-300 rounded-md">
+                                                        <p x-show="stop._containerError" class="text-red-500 text-[10px] mt-1">Container number is required for each leg.</p>
                                                     </div>
                                                     <div>
                                                         <label class="block text-[10px] uppercase text-gray-400 font-bold mb-1">REF Number</label>
@@ -729,10 +717,11 @@ function orderForm() {
             if (this.stops.length === 0) {
                 this.addStop();
             }
-            // Ensure stops have service_type and measurements
+            // Ensure stops have service_type, measurements, and error flags
             this.stops.forEach(stop => {
                 if (!stop.service_type) stop.service_type = 'truckload';
                 if (!stop.measurements) stop.measurements = 'in_lbs';
+                if (stop._containerError === undefined) stop._containerError = false;
             });
         },
 
@@ -761,6 +750,7 @@ function orderForm() {
                 measurements: 'in_lbs',
                 shipper: { ...autofill },
                 consignee: { company_name: '', address_1: '', address_2: '', city: '', state: '', zip: '', country: 'US', contact_name: '', phone: '', email: '', opening_time: '08:00', closing_time: '17:00', ready_date: '', ready_time: '', appointment: false, notes: '' },
+                _containerError: false,
                 billing: { customs_broker: '', port_of_entry: '', container_number: '', declared_value: 0, currency: 'USD', ref_number: '', customer_po_number: '' },
                 commodities: [this.newCommodity()],
                 accessorials: []
@@ -859,7 +849,24 @@ function orderForm() {
 
         async submitForm() {
             this.submitting = true;
-            
+
+            // Validate: container number required for each leg
+            let valid = true;
+            this.stops.forEach(stop => {
+                if (!stop.billing.container_number || stop.billing.container_number.trim() === '') {
+                    stop._containerError = true;
+                    stop.expanded = true;
+                    valid = false;
+                } else {
+                    stop._containerError = false;
+                }
+            });
+
+            if (!valid) {
+                this.submitting = false;
+                return;
+            }
+
             // Check if we need to sync costs to manifest
             if (this.massManifestId && this.quote.carrier_rows.length > 0) {
                 try {

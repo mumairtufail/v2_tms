@@ -237,14 +237,14 @@ class OrderController extends Controller
                 'order_type' => 'required|string',
                 'ref_number' => 'nullable|string|max:255',
                 'customer_po_number' => 'nullable|string|max:255',
-                'special_instructions' => 'nullable|string',
+                'container_number' => 'nullable|string|max:255',
             ]);
 
             // Update order basic fields
             $order->update([
                 'ref_number' => $validated['ref_number'] ?? $order->ref_number,
                 'customer_po_number' => $validated['customer_po_number'] ?? $order->customer_po_number,
-                'special_instructions' => $validated['special_instructions'] ?? $order->special_instructions,
+                'container_number' => $validated['container_number'] ?? $order->container_number,
                 'status' => $saveAsDraft ? 'draft' : 'pending',
             ]);
 

@@ -93,11 +93,11 @@
     <div class="grid grid-cols-2 gap-3">
         <div>
             <label class="block text-[10px] font-medium text-gray-400 uppercase">Opening</label>
-            <input type="time" x-model="stop.{{ $prefix }}.opening_time" class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500">
+            <input type="time" lang="sv" x-model="stop.{{ $prefix }}.opening_time" class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500">
         </div>
         <div>
             <label class="block text-[10px] font-medium text-gray-400 uppercase">Closing</label>
-            <input type="time" x-model="stop.{{ $prefix }}.closing_time" class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500">
+            <input type="time" lang="sv" x-model="stop.{{ $prefix }}.closing_time" class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500">
         </div>
     </div>
 
@@ -111,7 +111,7 @@
             </div>
             <div>
                 <label class="block text-[10px] font-medium text-gray-400 uppercase">Time</label>
-                <input type="time" x-model="stop.{{ $prefix }}.ready_time" class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500">
+                <input type="time" lang="sv" x-model="stop.{{ $prefix }}.ready_time" class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500">
             </div>
         </div>
         <label class="flex items-center gap-2 mt-2 cursor-pointer">
