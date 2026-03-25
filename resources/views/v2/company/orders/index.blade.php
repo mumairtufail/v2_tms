@@ -106,7 +106,7 @@
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Customer</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Stops</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Invoice</th>
+                    <!-- <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Invoice</th> -->
                     <th class="w-24 px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                 </tr>
             </thead>
@@ -178,7 +178,7 @@
                         </span>
                     </td>
                     
-                    <td class="px-4 py-2 align-top">
+                    <!-- <td class="px-4 py-2 align-top">
                         @if($order->quickbooks_invoice_id)
                         <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800" title="QB ID: {{ $order->quickbooks_invoice_id }}">
                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
@@ -187,18 +187,18 @@
                         @else
                         <span class="px-2 py-0.5 text-xs text-gray-400 italic">Not Invoiced</span>
                         @endif
-                    </td>
+                    </td> -->
                     
                     <td class="px-4 py-2 align-top text-right">
                         <div class="flex items-center justify-end gap-1">
-                            @if(!$order->quickbooks_invoice_id && auth()->user()->hasPermission('orders', 'update'))
+                            <!-- @if(!$order->quickbooks_invoice_id && auth()->user()->hasPermission('orders', 'update'))
                             <form action="{{ route('v2.orders.sync-quickbooks', ['company' => $company->slug, 'order' => $order->id]) }}" method="POST" class="inline">
                                 @csrf
                                 <button type="submit" class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all" title="Sync to QuickBooks">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                                 </button>
                             </form>
-                            @endif
+                            @endif -->
                             @if(auth()->user()->hasPermission('orders', 'update'))
                             <a href="{{ route('v2.orders.edit', ['company' => $company->slug, 'order' => $order->id]) }}" class="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-all" title="Edit Order">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
