@@ -89,26 +89,143 @@
                         </div>
                     </div>
                     <div x-show="expanded" x-collapse class="border-t border-gray-200 dark:border-gray-700 p-6 bg-gray-50 dark:bg-gray-800/50">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <h5 class="font-semibold mb-2">Location</h5>
-                                <p class="text-sm text-gray-600">
-                                    {{ $stop->company_name }}<br>
-                                    {{ $stop->address_1 }}<br>
-                                    {{ $stop->city }}, {{ $stop->state }} {{ $stop->postal_code }}<br>
-                                    {{ $stop->country }}
-                                </p>
-                                <div class="mt-2 text-sm">
-                                    <span class="font-medium">Type:</span> {{ ucfirst($stop->stop_type) }}
+                        @php
+                            $consignee = $stop->consignee_data ?? [];
+                            $billing = $stop->billing_data ?? [];
+                        @endphp
+
+                        <div class="space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="space-y-3">
+                                    <h5 class="font-semibold text-gray-900 dark:text-white">Shipper Information</h5>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-[10px] uppercase text-gray-500 mb-1">Company</label>
+                                            <input type="text" disabled value="{{ $stop->company_name }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/50 text-sm text-gray-700 dark:text-gray-300 cursor-not-allowed">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] uppercase text-gray-500 mb-1">Contact</label>
+                                            <input type="text" disabled value="{{ $stop->contact_name }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/50 text-sm text-gray-700 dark:text-gray-300 cursor-not-allowed">
+                                        </div>
+                                        <div class="md:col-span-2">
+                                            <label class="block text-[10px] uppercase text-gray-500 mb-1">Address</label>
+                                            <input type="text" disabled value="{{ trim(($stop->address_1 ?? '') . ', ' . ($stop->city ?? '') . ', ' . ($stop->state ?? '') . ' ' . ($stop->postal_code ?? '')) }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/50 text-sm text-gray-700 dark:text-gray-300 cursor-not-allowed">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] uppercase text-gray-500 mb-1">Phone</label>
+                                            <input type="text" disabled value="{{ $stop->contact_phone }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/50 text-sm text-gray-700 dark:text-gray-300 cursor-not-allowed">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] uppercase text-gray-500 mb-1">Email</label>
+                                            <input type="text" disabled value="{{ $stop->contact_email }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/50 text-sm text-gray-700 dark:text-gray-300 cursor-not-allowed">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-3">
+                                    <h5 class="font-semibold text-gray-900 dark:text-white">Consignee Information</h5>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-[10px] uppercase text-gray-500 mb-1">Company</label>
+                                            <input type="text" disabled value="{{ $consignee['company_name'] ?? '' }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/50 text-sm text-gray-700 dark:text-gray-300 cursor-not-allowed">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] uppercase text-gray-500 mb-1">Contact</label>
+                                            <input type="text" disabled value="{{ $consignee['contact_name'] ?? '' }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/50 text-sm text-gray-700 dark:text-gray-300 cursor-not-allowed">
+                                        </div>
+                                        <div class="md:col-span-2">
+                                            <label class="block text-[10px] uppercase text-gray-500 mb-1">Address</label>
+                                            <input type="text" disabled value="{{ trim(($consignee['address_1'] ?? '') . ', ' . ($consignee['city'] ?? '') . ', ' . ($consignee['state'] ?? '') . ' ' . ($consignee['zip'] ?? '')) }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/50 text-sm text-gray-700 dark:text-gray-300 cursor-not-allowed">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] uppercase text-gray-500 mb-1">Phone</label>
+                                            <input type="text" disabled value="{{ $consignee['phone'] ?? '' }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/50 text-sm text-gray-700 dark:text-gray-300 cursor-not-allowed">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] uppercase text-gray-500 mb-1">Email</label>
+                                            <input type="text" disabled value="{{ $consignee['email'] ?? '' }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/50 text-sm text-gray-700 dark:text-gray-300 cursor-not-allowed">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div>
+                                    <label class="block text-[10px] uppercase text-gray-500 mb-1">Ready Start</label>
+                                    <input type="text" disabled value="{{ $consignee['shipper_ready_start_at'] ?? ($stop->start_time ? $stop->start_time->format('m/d/y H:i') : '') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/50 text-sm text-gray-700 dark:text-gray-300 cursor-not-allowed">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] uppercase text-gray-500 mb-1">Ready End</label>
+                                    <input type="text" disabled value="{{ $consignee['shipper_ready_end_at'] ?? ($stop->start_time ? $stop->start_time->format('m/d/y H:i') : '') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/50 text-sm text-gray-700 dark:text-gray-300 cursor-not-allowed">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] uppercase text-gray-500 mb-1">Requested Start</label>
+                                    <input type="text" disabled value="{{ $consignee['requested_start_at'] ?? ($stop->end_time ? $stop->end_time->format('m/d/y H:i') : '') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/50 text-sm text-gray-700 dark:text-gray-300 cursor-not-allowed">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] uppercase text-gray-500 mb-1">Requested End</label>
+                                    <input type="text" disabled value="{{ $consignee['requested_end_at'] ?? ($stop->end_time ? $stop->end_time->format('m/d/y H:i') : '') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/50 text-sm text-gray-700 dark:text-gray-300 cursor-not-allowed">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                <div>
+                                    <label class="block text-[10px] uppercase text-gray-500 mb-1">Container #</label>
+                                    <input type="text" disabled value="{{ $billing['container_number'] ?? '' }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/50 text-sm text-gray-700 dark:text-gray-300 cursor-not-allowed">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] uppercase text-gray-500 mb-1">REF #</label>
+                                    <input type="text" disabled value="{{ $billing['ref_number'] ?? '' }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/50 text-sm text-gray-700 dark:text-gray-300 cursor-not-allowed">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] uppercase text-gray-500 mb-1">PO #</label>
+                                    <input type="text" disabled value="{{ $billing['customer_po_number'] ?? '' }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/50 text-sm text-gray-700 dark:text-gray-300 cursor-not-allowed">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] uppercase text-gray-500 mb-1">Currency</label>
+                                    <input type="text" disabled value="{{ $billing['currency'] ?? '' }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/50 text-sm text-gray-700 dark:text-gray-300 cursor-not-allowed">
+                                </div>
+                            </div>
+
                             <div>
-                                <h5 class="font-semibold mb-2">Contact</h5>
-                                <p class="text-sm text-gray-600">
-                                    {{ $stop->contact_name }}<br>
-                                    {{ $stop->contact_phone }}<br>
-                                    {{ $stop->contact_email }}
-                                </p>
+                                <h5 class="font-semibold text-gray-900 dark:text-white mb-2">Commodities</h5>
+                                @if($stop->commodities->count() > 0)
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-xs border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                                            <thead class="bg-gray-100 dark:bg-gray-700">
+                                                <tr>
+                                                    <th class="px-3 py-2 text-left">Description</th>
+                                                    <th class="px-3 py-2 text-left">Qty</th>
+                                                    <th class="px-3 py-2 text-left">Type</th>
+                                                    <th class="px-3 py-2 text-left">Weight</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                                @foreach($stop->commodities as $commodity)
+                                                    <tr>
+                                                        <td class="px-3 py-2">{{ $commodity->description }}</td>
+                                                        <td class="px-3 py-2">{{ $commodity->quantity }}</td>
+                                                        <td class="px-3 py-2">{{ $commodity->type }}</td>
+                                                        <td class="px-3 py-2">{{ $commodity->weight }}</td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                @else
+                                    <p class="text-sm text-gray-500">No commodities.</p>
+                                @endif
+                            </div>
+
+                            <div>
+                                <h5 class="font-semibold text-gray-900 dark:text-white mb-2">Accessorials</h5>
+                                <div class="flex flex-wrap gap-2">
+                                    @forelse($stop->accessorials as $accessorial)
+                                        <span class="px-2.5 py-1 text-xs rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300">{{ $accessorial->name }}</span>
+                                    @empty
+                                        <span class="text-sm text-gray-500">No accessorials.</span>
+                                    @endforelse
+                                </div>
                             </div>
                         </div>
                     </div>

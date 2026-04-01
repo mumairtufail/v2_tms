@@ -8,6 +8,7 @@ use App\Models\Manifest;
 use App\Services\ManifestService;
 use App\Support\Toast;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ManifestController extends Controller
 {
@@ -73,7 +74,16 @@ class ManifestController extends Controller
 
     public function edit(Company $company, Manifest $manifest)
     {
-        $manifest->load(['drivers', 'carriers', 'equipments', 'stops']);
+        $manifest->load([
+            'drivers',
+            'carriers',
+            'equipments',
+            'stops',
+            'orderStops.order.customer',
+            'orderStops.order.quote.costs',
+            'orderStops.commodities',
+            'orderStops.accessorials',
+        ]);
         
         // Users belong to a company
         $drivers = \App\Models\User::where('company_id', $company->id)->get(); 
@@ -299,20 +309,60 @@ class ManifestController extends Controller
             'cost_estimates.*.type' => 'nullable|string',
             'cost_estimates.*.description' => 'nullable|string',
             'cost_estimates.*.cost' => 'nullable|numeric',
+            'cost_estimates.*.percentage' => 'nullable|numeric|min:0|max:100',
         ]);
 
-        foreach ($validated['cost_estimates'] as $estimate) {
-            // Only add if it has a cost or description
-            if (!empty($estimate['cost']) || !empty($estimate['description'])) {
+        $freightSubtotal = collect($validated['cost_estimates'])
+            ->filter(function ($estimate) {
+                return strtolower((string) ($estimate['type'] ?? '')) !== 'fuel';
+            })
+            ->sum(function ($estimate) {
+                return (float) ($estimate['cost'] ?? 0);
+            });
+
+        DB::transaction(function () use ($manifest, $validated, $freightSubtotal) {
+            // Replace existing rows so order->manifest sync stays deterministic.
+            $manifest->costEstimates()->delete();
+
+            foreach ($validated['cost_estimates'] as $estimate) {
+                $type = strtolower((string) ($estimate['type'] ?? 'freight'));
+                $description = (string) ($estimate['description'] ?? '');
+                $cost = (float) ($estimate['cost'] ?? 0);
+                $percentage = isset($estimate['percentage']) ? (float) $estimate['percentage'] : null;
+
+                if ($type === 'fuel') {
+                    $pct = max(0, min(100, $percentage ?? 0));
+                    $computedCost = round($freightSubtotal * ($pct / 100), 2);
+
+                    if ($computedCost <= 0 && $description === '' && $pct <= 0) {
+                        continue;
+                    }
+
+                    $manifest->costEstimates()->create([
+                        'type' => 'fuel',
+                        'description' => $description,
+                        'qty' => $pct,
+                        'rate' => $freightSubtotal,
+                        'est_cost' => $computedCost,
+                    ]);
+                    continue;
+                }
+
+                if ($cost <= 0 && $description === '') {
+                    continue;
+                }
+
                 $manifest->costEstimates()->create([
-                    'type' => $estimate['type'] ?? 'Freight',
-                    'description' => $estimate['description'] ?? '',
+                    'type' => $type ?: 'freight',
+                    'description' => $description,
                     'qty' => 1,
-                    'rate' => $estimate['cost'] ?? 0,
-                    'est_cost' => $estimate['cost'] ?? 0,
+                    'rate' => $cost,
+                    'est_cost' => $cost,
                 ]);
             }
-        }
+
+            $this->manifestService->syncOrderQuotesFromManifestCosts($manifest);
+        });
 
         return response()->json(['success' => true, 'message' => 'Cost estimates added successfully']);
     }

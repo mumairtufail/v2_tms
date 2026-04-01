@@ -63,12 +63,13 @@
                             :value="old('docket_number', $carrier->docket_number ?? '')"
                             placeholder="e.g. MC123456"
                         />
-                        <x-text-input
-                            label="Currency"
-                            name="currency"
-                            :value="old('currency', $carrier->currency ?? 'USD')"
-                            placeholder="e.g. USD"
-                        />
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Currency</label>
+                            <select name="currency" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 focus:border-primary-500 focus:ring-primary-500">
+                                <option value="USD" {{ old('currency', $carrier->currency ?? 'USD') === 'USD' ? 'selected' : '' }}>USD</option>
+                                <option value="CAD" {{ old('currency', $carrier->currency ?? 'USD') === 'CAD' ? 'selected' : '' }}>CAD</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 

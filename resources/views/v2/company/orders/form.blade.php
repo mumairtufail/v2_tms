@@ -11,6 +11,20 @@
     ]" />
 
     {{-- 2. Page Header with Actions --}}
+    @php
+        $statusClasses = [
+            'draft' => 'bg-gray-100 text-gray-700 border-gray-300',
+            'new' => 'bg-blue-100 text-blue-700 border-blue-300',
+            'no_quote' => 'bg-amber-100 text-amber-700 border-amber-300',
+            'quoted' => 'bg-indigo-100 text-indigo-700 border-indigo-300',
+            'booked' => 'bg-green-100 text-green-700 border-green-300',
+            'in_transit' => 'bg-cyan-100 text-cyan-700 border-cyan-300',
+            'delivered' => 'bg-emerald-100 text-emerald-700 border-emerald-300',
+            'invoiced' => 'bg-purple-100 text-purple-700 border-purple-300',
+            'paid' => 'bg-teal-100 text-teal-700 border-teal-300',
+        ];
+        $statusClass = $statusClasses[$order->status] ?? 'bg-gray-100 text-gray-700 border-gray-300';
+    @endphp
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div class="flex items-center gap-4">
             <a href="{{ route('v2.orders.index', $company) }}" class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
@@ -21,16 +35,30 @@
         </div>
         
         <div class="flex items-center gap-2">
-            <x-secondary-button @click="saveDraft()" type="button">
+            <x-secondary-button x-show="isDraftOrder()" @click="saveDraft()" type="button">
                 <span x-show="saving" class="mr-2">
                     <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                 </span>
                 Save as Draft
             </x-secondary-button>
-            <x-primary-button @click="openConfirmModal()">
-                Submit & Process
+            <x-primary-button @click="primaryAction()">
+                <span x-text="isDraftOrder() ? 'Save & Submit' : 'Submit to Quote'"></span>
             </x-primary-button>
         </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3 mt-1">
+        <span class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-full border {{ $statusClass }}">
+            Current Status: {{ ucfirst(str_replace('_', ' ', $order->status)) }}
+        </span>
+        <a href="{{ route('v2.orders.edit', ['company' => $company->slug, 'order' => $order->id]) }}" class="text-xs font-semibold text-primary-600 hover:text-primary-700 hover:underline">
+            Order ID: {{ $order->order_number }}
+        </a>
+        @if($order->customer)
+            <a href="{{ route('v2.customers.edit', ['company' => $company->slug, 'customer' => $order->customer->id]) }}" class="text-xs font-semibold text-primary-600 hover:text-primary-700 hover:underline">
+                Customer: {{ $order->customer->name }}
+            </a>
+        @endif
     </div>
 
     {{-- 3. Order Type Tabs --}}
@@ -87,6 +115,7 @@
         @method('PATCH')
         <input type="hidden" name="order_type" value="{{ $order->order_type }}">
         <input type="hidden" name="save_as_draft" x-bind:value="saving ? '1' : '0'">
+        <input type="hidden" name="submission_mode" x-bind:value="submissionMode">
         <input type="hidden" name="stops" x-bind:value="JSON.stringify(stops)">
         <input type="hidden" name="quote_data" x-bind:value="JSON.stringify(quote)">
         
@@ -100,7 +129,7 @@
                     <h3 class="text-sm font-bold text-gray-900 dark:text-white">Order References</h3>
                 </div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
                         <label class="block text-[10px] font-medium text-gray-400 uppercase">Reference Number</label>
                         <input type="text" name="ref_number" value="{{ old('ref_number', $order->ref_number) }}" class="mt-1 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md" placeholder="Internal/Customer Ref">
@@ -111,7 +140,11 @@
                     </div>
                     <div>
                         <label class="block text-[10px] font-medium text-gray-400 uppercase">Container Number</label>
-                        <input type="text" name="container_number" value="{{ old('container_number', $order->container_number) }}" class="mt-1 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md" placeholder="e.g. MSCU1234567">
+                        <input type="text" name="container_number" x-model="topContainerNumber" @input="onTopContainerInput()" class="mt-1 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md" placeholder="e.g. MSCU1234567">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-medium text-gray-400 uppercase">Special Instructions</label>
+                        <input type="text" name="special_instructions" value="{{ old('special_instructions', $order->special_instructions) }}" class="mt-1 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md" placeholder="Special instructions for this order">
                     </div>
                 </div>
             </div>
@@ -145,11 +178,18 @@
                             <template x-for="(stop, stopIndex) in stops" :key="stop.uid">
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer" @click="stop.expanded = !stop.expanded">
                                     <td class="px-3 py-2">
-                                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 text-[10px] font-bold" x-text="stopIndex + 1"></span>
+                                        <a :href="'#leg-' + stop.uid" @click.stop="stop.expanded = true" class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 text-[10px] font-bold hover:bg-primary-200 dark:hover:bg-primary-900/50" x-text="stopIndex + 1"></a>
                                     </td>
                                     <td class="px-3 py-2" x-text="stop.shipper.city ? stop.shipper.city + ', ' + stop.shipper.state : '-'"></td>
                                     <td class="px-3 py-2" x-text="stop.consignee.city ? stop.consignee.city + ', ' + stop.consignee.state : '-'"></td>
-                                    <td class="px-3 py-2" x-text="manifestsMap[stop.manifest_id] || '-'"></td>
+                                    <td class="px-3 py-2">
+                                        <template x-if="stop.manifest_id && manifestsMap[stop.manifest_id]">
+                                            <a :href="manifestEditUrl(stop.manifest_id)" @click.stop class="text-primary-600 hover:text-primary-700 hover:underline" x-text="manifestsMap[stop.manifest_id]"></a>
+                                        </template>
+                                        <template x-if="!(stop.manifest_id && manifestsMap[stop.manifest_id])">
+                                            <span>-</span>
+                                        </template>
+                                    </td>
                                     <td class="px-3 py-2" x-text="stop.commodities.length"></td>
 
                                 </tr>
@@ -161,7 +201,7 @@
                 {{-- Dynamic Stops List (Expanded Details) --}}
                 <div class="space-y-6">
                     <template x-for="(stop, stopIndex) in stops" :key="stop.uid">
-                        <div class="relative">
+                        <div class="relative" :id="'leg-' + stop.uid">
                             {{-- Connection Line --}}
                             <div x-show="stopIndex < stops.length - 1" class="absolute left-6 top-12 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-800 z-0"></div>
                             
@@ -249,7 +289,6 @@
                                                             <select x-model="stop.billing.currency" class="block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md">
                                                                 <option value="USD">USD</option>
                                                                 <option value="CAD">CAD</option>
-                                                                <option value="EUR">EUR</option>
                                                             </select>
                                                         </div>
                                                     </div>
@@ -258,8 +297,10 @@
                                                     <div>
                                                         <label class="block text-[10px] uppercase text-gray-400 font-bold mb-1">Container Number <span class="text-red-500">*</span></label>
                                                         <input type="text" x-model="stop.billing.container_number" placeholder="Container Number (required)"
+                                                               :readonly="Boolean(topContainerNumber && topContainerNumber.trim())"
                                                                :class="stop._containerError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 dark:border-gray-700'"
                                                                class="block w-full text-sm dark:bg-gray-800 dark:text-gray-300 rounded-md">
+                                                        <p x-show="topContainerNumber && topContainerNumber.trim()" class="text-[10px] text-gray-500 mt-1">Using top-level container number.</p>
                                                         <p x-show="stop._containerError" class="text-red-500 text-[10px] mt-1">Container number is required for each leg.</p>
                                                     </div>
                                                     <div>
@@ -504,7 +545,7 @@
                                         <select x-model="massManifestId" class="text-[10px] py-1 rounded border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white">
                                             <option value="" class="text-gray-500 bg-white dark:bg-gray-800">Apply to all...</option>
                                             <template x-for="manifest in manifests" :key="manifest.id">
-                                                <option :value="manifest.id" x-text="manifest.code" class="text-black dark:text-white bg-white dark:bg-gray-800"></option>
+                                                <option :value="String(manifest.id)" x-text="manifest.code" class="text-black dark:text-white bg-white dark:bg-gray-800"></option>
                                             </template>
                                         </select>
                                         <button type="button" @click="applyMassManifest()" class="text-[10px] bg-primary-50 text-primary-600 px-2 py-1 rounded hover:bg-primary-100 font-bold transition-colors">Apply</button>
@@ -536,7 +577,7 @@
                                                         <select x-model="stop.manifest_id" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-black dark:text-white focus:ring-primary-500 focus:border-primary-500 transition-shadow">
                                                             <option value="" class="text-gray-500 bg-white dark:bg-gray-800">No Manifest</option>
                                                             <template x-for="manifest in manifests" :key="manifest.id">
-                                                                <option :value="manifest.id" x-text="manifest.code" class="text-black dark:text-white bg-white dark:bg-gray-800"></option>
+                                                                <option :value="String(manifest.id)" x-text="manifest.code" class="text-black dark:text-white bg-white dark:bg-gray-800"></option>
                                                             </template>
                                                         </select>
                                                     </td>
@@ -566,11 +607,11 @@
                                     <div class="grid grid-cols-2 gap-3">
                                         <div>
                                             <label class="block text-[10px] font-medium text-gray-400 uppercase">Est. Start</label>
-                                            <input type="date" name="quote_delivery_start" x-model="quote.delivery_start" class="mt-1 block w-full text-xs border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md">
+                                            <input type="datetime-local" name="quote_delivery_start" x-model="quote.delivery_start" class="mt-1 block w-full text-xs border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md">
                                         </div>
                                         <div>
                                             <label class="block text-[10px] font-medium text-gray-400 uppercase">Est. End</label>
-                                            <input type="date" name="quote_delivery_end" x-model="quote.delivery_end" class="mt-1 block w-full text-xs border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md">
+                                            <input type="datetime-local" name="quote_delivery_end" x-model="quote.delivery_end" class="mt-1 block w-full text-xs border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md">
                                         </div>
                                     </div>
                                     
@@ -603,9 +644,16 @@
                                                             </td>
                                                             <td class="p-2"><input type="text" x-model="row.description" placeholder="Description" class="w-full border-0 bg-transparent p-0 text-[10px] dark:text-white focus:ring-0"></td>
                                                             <td class="p-2 text-right">
-                                                                <div class="flex items-center justify-end gap-1">
+                                                                <div x-show="row.type !== 'Fuel'" class="flex items-center justify-end gap-1">
                                                                     <span class="text-gray-400">$</span>
-                                                                    <input type="number" step="0.01" x-model="row.cost" placeholder="0.00" class="w-16 border-0 bg-transparent p-0 text-right text-[10px] font-bold dark:text-white focus:ring-0">
+                                                                    <input type="number" step="0.01" x-model="row.cost" placeholder="0.00" class="w-20 border-0 bg-transparent p-0 text-right text-[10px] font-bold dark:text-white focus:ring-0">
+                                                                </div>
+                                                                <div x-show="row.type === 'Fuel'" class="flex flex-col items-end gap-1">
+                                                                    <div class="flex items-center justify-end gap-1">
+                                                                        <span class="text-gray-400">%</span>
+                                                                        <input type="number" min="0" max="100" step="0.01" x-model="row.percentage" @input="normalizeQuoteRows(quote.customer_rows)" placeholder="10" class="w-20 border-0 bg-transparent p-0 text-right text-[10px] font-bold dark:text-white focus:ring-0">
+                                                                    </div>
+                                                                    <div class="text-[10px] text-gray-400" x-text="'$' + formatMoney(calculateRowAmount(row, quote.customer_rows)) + ' from Freight subtotal'"></div>
                                                                 </div>
                                                             </td>
                                                             <td class="p-2 text-center"><button type="button" @click="quote.customer_rows.splice(idx, 1)" class="text-gray-400 hover:text-red-500 text-lg">&times;</button></td>
@@ -652,9 +700,16 @@
                                                             </td>
                                                             <td class="p-2"><input type="text" x-model="row.description" placeholder="Description" class="w-full border-0 bg-transparent p-0 text-[10px] dark:text-white focus:ring-0"></td>
                                                             <td class="p-2 text-right">
-                                                                <div class="flex items-center justify-end gap-1">
+                                                                <div x-show="row.type !== 'Fuel'" class="flex items-center justify-end gap-1">
                                                                     <span class="text-gray-400">$</span>
-                                                                    <input type="number" step="0.01" x-model="row.cost" placeholder="0.00" class="w-16 border-0 bg-transparent p-0 text-right text-[10px] font-bold dark:text-white focus:ring-0">
+                                                                    <input type="number" step="0.01" x-model="row.cost" placeholder="0.00" class="w-20 border-0 bg-transparent p-0 text-right text-[10px] font-bold dark:text-white focus:ring-0">
+                                                                </div>
+                                                                <div x-show="row.type === 'Fuel'" class="flex flex-col items-end gap-1">
+                                                                    <div class="flex items-center justify-end gap-1">
+                                                                        <span class="text-gray-400">%</span>
+                                                                        <input type="number" min="0" max="100" step="0.01" x-model="row.percentage" @input="normalizeQuoteRows(quote.carrier_rows)" placeholder="10" class="w-20 border-0 bg-transparent p-0 text-right text-[10px] font-bold dark:text-white focus:ring-0">
+                                                                    </div>
+                                                                    <div class="text-[10px] text-gray-400" x-text="'$' + formatMoney(calculateRowAmount(row, quote.carrier_rows)) + ' from Freight subtotal'"></div>
                                                                 </div>
                                                             </td>
                                                             <td class="p-2 text-center"><button type="button" @click="quote.carrier_rows.splice(idx, 1)" class="text-gray-400 hover:text-red-500 text-lg">&times;</button></td>
@@ -683,11 +738,11 @@
 
                     <div class="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-3">
                         <button type="button" @click="showProcessModal = false" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
-                        <button type="button" @click="submitForm()" class="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-lg flex items-center gap-2">
+                            <button type="button" @click="submitQuote()" class="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-lg flex items-center gap-2" :disabled="submitting">
                              <span x-show="submitting">
                                 <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                              </span>
-                             Process & Finalize Order
+                                Submit Quote
                         </button>
                     </div>
                 </div>
@@ -712,28 +767,153 @@ function orderForm() {
         submitting: false,
         showProcessModal: false,
         massManifestId: '',
+        submissionMode: 'new',
+        orderStatus: @json($order->status),
+        topContainerNumber: @json(old('container_number', $order->container_number ?? '')),
 
         init() {
             if (this.stops.length === 0) {
                 this.addStop();
             }
+
+            this.manifests = (this.manifests || []).map(manifest => ({
+                ...manifest,
+                id: String(manifest.id),
+            }));
+
+            this.stops = this.stops.map(stop => ({
+                ...stop,
+                manifest_id: stop.manifest_id ? String(stop.manifest_id) : ''
+            }));
+
+            this.quote.delivery_start = this.toDateTimeLocal(this.quote.delivery_start);
+            this.quote.delivery_end = this.toDateTimeLocal(this.quote.delivery_end);
+
             // Ensure stops have service_type, measurements, and error flags
             this.stops.forEach(stop => {
                 if (!stop.service_type) stop.service_type = 'truckload';
                 if (!stop.measurements) stop.measurements = 'in_lbs';
                 if (stop._containerError === undefined) stop._containerError = false;
+
+                ['shipper', 'consignee'].forEach(role => {
+                    if (!stop[role].ready_at && (stop[role].ready_date || stop[role].ready_time)) {
+                        const legacyDate = stop[role].ready_date || '';
+                        const legacyTime = stop[role].ready_time || '00:00';
+                        if (legacyDate) {
+                            const parts = legacyDate.split('-');
+                            if (parts.length === 3) {
+                                const yy = parts[0].slice(-2);
+                                stop[role].ready_at = `${parts[1]}/${parts[2]}/${yy} ${legacyTime.slice(0, 5)}`;
+                            }
+                        }
+                    }
+
+                    if (role === 'shipper') {
+                        if (!stop[role].ready_start_at && stop[role].ready_at) stop[role].ready_start_at = stop[role].ready_at;
+                        if (!stop[role].ready_end_at && stop[role].ready_at) stop[role].ready_end_at = stop[role].ready_at;
+
+                        stop[role].ready_start_at_picker = this.toDateTimeLocal(stop[role].ready_start_at);
+                        stop[role].ready_end_at_picker = this.toDateTimeLocal(stop[role].ready_end_at);
+                    } else {
+                        if (!stop[role].requested_start_at && stop[role].ready_at) stop[role].requested_start_at = stop[role].ready_at;
+                        if (!stop[role].requested_end_at && stop[role].ready_at) stop[role].requested_end_at = stop[role].ready_at;
+
+                        stop[role].requested_start_at_picker = this.toDateTimeLocal(stop[role].requested_start_at);
+                        stop[role].requested_end_at_picker = this.toDateTimeLocal(stop[role].requested_end_at);
+                    }
+                });
             });
+
+            const assignedManifestIds = [...new Set(this.stops.map(stop => stop.manifest_id).filter(Boolean))];
+            if (assignedManifestIds.length === 1) {
+                this.massManifestId = assignedManifestIds[0];
+            }
+
+            if (this.topContainerNumber && this.topContainerNumber.trim()) {
+                this.applyTopContainerNumberToAllStops();
+            }
         },
 
         getAccessorialName(id) {
             return this.accessorialsList[id] || 'Unknown';
         },
 
+        toDateTimeLocal(value) {
+            if (!value) return '';
+
+            const direct = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+            if (direct.test(value)) return value;
+
+            const display = /^(\d{2})\/(\d{2})\/(\d{2})\s(\d{2}):(\d{2})$/;
+            const displayMatch = String(value).match(display);
+            if (displayMatch) {
+                const [, mm, dd, yy, hh, min] = displayMatch;
+                return `20${yy}-${mm}-${dd}T${hh}:${min}`;
+            }
+
+            const spaced = /^(\d{4}-\d{2}-\d{2})\s(\d{2}:\d{2})(:\d{2})?$/;
+            const spacedMatch = String(value).match(spaced);
+            if (spacedMatch) {
+                return `${spacedMatch[1]}T${spacedMatch[2]}`;
+            }
+
+            const dateObj = new Date(value);
+            if (!Number.isNaN(dateObj.getTime())) {
+                const y = dateObj.getFullYear();
+                const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const d = String(dateObj.getDate()).padStart(2, '0');
+                const h = String(dateObj.getHours()).padStart(2, '0');
+                const i = String(dateObj.getMinutes()).padStart(2, '0');
+                return `${y}-${m}-${d}T${h}:${i}`;
+            }
+
+            return '';
+        },
+
+        fromDateTimeLocal(value) {
+            if (!value) return '';
+
+            const [datePart, timePart = '00:00'] = String(value).split('T');
+            const parts = datePart.split('-');
+            if (parts.length !== 3) return '';
+
+            const yy = parts[0].slice(-2);
+            const mm = parts[1];
+            const dd = parts[2];
+            return `${mm}/${dd}/${yy} ${timePart.slice(0, 5)}`;
+        },
+
+        syncStopDateTime(stop, role, bound) {
+            const isStart = bound === 'start';
+
+            if (role === 'shipper') {
+                const pickerField = isStart ? 'ready_start_at_picker' : 'ready_end_at_picker';
+                const valueField = isStart ? 'ready_start_at' : 'ready_end_at';
+                stop[role][valueField] = this.fromDateTimeLocal(stop[role][pickerField]);
+                if (isStart) {
+                    stop[role].ready_at = stop[role][valueField];
+                }
+            } else {
+                const pickerField = isStart ? 'requested_start_at_picker' : 'requested_end_at_picker';
+                const valueField = isStart ? 'requested_start_at' : 'requested_end_at';
+                stop[role][valueField] = this.fromDateTimeLocal(stop[role][pickerField]);
+                if (!isStart) {
+                    stop[role].ready_at = stop[role][valueField];
+                }
+            }
+        },
+
         addStop() {
             let autofill = {
                 company_name: '', address_1: '', address_2: '', city: '', state: '', zip: '', country: 'US',
                 contact_name: '', phone: '', email: '', opening_time: '08:00', closing_time: '17:00',
-                ready_date: '', ready_time: '', appointment: false, notes: ''
+                ready_at: '',
+                ready_start_at: '',
+                ready_end_at: '',
+                ready_start_at_picker: '',
+                ready_end_at_picker: '',
+                appointment: false,
+                notes: ''
             };
 
             if (this.stops.length > 0) {
@@ -749,12 +929,38 @@ function orderForm() {
                 service_type: 'truckload',
                 measurements: 'in_lbs',
                 shipper: { ...autofill },
-                consignee: { company_name: '', address_1: '', address_2: '', city: '', state: '', zip: '', country: 'US', contact_name: '', phone: '', email: '', opening_time: '08:00', closing_time: '17:00', ready_date: '', ready_time: '', appointment: false, notes: '' },
+                consignee: { company_name: '', address_1: '', address_2: '', city: '', state: '', zip: '', country: 'US', contact_name: '', phone: '', email: '', opening_time: '08:00', closing_time: '17:00', ready_at: '', requested_start_at: '', requested_end_at: '', requested_start_at_picker: '', requested_end_at_picker: '', appointment: false, notes: '' },
                 _containerError: false,
-                billing: { customs_broker: '', port_of_entry: '', container_number: '', declared_value: 0, currency: 'USD', ref_number: '', customer_po_number: '' },
+                billing: { customs_broker: '', port_of_entry: '', container_number: this.topContainerNumber || '', declared_value: 0, currency: 'USD', ref_number: '', customer_po_number: '' },
                 commodities: [this.newCommodity()],
                 accessorials: []
             });
+
+            if (this.topContainerNumber && this.topContainerNumber.trim()) {
+                this.applyTopContainerNumberToAllStops();
+            }
+        },
+
+        onTopContainerInput() {
+            if (!this.topContainerNumber || this.topContainerNumber.trim() === '') {
+                return;
+            }
+
+            this.applyTopContainerNumberToAllStops();
+        },
+
+        applyTopContainerNumberToAllStops() {
+            const sharedValue = (this.topContainerNumber || '').trim();
+            if (!sharedValue) return;
+
+            this.stops = this.stops.map(stop => ({
+                ...stop,
+                _containerError: false,
+                billing: {
+                    ...stop.billing,
+                    container_number: sharedValue,
+                }
+            }));
         },
 
         newCommodity() {
@@ -790,7 +996,7 @@ function orderForm() {
         },
 
         addQuoteRow(type) {
-            this.quote[type + '_rows'].push({ type: 'Freight', description: '', cost: 0 });
+            this.quote[type + '_rows'].push({ type: 'Freight', description: '', cost: 0, percentage: 0 });
         },
 
         applyMassManifest() {
@@ -802,17 +1008,7 @@ function orderForm() {
             console.log('Applying manifest ID:', this.massManifestId);
             
             // Normalize target ID to ensure it matches the types in the options
-            let targetId = this.massManifestId;
-            
-            // If the manifests array is available, find the matching ID to use its exact type
-            if (this.manifests && this.manifests.length) {
-                const match = this.manifests.find(m => m.id == targetId);
-                if (match) {
-                    targetId = match.id;
-                }
-            } else if (!isNaN(targetId) && targetId !== '') {
-                targetId = Number(targetId);
-            }
+            const targetId = String(this.massManifestId);
             
             // Use map to create a new array, forcing Alpine to react
             this.stops = this.stops.map(stop => {
@@ -821,8 +1017,43 @@ function orderForm() {
             });
         },
 
+        freightSubtotal(rows) {
+            return rows.reduce((acc, row) => {
+                if (row.type === 'Freight') {
+                    return acc + (parseFloat(row.cost) || 0);
+                }
+                return acc;
+            }, 0);
+        },
+
+        calculateRowAmount(row, rows) {
+            if (row.type === 'Fuel') {
+                const percentage = parseFloat(row.percentage) || 0;
+                return this.freightSubtotal(rows) * (percentage / 100);
+            }
+
+            return parseFloat(row.cost) || 0;
+        },
+
         calculateTotal(rows) {
-            return rows.reduce((acc, row) => acc + (parseFloat(row.cost) || 0), 0).toFixed(2);
+            return rows.reduce((acc, row) => acc + this.calculateRowAmount(row, rows), 0).toFixed(2);
+        },
+
+        formatMoney(value) {
+            return (parseFloat(value) || 0).toFixed(2);
+        },
+
+        normalizeQuoteRows(rows) {
+            const freightBase = this.freightSubtotal(rows);
+            rows.forEach(row => {
+                if (row.type === 'Fuel') {
+                    const percentage = parseFloat(row.percentage) || 0;
+                    row.cost = +(freightBase * (percentage / 100)).toFixed(2);
+                } else {
+                    row.percentage = row.percentage ?? '';
+                    row.cost = parseFloat(row.cost) || 0;
+                }
+            });
         },
 
         calculateProfit() {
@@ -840,6 +1071,25 @@ function orderForm() {
 
         saveDraft() {
             this.saving = true;
+            this.submissionMode = 'draft';
+            document.getElementById('orderForm').submit();
+        },
+
+        isDraftOrder() {
+            return this.orderStatus === 'draft';
+        },
+
+        primaryAction() {
+            if (this.isDraftOrder()) {
+                this.submitAsNew();
+                return;
+            }
+
+            this.openConfirmModal();
+        },
+
+        submitAsNew() {
+            this.submissionMode = 'new';
             document.getElementById('orderForm').submit();
         },
 
@@ -847,52 +1097,84 @@ function orderForm() {
             this.showProcessModal = true;
         },
 
-        async submitForm() {
-            this.submitting = true;
-
-            // Validate: container number required for each leg
-            let valid = true;
-            this.stops.forEach(stop => {
-                if (!stop.billing.container_number || stop.billing.container_number.trim() === '') {
-                    stop._containerError = true;
-                    stop.expanded = true;
-                    valid = false;
-                } else {
-                    stop._containerError = false;
-                }
-            });
-
-            if (!valid) {
-                this.submitting = false;
+        async submitQuote() {
+            const isValid = this.prepareQuoteSubmission();
+            if (!isValid) {
                 return;
             }
 
-            // Check if we need to sync costs to manifest
-            if (this.massManifestId && this.quote.carrier_rows.length > 0) {
-                try {
-                    console.log('Syncing costs to manifest:', this.massManifestId);
-                    // Use company slug from PHP
-                    const companySlug = '{{ $company->slug }}';
-                    const response = await fetch(`/v2/${companySlug}/manifests/${this.massManifestId}/cost-estimates`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                        },
-                        body: JSON.stringify({
-                            cost_estimates: this.quote.carrier_rows
-                        })
-                    });
-                    
-                    if (!response.ok) {
-                        console.warn('Failed to sync costs to manifest');
-                    }
-                } catch (e) {
-                    console.error('Error syncing costs:', e);
-                }
+            const targetManifestIds = [...new Set([
+                this.massManifestId,
+                ...this.stops.map(stop => stop.manifest_id)
+            ].filter(Boolean))];
+
+            if (targetManifestIds.length > 0 && this.quote.carrier_rows.length > 0) {
+                await this.syncCarrierCostsToManifests(targetManifestIds);
             }
 
             document.getElementById('orderForm').submit();
+        },
+
+        prepareQuoteSubmission() {
+            this.submitting = true;
+            this.submissionMode = 'quote';
+
+            this.normalizeQuoteRows(this.quote.customer_rows);
+            this.normalizeQuoteRows(this.quote.carrier_rows);
+
+            this.stops.forEach(stop => {
+                if (stop.shipper.ready_start_at_picker) this.syncStopDateTime(stop, 'shipper', 'start');
+                if (stop.shipper.ready_end_at_picker) this.syncStopDateTime(stop, 'shipper', 'end');
+                if (stop.consignee.requested_start_at_picker) this.syncStopDateTime(stop, 'consignee', 'start');
+                if (stop.consignee.requested_end_at_picker) this.syncStopDateTime(stop, 'consignee', 'end');
+            });
+
+            if (this.topContainerNumber && this.topContainerNumber.trim()) {
+                this.applyTopContainerNumberToAllStops();
+            }
+
+            this.stops.forEach(stop => {
+                stop._containerError = false;
+            });
+
+            return true;
+        },
+
+        async syncCarrierCostsToManifests(targetManifestIds) {
+            try {
+                const urlTemplate = '{{ route('v2.manifests.cost-estimates.store', ['company' => $company->slug, 'manifest' => '__MANIFEST__']) }}';
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+                const payloadRows = this.quote.carrier_rows.map(row => {
+                    const rowType = String(row.type || '').toLowerCase();
+                    return {
+                        type: row.type,
+                        description: row.description,
+                        cost: parseFloat(row.cost) || 0,
+                        percentage: rowType === 'fuel' ? (parseFloat(row.percentage) || 0) : null,
+                    };
+                });
+
+                const requests = targetManifestIds.map(manifestId => {
+                    const url = urlTemplate.replace('__MANIFEST__', manifestId);
+                    return fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken
+                        },
+                        body: JSON.stringify({ cost_estimates: payloadRows })
+                    }).then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to sync costs to manifest ' + manifestId);
+                        }
+                    });
+                });
+
+                await Promise.all(requests);
+            } catch (e) {
+                console.error('Error syncing manifest costs:', e);
+            }
         },
 
         createPendingManifest() {
@@ -911,7 +1193,7 @@ function orderForm() {
                     // Ensure manifestsMap is reactive
                     this.manifestsMap = { ...this.manifestsMap, [data.manifest.id]: data.manifest.code };
                     
-                    this.massManifestId = data.manifest.id;
+                    this.massManifestId = String(data.manifest.id);
                     
                     // Auto-assign to all stops
                     this.applyMassManifest();
@@ -926,6 +1208,11 @@ function orderForm() {
             .finally(() => {
                 this.creatingManifest = false;
             });
+        },
+
+        manifestEditUrl(manifestId) {
+            if (!manifestId) return '#';
+            return '{{ route('v2.manifests.edit', ['company' => $company->slug, 'manifest' => '__MANIFEST__']) }}'.replace('__MANIFEST__', manifestId);
         }
     }
 }

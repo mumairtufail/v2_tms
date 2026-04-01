@@ -22,7 +22,7 @@ class CarrierRequest extends FormRequest
             'state' => ['nullable', 'string', 'max:100'],
             'post_code' => ['nullable', 'string', 'max:20'],
             'country' => ['nullable', 'string', 'max:50'],
-            'currency' => ['nullable', 'string', 'max:10'],
+            'currency' => ['nullable', 'string', 'in:USD,CAD'],
             'is_active' => ['boolean'],
         ];
     }
@@ -31,6 +31,7 @@ class CarrierRequest extends FormRequest
     {
         $this->merge([
             'is_active' => $this->boolean('is_active'),
+            'currency' => strtoupper((string) $this->input('currency', 'USD')),
         ]);
     }
 }

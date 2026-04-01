@@ -6,6 +6,7 @@ use App\Models\Manifest;
 use App\Models\ManifestDriver;
 use App\Models\ManifestCarrier;
 use App\Models\ManifestEquipment;
+use App\Models\OrderQuote;
 use App\Models\Stop;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -62,6 +63,8 @@ class ManifestService
             if (isset($data['cost_estimates'])) {
                 // Remove existing estimates to replace with new set
                 $manifest->costEstimates()->delete();
+
+                $freightSubtotal = $this->extractFreightSubtotal($data['cost_estimates']);
                 
                 foreach ($data['cost_estimates'] as $estimate) {
                     // Skip empty rows if any
@@ -69,17 +72,106 @@ class ManifestService
                         continue;
                     }
 
-                    // Calculate total cost
-                    $qty = floatval($estimate['qty'] ?? 0);
-                    $rate = floatval($estimate['rate'] ?? 0);
-                    $estimate['est_cost'] = $qty * $rate;
-                    
-                    $manifest->costEstimates()->create($estimate);
+                    $type = strtolower((string) ($estimate['type'] ?? 'miscellaneous'));
+                    $description = (string) ($estimate['description'] ?? '');
+                    $qty = (float) ($estimate['qty'] ?? 0);
+                    $rate = (float) ($estimate['rate'] ?? 0);
+
+                    if ($type === 'fuel') {
+                        $percentage = max(0, min(100, $qty));
+                        $calculatedCost = round($freightSubtotal * ($percentage / 100), 2);
+
+                        if ($calculatedCost <= 0 && $description === '' && $percentage <= 0) {
+                            continue;
+                        }
+
+                        $manifest->costEstimates()->create([
+                            'type' => 'fuel',
+                            'description' => $description,
+                            'qty' => $percentage,
+                            'rate' => $freightSubtotal,
+                            'est_cost' => $calculatedCost,
+                        ]);
+                        continue;
+                    }
+
+                    $estCost = round($qty * $rate, 2);
+                    if ($estCost <= 0 && $description === '') {
+                        continue;
+                    }
+
+                    $manifest->costEstimates()->create([
+                        'type' => $type,
+                        'description' => $description,
+                        'qty' => $qty,
+                        'rate' => $rate,
+                        'est_cost' => $estCost,
+                    ]);
                 }
+
+                $this->syncOrderQuotesFromManifestCosts($manifest);
             }
             
             return $manifest;
         });
+    }
+
+    public function syncOrderQuotesFromManifestCosts(Manifest $manifest): void
+    {
+        $manifest->loadMissing('costEstimates', 'orderStops.order.quote.costs');
+
+        $carrierRows = $manifest->costEstimates->map(function ($estimate) {
+            $type = strtolower((string) ($estimate->type ?? 'miscellaneous'));
+            $percentage = $type === 'fuel'
+                ? max(0, min(100, (float) ($estimate->qty ?? 0)))
+                : null;
+
+            return [
+                'category' => 'carrier',
+                'type' => ucwords(str_replace('_', ' ', $type)),
+                'description' => (string) ($estimate->description ?? ''),
+                'cost' => (float) ($estimate->est_cost ?? 0),
+                'percentage' => $percentage,
+            ];
+        })->values();
+
+        $orders = $manifest->orderStops
+            ->pluck('order')
+            ->filter()
+            ->unique('id')
+            ->values();
+
+        foreach ($orders as $order) {
+            $quote = $order->quote;
+            if (!$quote) {
+                $quote = OrderQuote::create([
+                    'order_id' => $order->id,
+                    'service_id' => null,
+                    'notes' => null,
+                    'delivery_start_date' => null,
+                    'delivery_end_date' => null,
+                ]);
+            }
+
+            $quote->costs()->where('category', 'carrier')->delete();
+
+            foreach ($carrierRows as $row) {
+                $quote->costs()->create($row);
+            }
+        }
+    }
+
+    private function extractFreightSubtotal(array $estimates): float
+    {
+        return collect($estimates)
+            ->filter(function ($estimate) {
+                return strtolower((string) ($estimate['type'] ?? '')) !== 'fuel';
+            })
+            ->sum(function ($estimate) {
+                $qty = (float) ($estimate['qty'] ?? 0);
+                $rate = (float) ($estimate['rate'] ?? 0);
+                return $qty * $rate;
+            });
     }
 
     public function deleteManifest(Manifest $manifest): void

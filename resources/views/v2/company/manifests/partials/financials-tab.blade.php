@@ -1,4 +1,15 @@
-<div class="space-y-6" x-data="costEstimates({{ $manifest->costEstimates->toJson() }})">
+@php
+    $manifestOrders = $manifest->orderStops->pluck('order')->filter()->unique('id');
+    $manifestRevenue = $manifestOrders->sum(function ($order) {
+        return optional($order->quote)
+            ? $order->quote->costs->where('category', 'customer')->sum(function ($cost) {
+                return (float) ($cost->cost ?? 0);
+            })
+            : 0;
+    });
+@endphp
+
+<div class="space-y-6" x-data="costEstimates({{ $manifest->costEstimates->toJson() }}, {{ (float) $manifestRevenue }})">
     <!-- Cost Estimates Section -->
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
         <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
@@ -33,9 +44,9 @@
                         <tr>
                             <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Type</th>
                             <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Description</th>
-                            <th class="px-6 py-4 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest w-32">Qty</th>
-                            <th class="px-6 py-4 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest w-40">Rate</th>
-                            <th class="px-6 py-4 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest w-40">Est. Cost</th>
+                            <th class="px-6 py-4 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest w-32">Qty / %</th>
+                            <th class="px-6 py-4 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest w-40">Rate / Base</th>
+                            <th class="px-6 py-4 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest w-40">Cost</th>
                             <th class="px-6 py-4 w-16"></th>
                         </tr>
                     </thead>
@@ -60,22 +71,34 @@
                                            class="w-full rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500 px-3 py-2">
                                 </td>
                                 <td class="px-6 py-4">
-                                    <input type="number" x-model.number="row.qty" 
-                                           :name="'cost_estimates[' + index + '][qty]'"
-                                           min="0" step="1"
-                                           class="w-full rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 text-sm text-right focus:border-primary-500 focus:ring-primary-500 px-3 py-2">
-                                </td>
-                                <td class="px-6 py-4">
                                     <div class="relative">
-                                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
-                                        <input type="number" x-model.number="row.rate" 
-                                               :name="'cost_estimates[' + index + '][rate]'"
+                                        <input type="number" x-model.number="row.qty" 
+                                               :name="'cost_estimates[' + index + '][qty]'"
                                                min="0" step="0.01"
-                                               class="w-full pl-8 rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 text-sm text-right focus:border-primary-500 focus:ring-primary-500 px-3 py-2">
+                                               class="w-full rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 text-sm text-right focus:border-primary-500 focus:ring-primary-500 px-3 py-2"
+                                               :placeholder="isFuelRow(row) ? 'Fuel %' : 'Qty'">
+                                        <span x-show="isFuelRow(row)" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">%</span>
                                     </div>
                                 </td>
+                                <td class="px-6 py-4">
+                                    <template x-if="!isFuelRow(row)">
+                                        <div class="relative">
+                                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
+                                            <input type="number" x-model.number="row.rate" 
+                                                   :name="'cost_estimates[' + index + '][rate]'"
+                                                   min="0" step="0.01"
+                                                   class="w-full pl-8 rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 text-sm text-right focus:border-primary-500 focus:ring-primary-500 px-3 py-2">
+                                        </div>
+                                    </template>
+                                    <template x-if="isFuelRow(row)">
+                                        <div>
+                                            <input type="hidden" :name="'cost_estimates[' + index + '][rate]'" :value="freightSubtotal.toFixed(2)">
+                                            <div class="w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 text-sm text-right px-3 py-2 bg-gray-50 dark:bg-gray-800" x-text="formatCurrency(freightSubtotal)"></div>
+                                        </div>
+                                    </template>
+                                </td>
                                 <td class="px-6 py-4 text-right font-bold text-gray-900 dark:text-white">
-                                    <span x-text="formatCurrency(row.qty * row.rate)"></span>
+                                    <span x-text="formatCurrency(rowEstimatedCost(row))"></span>
                                 </td>
                                 <td class="px-6 py-4 text-center">
                                     <button type="button" @click="removeRow(index)" 
@@ -91,7 +114,7 @@
                     </tbody>
                     <tfoot class="bg-gray-50/80 dark:bg-gray-900/80 backdrop-blur-sm border-t border-gray-200 dark:border-gray-800">
                         <tr>
-                            <td colspan="4" class="px-6 py-5 text-right font-bold text-gray-500 dark:text-gray-400 tracking-widest uppercase text-xs">Total Estimated Cost</td>
+                            <td colspan="4" class="px-6 py-5 text-right font-bold text-gray-500 dark:text-gray-400 tracking-widest uppercase text-xs">Total Cost</td>
                             <td class="px-6 py-5 text-right">
                                 <span class="bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 px-6 py-2.5 rounded-xl font-bold text-2xl ring-1 ring-primary-500/20 shadow-sm" x-text="formatCurrency(total)"></span>
                             </td>
@@ -125,8 +148,8 @@
                     </svg>
                 </div>
                 <div>
-                    <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Est. Revenue</p>
-                    <p class="text-2xl font-black text-gray-900 dark:text-white mt-1">$0.00</p>
+                    <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Revenue</p>
+                    <p class="text-2xl font-black text-gray-900 dark:text-white mt-1" x-text="formatCurrency(revenue)">$0.00</p>
                 </div>
             </div>
         </div>
@@ -139,7 +162,7 @@
                     </svg>
                 </div>
                 <div>
-                    <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Est. Costs</p>
+                    <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Costs</p>
                     <p class="text-2xl font-black text-gray-900 dark:text-white mt-1" x-text="formatCurrency(total)">$0.00</p>
                 </div>
             </div>
@@ -153,8 +176,8 @@
                     </svg>
                 </div>
                 <div>
-                    <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Est. Profit</p>
-                    <p class="text-2xl font-black text-primary-600 dark:text-primary-400 mt-1" x-text="formatCurrency(0 - total)">$0.00</p>
+                    <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Profit</p>
+                    <p class="text-2xl font-black text-primary-600 dark:text-primary-400 mt-1" x-text="formatCurrency(profit)">$0.00</p>
                 </div>
             </div>
         </div>

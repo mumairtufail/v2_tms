@@ -55,10 +55,16 @@
                     :options="[
                         'new' => 'New', 
                         'draft' => 'Draft', 
+                        'no_quote' => 'No Quote', 
+                        'quoted' => 'Quoted', 
+                        'booked' => 'Booked', 
+                        'in_transit' => 'In Transit', 
+                        'delivered' => 'Delivered', 
+                        'invoiced' => 'Invoiced',
+                        'paid' => 'Paid',
                         'active' => 'Active', 
                         'dispatched' => 'Dispatched', 
                         'completed' => 'Completed', 
-                        'invoiced' => 'Invoiced',
                         'cancelled' => 'Cancelled'
                     ]" 
                     placeholder="All Status" class="w-full" />
@@ -112,17 +118,17 @@
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                 @forelse($orders as $index => $order)
-                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors group">
-                    <td class="px-4 py-2 align-top">
-                        <input type="checkbox" value="{{ $order->id }}" x-model="selected" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors group cursor-pointer" @click="window.location.href='{{ route('v2.orders.edit', ['company' => $company->slug, 'order' => $order->id]) }}'">
+                    <td class="px-4 py-2 align-top" @click.stop>
+                        <input type="checkbox" value="{{ $order->id }}" x-model="selected" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500" @click.stop>
                     </td>
                     <td class="px-4 py-2 text-gray-500 align-top">{{ $orders->firstItem() + $index }}</td>
                     
                     <td class="px-4 py-2 align-top">
                         <div class="flex flex-col">
-                            <span class="font-bold text-gray-900 dark:text-white group-hover:text-primary-600 transition-colors">
+                            <a href="{{ route('v2.orders.edit', ['company' => $company->slug, 'order' => $order->id]) }}" class="font-bold text-gray-900 dark:text-white group-hover:text-primary-600 transition-colors hover:underline" @click.stop>
                                 <x-search-highlight :text="$order->order_number" :search="request('search')" />
-                            </span>
+                            </a>
                             <span class="text-xs text-gray-500 mt-0.5">Type: {{ str_replace('_', ' ', ucfirst($order->order_type)) }}</span>
                             @if($order->ref_number)
                                 <span class="text-xs text-gray-400 mt-0.5">Ref: {{ $order->ref_number }}</span>
@@ -132,9 +138,13 @@
 
                     <td class="px-4 py-2 align-top">
                         <div class="flex flex-col">
-                            <span class="font-medium text-gray-900 dark:text-white">
-                                <x-search-highlight :text="$order->customer->name ?? 'N/A'" :search="request('search')" />
-                            </span>
+                            @if(!empty($order->customer))
+                                <a href="{{ route('v2.customers.edit', ['company' => $company->slug, 'customer' => $order->customer->id]) }}" class="font-medium text-gray-900 dark:text-white hover:text-primary-600 hover:underline" @click.stop>
+                                    <x-search-highlight :text="$order->customer->name" :search="request('search')" />
+                                </a>
+                            @else
+                                <span class="font-medium text-gray-900 dark:text-white">N/A</span>
+                            @endif
                             @if($order->customer_po_number)
                                 <span class="text-xs text-gray-500">PO: {{ $order->customer_po_number }}</span>
                             @endif
@@ -167,6 +177,13 @@
                             $statusClasses = [
                                 'new' => 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800',
                                 'draft' => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 border-gray-200 dark:border-gray-700',
+                                'no_quote' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+                                'quoted' => 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
+                                'booked' => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800',
+                                'in_transit' => 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800',
+                                'delivered' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+                                'invoiced' => 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border-purple-200 dark:border-purple-800',
+                                'paid' => 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300 border-teal-200 dark:border-teal-800',
                                 'active' => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800',
                                 'completed' => 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border-purple-200 dark:border-purple-800',
                                 'cancelled' => 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800',
@@ -174,7 +191,7 @@
                             $class = $statusClasses[$order->status] ?? 'bg-gray-100 text-gray-700 border-gray-200';
                         @endphp
                         <span class="px-2 py-0.5 text-xs font-semibold rounded-full border {{ $class }}">
-                            {{ ucfirst($order->status) }}
+                            {{ ucfirst(str_replace('_', ' ', $order->status)) }}
                         </span>
                     </td>
                     
@@ -189,7 +206,7 @@
                         @endif
                     </td> -->
                     
-                    <td class="px-4 py-2 align-top text-right">
+                    <td class="px-4 py-2 align-top text-right" @click.stop>
                         <div class="flex items-center justify-end gap-1">
                             <!-- @if(!$order->quickbooks_invoice_id && auth()->user()->hasPermission('orders', 'update'))
                             <form action="{{ route('v2.orders.sync-quickbooks', ['company' => $company->slug, 'order' => $order->id]) }}" method="POST" class="inline">
@@ -200,12 +217,12 @@
                             </form>
                             @endif -->
                             @if(auth()->user()->hasPermission('orders', 'update'))
-                            <a href="{{ route('v2.orders.edit', ['company' => $company->slug, 'order' => $order->id]) }}" class="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-all" title="Edit Order">
+                            <a href="{{ route('v2.orders.edit', ['company' => $company->slug, 'order' => $order->id]) }}" class="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-all" title="Edit Order" @click.stop>
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                             </a>
                             @endif
                             @if(auth()->user()->hasPermission('orders', 'delete'))
-                            <button type="button" @click="$dispatch('open-modal', 'delete-order-{{ $order->id }}')" class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all" title="Delete">
+                            <button type="button" @click.stop="$dispatch('open-modal', 'delete-order-{{ $order->id }}')" class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all" title="Delete">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                             </button>
                             @endif

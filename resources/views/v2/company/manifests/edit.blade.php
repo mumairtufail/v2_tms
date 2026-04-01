@@ -484,7 +484,7 @@ function manifestEdit() {
     }
 }
 
-function costEstimates(initialData) {
+function costEstimates(initialData, initialRevenue = 0) {
     // Robustly handle initialData as array or object
     let data = [];
     if (Array.isArray(initialData)) {
@@ -496,13 +496,50 @@ function costEstimates(initialData) {
     console.log('Initializing costEstimates with data:', data);
 
     return {
-        rows: data.length > 0 ? data : [
-            { type: 'fuel', description: '', qty: 1, rate: 0 },
-        ],
+        rows: data.length > 0
+            ? data.map(row => ({
+                type: row.type || 'miscellaneous',
+                description: row.description || '',
+                qty: Number(row.qty || 0),
+                rate: Number(row.rate || 0),
+            }))
+            : [
+                { type: 'fuel', description: '', qty: 0, rate: 0 },
+            ],
+        revenue: Number(initialRevenue || 0),
         submitting: false,
+
+        isFuelRow(row) {
+            return String(row.type || '').toLowerCase() === 'fuel';
+        },
+
+        get freightSubtotal() {
+            return this.rows.reduce((sum, row) => {
+                if (this.isFuelRow(row)) {
+                    return sum;
+                }
+
+                const qty = Number(row.qty || 0);
+                const rate = Number(row.rate || 0);
+                return sum + (qty * rate);
+            }, 0);
+        },
+
+        rowEstimatedCost(row) {
+            if (this.isFuelRow(row)) {
+                const percentage = Number(row.qty || 0);
+                return this.freightSubtotal * (Math.max(0, Math.min(100, percentage)) / 100);
+            }
+
+            return Number(row.qty || 0) * Number(row.rate || 0);
+        },
         
         get total() {
-            return this.rows.reduce((sum, row) => sum + (Number(row.qty || 0) * Number(row.rate || 0)), 0);
+            return this.rows.reduce((sum, row) => sum + this.rowEstimatedCost(row), 0);
+        },
+
+        get profit() {
+            return this.revenue - this.total;
         },
         
         addRow() {
