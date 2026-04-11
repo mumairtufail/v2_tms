@@ -195,7 +195,8 @@ class OrderController extends Controller
                     'cube' => 0,
                     'freight_class' => '',
                 ]],
-                'accessorials' => $stop->accessorials->pluck('id')->map(fn($id) => (string)$id)->toArray(),
+                'accessorials'  => $stop->accessorials->pluck('id')->map(fn($id) => (string)$id)->toArray(),
+                'special_instructions' => $stop->special_instructions ?? '',
             ];
         });
 
@@ -419,9 +420,10 @@ class OrderController extends Controller
                 'start_time' => $startTime,
                 'end_time' => $endTime,
                 'is_appointment' => (bool)($stopData['shipper']['appointment'] ?? false),
-                'notes' => $stopData['shipper']['notes'] ?? '',
-                'consignee_data' => $consigneePayload,
-                'billing_data' => $stopData['billing'] ?? [],
+                'notes'                => $stopData['shipper']['notes'] ?? '',
+                'special_instructions' => $stopData['special_instructions'] ?? '',
+                'consignee_data'       => $consigneePayload,
+                'billing_data'         => $stopData['billing'] ?? [],
             ];
 
             // Create or update stop

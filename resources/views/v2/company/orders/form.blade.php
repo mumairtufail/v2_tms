@@ -315,7 +315,34 @@
                                             </div>
                                         </div>
 
+                                        {{-- ── Special Instructions (Required) ── --}}
+                                        <div class="pt-4 border-t border-gray-100 dark:border-gray-800">
+                                            <div class="flex items-center gap-2 mb-3">
+                                                <div class="w-2 h-2 rounded-full bg-purple-500 ring-4 ring-purple-100 dark:ring-purple-900/30"></div>
+                                                <h4 class="text-xs font-bold text-gray-500 uppercase">
+                                                    Special Instructions
+                                                    <span class="text-red-500 ml-0.5">*</span>
+                                                    <span class="ml-2 text-[9px] font-normal text-gray-400 normal-case">Required for each leg</span>
+                                                </h4>
+                                            </div>
+                                            <textarea
+                                                x-model="stop.special_instructions"
+                                                rows="3"
+                                                placeholder="Enter any special handling, pickup, or delivery instructions for this leg…"
+                                                :class="stop._siError
+                                                    ? 'border-red-400 focus:border-red-500 focus:ring-red-400 bg-red-50 dark:bg-red-900/10'
+                                                    : 'border-gray-200 dark:border-gray-700 focus:ring-primary-500 focus:border-primary-500'"
+                                                @input="stop._siError = false"
+                                                class="block w-full text-sm rounded-md dark:bg-gray-800 dark:text-gray-300 transition-colors resize-none"
+                                            ></textarea>
+                                            <p x-show="stop._siError" class="mt-1 text-xs text-red-500 flex items-center gap-1">
+                                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                                Special instructions are required for this leg.
+                                            </p>
+                                        </div>
+
                                         {{-- Commodities Section - Rose Rocket Style --}}
+
                                         <div class="pt-4 border-t border-gray-100 dark:border-gray-800">
                                             <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
                                                 {{-- Commodities Header with Count --}}
@@ -549,7 +576,8 @@ function orderForm() {
 
             this.stops = this.stops.map(stop => ({
                 ...stop,
-                manifest_id: stop.manifest_id ? String(stop.manifest_id) : ''
+                manifest_id: stop.manifest_id ? String(stop.manifest_id) : '',
+                special_instructions: stop.special_instructions ?? '',
             }));
 
             // ── Initialize Quote Rows ─────────────────────────────────────────
@@ -599,6 +627,7 @@ function orderForm() {
                 if (!stop.service_type) stop.service_type = 'truckload';
                 if (!stop.measurements) stop.measurements = 'in_lbs';
                 if (stop._containerError === undefined) stop._containerError = false;
+                if (stop._siError === undefined) stop._siError = false;
 
                 ['shipper', 'consignee'].forEach(role => {
                     if (!stop[role].ready_at && (stop[role].ready_date || stop[role].ready_time)) {
@@ -733,6 +762,7 @@ function orderForm() {
                 manifest_id: '',
                 service_type: 'truckload',
                 measurements: 'in_lbs',
+                special_instructions: '',
                 shipper: { ...autofill },
                 consignee: { company_name: '', address_1: '', address_2: '', city: '', state: '', zip: '', country: 'US', contact_name: '', phone: '', email: '', opening_time: '08:00', closing_time: '17:00', ready_at: '', requested_start_at: '', requested_end_at: '', requested_start_at_picker: '', requested_end_at_picker: '', appointment: false, notes: '' },
                 _containerError: false,
@@ -999,9 +1029,27 @@ freightSubtotal(rows) {
                 this.applyTopContainerNumberToAllStops();
             }
 
+            // ── Validate required fields ────────────────────────────────────
+            let formValid = true;
+
             this.stops.forEach(stop => {
                 stop._containerError = false;
+                stop._siError = !stop.special_instructions || !stop.special_instructions.trim();
+                if (stop._siError) {
+                    stop.expanded = true; // auto-expand leg so error is visible
+                    formValid = false;
+                }
             });
+
+            if (!formValid) {
+                this.submitting = false;
+                // Scroll to first error after Alpine flushes the DOM open
+                setTimeout(() => {
+                    const el = document.querySelector('.border-red-400');
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 80);
+                return false;
+            }
 
             return true;
         },
