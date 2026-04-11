@@ -206,16 +206,22 @@ class OrderController extends Controller
             'delivery_start' => $quote->delivery_start_date ? Carbon::parse($quote->delivery_start_date)->format('Y-m-d\\TH:i') : '',
             'delivery_end' => $quote->delivery_end_date ? Carbon::parse($quote->delivery_end_date)->format('Y-m-d\\TH:i') : '',
             'customer_rows' => $quote->costs->where('category', 'customer')->map(fn($c) => [
-                'type' => $c->type ?? 'Freight',
+                'type'        => $c->type ?? 'Freight',
                 'description' => $c->description ?? '',
-                'cost' => $c->cost ?? 0,
-                'percentage' => $c->percentage ?? null,
+                'qty'         => $c->qty ?? 0,
+                'rate'        => $c->rate ?? 0,
+                'cost'        => $c->cost ?? 0,
+                'percentage'  => $c->percentage ?? null,
+                'is_default'  => false, // re-stamped by Alpine init()
             ])->values()->toArray(),
             'carrier_rows' => $quote->costs->where('category', 'carrier')->map(fn($c) => [
-                'type' => $c->type ?? 'Freight', // Default to Freight if null
+                'type'        => $c->type ?? 'Freight',
                 'description' => $c->description ?? '',
-                'cost' => $c->cost ?? 0,
-                'percentage' => $c->percentage ?? null,
+                'qty'         => $c->qty ?? 0,
+                'rate'        => $c->rate ?? 0,
+                'cost'        => $c->cost ?? 0,
+                'percentage'  => $c->percentage ?? null,
+                'is_default'  => false, // re-stamped by Alpine init()
             ])->values()->toArray(),
         ];
 
@@ -490,59 +496,66 @@ class OrderController extends Controller
         ]);
         $quote->save();
 
-        // Clear existing costs
+        // Clear existing costs and recreate
         $quote->costs()->delete();
 
-        $customerFreightSubtotal = collect($quoteData['customer_rows'] ?? [])->reduce(function ($carry, $row) {
-            if (($row['type'] ?? '') === 'Freight') {
-                return $carry + ((float) ($row['cost'] ?? 0));
-            }
-            return $carry;
-        }, 0.0);
+        // Helper: compute freight subtotal (qty × rate) for surcharge calculation
+        $calcFreightSubtotal = function (array $rows): float {
+            return collect($rows)->reduce(function ($carry, $row) {
+                $t = strtolower($row['type'] ?? '');
+                if ($t === 'freight' || $t === 'freight (per mile)') {
+                    return $carry + ((float)($row['qty'] ?? 0)) * ((float)($row['rate'] ?? 0));
+                }
+                return $carry;
+            }, 0.0);
+        };
 
-        $carrierFreightSubtotal = collect($quoteData['carrier_rows'] ?? [])->reduce(function ($carry, $row) {
-            if (($row['type'] ?? '') === 'Freight') {
-                return $carry + ((float) ($row['cost'] ?? 0));
-            }
-            return $carry;
-        }, 0.0);
+        $customerFreightBase = $calcFreightSubtotal($quoteData['customer_rows'] ?? []);
+        $carrierFreightBase  = $calcFreightSubtotal($quoteData['carrier_rows'] ?? []);
 
-        // Add customer rows (Revenue)
+        // Save customer rows (Revenue) — save ALL rows always
         foreach ($quoteData['customer_rows'] ?? [] as $row) {
-            $isFuel = ($row['type'] ?? '') === 'Fuel';
-            $percentage = isset($row['percentage']) && $row['percentage'] !== '' ? max(0.0, min(100.0, (float) $row['percentage'])) : null;
-            $cost = (float) ($row['cost'] ?? 0);
-            if ($isFuel && $percentage !== null) {
-                $cost = round($customerFreightSubtotal * ($percentage / 100), 2);
-            }
-            if (!empty($row['description']) || (!empty($row['cost']) && $row['cost'] != 0)) {
-                $quote->costs()->create([
-                    'category' => 'customer',
-                    'type' => $row['type'] ?? 'Freight',
-                    'description' => $row['description'] ?? '',
-                    'cost' => $cost,
-                    'percentage' => $isFuel ? $percentage : null,
-                ]);
-            }
+            $typeStr    = strtolower($row['type'] ?? '');
+            $isSurcharge = ($typeStr === 'fuel (surcharge)');
+            $qty        = (float) ($row['qty'] ?? 0);
+            $rate       = (float) ($row['rate'] ?? 0);
+
+            // For fuel surcharge: cost = freightBase × percentage/100
+            $cost = $isSurcharge
+                ? round($customerFreightBase * ($qty / 100), 2)
+                : round($qty * $rate, 2);
+
+            $quote->costs()->create([
+                'category'   => 'customer',
+                'type'       => $row['type'] ?? 'Freight',
+                'description'=> $row['description'] ?? '',
+                'qty'        => $qty,
+                'rate'       => $isSurcharge ? $customerFreightBase : $rate,
+                'cost'       => $cost,
+                'percentage' => $isSurcharge ? $qty : null,
+            ]);
         }
 
-        // Add carrier rows (Costs)
+        // Save carrier rows (Expenses) — save ALL rows always
         foreach ($quoteData['carrier_rows'] ?? [] as $row) {
-            $isFuel = ($row['type'] ?? '') === 'Fuel';
-            $percentage = isset($row['percentage']) && $row['percentage'] !== '' ? max(0.0, min(100.0, (float) $row['percentage'])) : null;
-            $cost = (float) ($row['cost'] ?? 0);
-            if ($isFuel && $percentage !== null) {
-                $cost = round($carrierFreightSubtotal * ($percentage / 100), 2);
-            }
-            if (!empty($row['description']) || (!empty($row['cost']) && $row['cost'] != 0)) {
-                $quote->costs()->create([
-                    'category' => 'carrier',
-                    'type' => $row['type'] ?? 'Freight',
-                    'description' => $row['description'] ?? '',
-                    'cost' => $cost,
-                    'percentage' => $isFuel ? $percentage : null,
-                ]);
-            }
+            $typeStr    = strtolower($row['type'] ?? '');
+            $isSurcharge = ($typeStr === 'fuel (surcharge)');
+            $qty        = (float) ($row['qty'] ?? 0);
+            $rate       = (float) ($row['rate'] ?? 0);
+
+            $cost = $isSurcharge
+                ? round($carrierFreightBase * ($qty / 100), 2)
+                : round($qty * $rate, 2);
+
+            $quote->costs()->create([
+                'category'   => 'carrier',
+                'type'       => $row['type'] ?? 'Freight',
+                'description'=> $row['description'] ?? '',
+                'qty'        => $qty,
+                'rate'       => $isSurcharge ? $carrierFreightBase : $rate,
+                'cost'       => $cost,
+                'percentage' => $isSurcharge ? $qty : null,
+            ]);
         }
 
         $log->info("Processed quote", [

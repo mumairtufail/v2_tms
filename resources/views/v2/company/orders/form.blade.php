@@ -512,243 +512,9 @@
     </form>
 
     {{-- Processing Modal --}}
-    <div x-cloak x-show="showProcessModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div x-show="showProcessModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="showProcessModal = false"></div>
+            @include('v2.company.orders.partials.quote-modal')
 
-            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-            <div x-show="showProcessModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" 
-                class="inline-block align-bottom bg-white dark:bg-gray-900 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full border border-gray-200 dark:border-gray-800">
-                
-                <div class="bg-white dark:bg-gray-900">
-                    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                        <div>
-                            <h3 class="text-lg font-bold text-gray-900 dark:text-white">Order Processing & Quoting</h3>
-                            <p class="text-xs text-gray-500">Assign manifests and define financial quotes</p>
-                        </div>
-                        <button @click="showProcessModal = false" class="text-gray-400 hover:text-gray-500">
-                            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                        </button>
-                    </div>
-
-                    <div class="p-6">
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            {{-- Manifest Assignments --}}
-                            <div class="space-y-4">
-                                <div class="flex items-center justify-between">
-                                    <h4 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                        <svg class="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                                        Manifest Assignments
-                                    </h4>
-                                    <div class="flex items-center gap-2">
-                                        <select x-model="massManifestId" class="text-[10px] py-1 rounded border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white">
-                                            <option value="" class="text-gray-500 bg-white dark:bg-gray-800">Apply to all...</option>
-                                            <template x-for="manifest in manifests" :key="manifest.id">
-                                                <option :value="String(manifest.id)" x-text="manifest.code" class="text-black dark:text-white bg-white dark:bg-gray-800"></option>
-                                            </template>
-                                        </select>
-                                        <button type="button" @click="applyMassManifest()" class="text-[10px] bg-primary-50 text-primary-600 px-2 py-1 rounded hover:bg-primary-100 font-bold transition-colors">Apply</button>
-                                        <button type="button" @click="createPendingManifest()" class="text-[10px] bg-green-50 text-green-600 px-2 py-1 rounded hover:bg-green-100 font-bold transition-colors flex items-center gap-1">
-                                            <span x-show="creatingManifest" class="animate-spin">
-                                                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                            </span>
-                                            <span x-show="!creatingManifest">+ New</span>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
-                                    <table class="w-full text-xs">
-                                        <thead class="bg-gray-100 dark:bg-gray-800">
-                                            <tr>
-                                                <th class="px-3 py-2 text-left text-gray-700 dark:text-gray-200 text-[10px] uppercase font-bold w-1/3">Stop</th>
-                                                <th class="px-3 py-2 text-left text-gray-700 dark:text-gray-200 text-[10px] uppercase font-bold">Manifest</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                                            <template x-for="(stop, sIdx) in stops" :key="sIdx">
-                                                <tr class="bg-white dark:bg-gray-900">
-                                                    <td class="px-3 py-2">
-                                                        <div class="font-bold text-gray-900 dark:text-white text-xs" x-text="'Stop ' + (sIdx + 1)"></div>
-                                                        <div class="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[150px]" 
-                                                             x-text="(stop.shipper.city || 'No Location') + ' → ' + (stop.consignee.city || 'No Location')"></div>
-                                                    </td>
-                                                    <td class="px-3 py-3">
-                                                        <select x-model="stop.manifest_id" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-black dark:text-white focus:ring-primary-500 focus:border-primary-500 transition-shadow">
-                                                            <option value="" class="text-gray-500 bg-white dark:bg-gray-800">No Manifest</option>
-                                                            <template x-for="manifest in manifests" :key="manifest.id">
-                                                                <option :value="String(manifest.id)" x-text="manifest.code" class="text-black dark:text-white bg-white dark:bg-gray-800"></option>
-                                                            </template>
-                                                        </select>
-                                                    </td>
-                                                </tr>
-                                            </template>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            {{-- Financial Quote --}}
-                            <div class="space-y-4">
-                                <h4 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                    <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                    Financial Quotes
-                                </h4>
-                                <div class="grid grid-cols-1 gap-4">
-                                    <div>
-                                        <label class="block text-[10px] font-medium text-gray-400 uppercase">Service</label>
-                                        <select name="service_id" x-model="quote.service_id" class="mt-1 block w-full text-xs rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
-                                            <option value="">Choose Service...</option>
-                                            @foreach($services as $service)
-                                                <option value="{{ $service->id }}">{{ $service->name }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="grid grid-cols-2 gap-3">
-                                        <div>
-                                            <label class="block text-[10px] font-medium text-gray-400 uppercase">Est. Start</label>
-                                            <input type="datetime-local" name="quote_delivery_start" x-model="quote.delivery_start" class="mt-1 block w-full text-xs border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md">
-                                        </div>
-                                        <div>
-                                            <label class="block text-[10px] font-medium text-gray-400 uppercase">Est. End</label>
-                                            <input type="datetime-local" name="quote_delivery_end" x-model="quote.delivery_end" class="mt-1 block w-full text-xs border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md">
-                                        </div>
-                                    </div>
-                                    
-                                    {{-- Quote Rows (Revenue) --}}
-                                    <div class="space-y-2">
-                                        <div class="flex items-center justify-between">
-                                            <span class="text-[10px] font-bold text-gray-400 uppercase">Customer Quote (Revenue)</span>
-                                            <button type="button" @click="addQuoteRow('customer')" class="text-[10px] text-primary-600 font-bold">+ Add Line</button>
-                                        </div>
-                                        <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-800 overflow-hidden">
-                                            <table class="w-full text-[10px]">
-                                                <thead class="bg-gray-100 dark:bg-gray-800 text-gray-500">
-                                                    <tr>
-                                                        <th class="p-2 text-left w-24">Type</th>
-                                                        <th class="p-2 text-left">Description</th>
-                                                        <th class="p-2 text-right w-24">Amount</th>
-                                                        <th class="p-2 w-6"></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                                                    <template x-for="(row, idx) in quote.customer_rows" :key="'cust-'+idx">
-                                                        <tr class="hover:bg-gray-100/50 dark:hover:bg-gray-700/30 transition-colors">
-                                                            <td class="p-2">
-                                                                <select x-model="row.type" class="w-full border-0 bg-white dark:bg-gray-800 p-1 rounded text-[10px] text-black dark:text-white focus:ring-2 focus:ring-primary-500 cursor-pointer">
-                                                                    <option value="Freight" class="bg-white dark:bg-gray-800 text-black dark:text-white">Freight</option>
-                                                                    <option value="Fuel" class="bg-white dark:bg-gray-800 text-black dark:text-white">Fuel</option>
-                                                                    <option value="Accessorial" class="bg-white dark:bg-gray-800 text-black dark:text-white">Accessorial</option>
-                                                                    <option value="Other" class="bg-white dark:bg-gray-800 text-black dark:text-white">Other</option>
-                                                                </select>
-                                                            </td>
-                                                            <td class="p-2"><input type="text" x-model="row.description" placeholder="Description" class="w-full border-0 bg-transparent p-0 text-[10px] dark:text-white focus:ring-0"></td>
-                                                            <td class="p-2 text-right">
-                                                                <div x-show="row.type !== 'Fuel'" class="flex items-center justify-end gap-1">
-                                                                    <span class="text-gray-400">$</span>
-                                                                    <input type="number" step="0.01" x-model="row.cost" placeholder="0.00" class="w-20 border-0 bg-transparent p-0 text-right text-[10px] font-bold dark:text-white focus:ring-0">
-                                                                </div>
-                                                                <div x-show="row.type === 'Fuel'" class="flex flex-col items-end gap-1">
-                                                                    <div class="flex items-center justify-end gap-1">
-                                                                        <span class="text-gray-400">%</span>
-                                                                        <input type="number" min="0" max="100" step="0.01" x-model="row.percentage" @input="normalizeQuoteRows(quote.customer_rows)" placeholder="10" class="w-20 border-0 bg-transparent p-0 text-right text-[10px] font-bold dark:text-white focus:ring-0">
-                                                                    </div>
-                                                                    <div class="text-[10px] text-gray-400" x-text="'$' + formatMoney(calculateRowAmount(row, quote.customer_rows)) + ' from Freight subtotal'"></div>
-                                                                </div>
-                                                            </td>
-                                                            <td class="p-2 text-center"><button type="button" @click="quote.customer_rows.splice(idx, 1)" class="text-gray-400 hover:text-red-500 text-lg">&times;</button></td>
-                                                        </tr>
-                                                    </template>
-                                                </tbody>
-                                                <tfoot class="bg-primary-50/50 dark:bg-primary-900/10">
-                                                    <tr>
-                                                        <td colspan="2" class="p-2 text-right font-bold uppercase text-gray-500">Revenue Total:</td>
-                                                        <td class="p-2 text-right font-bold text-primary-600" x-text="'$' + calculateTotal(quote.customer_rows)"></td>
-                                                        <td></td>
-                                                    </tr>
-                                                </tfoot>
-                                            </table>
-                                        </div>
-                                    </div>
-
-                                    {{-- Carrier Cost Rows --}}
-                                    <div class="space-y-2">
-                                        <div class="flex items-center justify-between">
-                                            <span class="text-[10px] font-bold text-gray-400 uppercase">Carrier Cost (Expenses)</span>
-                                            <button type="button" @click="addQuoteRow('carrier')" class="text-[10px] text-orange-600 font-bold">+ Add Line</button>
-                                        </div>
-                                        <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-800 overflow-hidden">
-                                            <table class="w-full text-[10px]">
-                                                <thead class="bg-gray-100 dark:bg-gray-800 text-gray-500">
-                                                    <tr>
-                                                        <th class="p-2 text-left w-24">Type</th>
-                                                        <th class="p-2 text-left">Description</th>
-                                                        <th class="p-2 text-right w-24">Amount</th>
-                                                        <th class="p-2 w-6"></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                                                    <template x-for="(row, idx) in quote.carrier_rows" :key="'carr-'+idx">
-                                                        <tr class="hover:bg-gray-100/50 dark:hover:bg-gray-700/30 transition-colors">
-                                                            <td class="p-2">
-                                                                <select x-model="row.type" class="w-full border-0 bg-white dark:bg-gray-800 p-1 rounded text-[10px] text-black dark:text-white focus:ring-2 focus:ring-primary-500 cursor-pointer">
-                                                                    <option value="Freight" class="bg-white dark:bg-gray-800 text-black dark:text-white">Freight</option>
-                                                                    <option value="Fuel" class="bg-white dark:bg-gray-800 text-black dark:text-white">Fuel</option>
-                                                                    <option value="Accessorial" class="bg-white dark:bg-gray-800 text-black dark:text-white">Accessorial</option>
-                                                                    <option value="Other" class="bg-white dark:bg-gray-800 text-black dark:text-white">Other</option>
-                                                                </select>
-                                                            </td>
-                                                            <td class="p-2"><input type="text" x-model="row.description" placeholder="Description" class="w-full border-0 bg-transparent p-0 text-[10px] dark:text-white focus:ring-0"></td>
-                                                            <td class="p-2 text-right">
-                                                                <div x-show="row.type !== 'Fuel'" class="flex items-center justify-end gap-1">
-                                                                    <span class="text-gray-400">$</span>
-                                                                    <input type="number" step="0.01" x-model="row.cost" placeholder="0.00" class="w-20 border-0 bg-transparent p-0 text-right text-[10px] font-bold dark:text-white focus:ring-0">
-                                                                </div>
-                                                                <div x-show="row.type === 'Fuel'" class="flex flex-col items-end gap-1">
-                                                                    <div class="flex items-center justify-end gap-1">
-                                                                        <span class="text-gray-400">%</span>
-                                                                        <input type="number" min="0" max="100" step="0.01" x-model="row.percentage" @input="normalizeQuoteRows(quote.carrier_rows)" placeholder="10" class="w-20 border-0 bg-transparent p-0 text-right text-[10px] font-bold dark:text-white focus:ring-0">
-                                                                    </div>
-                                                                    <div class="text-[10px] text-gray-400" x-text="'$' + formatMoney(calculateRowAmount(row, quote.carrier_rows)) + ' from Freight subtotal'"></div>
-                                                                </div>
-                                                            </td>
-                                                            <td class="p-2 text-center"><button type="button" @click="quote.carrier_rows.splice(idx, 1)" class="text-gray-400 hover:text-red-500 text-lg">&times;</button></td>
-                                                        </tr>
-                                                    </template>
-                                                    <template x-if="quote.carrier_rows.length === 0">
-                                                        <tr>
-                                                            <td colspan="4" class="p-4 text-center text-gray-400 italic">No carrier costs defined.</td>
-                                                        </tr>
-                                                    </template>
-                                                </tbody>
-                                                <tfoot class="bg-orange-50/50 dark:bg-orange-900/10">
-                                                    <tr>
-                                                        <td colspan="2" class="p-2 text-right font-bold uppercase text-gray-500">Cost Total:</td>
-                                                        <td class="p-2 text-right font-bold text-orange-600" x-text="'$' + calculateTotal(quote.carrier_rows)"></td>
-                                                        <td></td>
-                                                    </tr>
-                                                </tfoot>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-3">
-                        <button type="button" @click="showProcessModal = false" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
-                            <button type="button" @click="submitQuote()" class="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-lg flex items-center gap-2" :disabled="submitting">
-                             <span x-show="submitting">
-                                <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                             </span>
-                                Submit Quote
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
 @push('scripts')
@@ -785,6 +551,45 @@ function orderForm() {
                 ...stop,
                 manifest_id: stop.manifest_id ? String(stop.manifest_id) : ''
             }));
+
+            // ── Initialize Quote Rows ─────────────────────────────────────────
+            // Always guarantee (at minimum) a Freight row [0] and a Fuel row [1].
+            // This repairs orders that were saved before the 2-row default existed.
+            const ensureDefaultRows = (rows, freightDesc, fuelDesc) => {
+                // Stamp is_default on saved rows first
+                let r = rows.map((row, i) => ({ ...row, is_default: i < 2 }));
+
+                // Row 0: must be a Freight-type row
+                if (r.length === 0 || (r[0].type !== 'Freight' && r[0].type !== 'Freight (per mile)')) {
+                    r.unshift({ type: 'Freight', description: freightDesc, qty: 1, rate: 0, cost: 0, is_default: true });
+                }
+
+                // Row 1: must be a Fuel-type row
+                const fuelTypes = ['fuel (surcharge)', 'fuel (per mile)', 'fuel (flat)'];
+                const row1Type = String(r[1]?.type || '').toLowerCase();
+                if (r.length < 2 || !fuelTypes.includes(row1Type)) {
+                    r.splice(1, 0, { type: 'Fuel (surcharge)', description: fuelDesc, qty: 0, rate: 0, cost: 0, is_default: true });
+                }
+
+                // Re-stamp is_default after possible inserts
+                return r.map((row, i) => ({ ...row, is_default: i < 2 }));
+            };
+
+            this.quote.customer_rows = ensureDefaultRows(
+                this.quote.customer_rows,
+                'Freight Charge',
+                'Fuel Surcharge (0%)'
+            );
+
+            this.quote.carrier_rows = ensureDefaultRows(
+                this.quote.carrier_rows,
+                'Partner Freight',
+                'Fuel Surcharge (0%)'
+            );
+
+            // Run normalizeQuoteRows so fuel surcharge rate/description are synced on load
+            this.normalizeQuoteRows(this.quote.customer_rows);
+            this.normalizeQuoteRows(this.quote.carrier_rows);
 
             this.quote.delivery_start = this.toDateTimeLocal(this.quote.delivery_start);
             this.quote.delivery_end = this.toDateTimeLocal(this.quote.delivery_end);
@@ -1017,61 +822,102 @@ function orderForm() {
             });
         },
 
-        freightSubtotal(rows) {
-            return rows.reduce((acc, row) => {
-                if (row.type === 'Freight') {
-                    return acc + (parseFloat(row.cost) || 0);
-                }
-                return acc;
-            }, 0);
-        },
+      
+calculateRowAmount(row, rows) {
+    const rowType = String(row.type || '').toLowerCase();
+    
+    // Logic: Fuel (surcharge) is linked to Freight subtotal
+    if (rowType === 'fuel (surcharge)') {
+        const percentage = parseFloat(row.qty) || 0;
+        const freightBase = this.freightSubtotal(rows);
+        return freightBase * (percentage / 100);
+    }
 
-        calculateRowAmount(row, rows) {
-            if (row.type === 'Fuel') {
-                const percentage = parseFloat(row.percentage) || 0;
-                return this.freightSubtotal(rows) * (percentage / 100);
-            }
-
-            return parseFloat(row.cost) || 0;
-        },
+    const qty = parseFloat(row.qty) || 0;
+    const rate = parseFloat(row.rate) || 0;
+    return qty * rate;
+},
 
         calculateTotal(rows) {
             return rows.reduce((acc, row) => acc + this.calculateRowAmount(row, rows), 0).toFixed(2);
         },
 
         formatMoney(value) {
-            return (parseFloat(value) || 0).toFixed(2);
+            return (parseFloat(value) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         },
 
-        normalizeQuoteRows(rows) {
-            const freightBase = this.freightSubtotal(rows);
-            rows.forEach(row => {
-                if (row.type === 'Fuel') {
-                    const percentage = parseFloat(row.percentage) || 0;
-                    row.cost = +(freightBase * (percentage / 100)).toFixed(2);
-                } else {
-                    row.percentage = row.percentage ?? '';
-                    row.cost = parseFloat(row.cost) || 0;
-                }
+     normalizeQuoteRows(rows) {
+    const freightBase = this.freightSubtotal(rows);
+    rows.forEach(row => {
+        const rowType = String(row.type || '').toLowerCase();
+        
+        if (rowType === 'fuel (surcharge)') {
+            // Mirror Freight Cost to the Rate field (for display)
+            row.rate = freightBase.toFixed(2);
+            // Dynamic description showing %
+            row.description = `Fuel Surcharge (${row.qty || 0}%)`;
+            row.cost = (freightBase * ((parseFloat(row.qty) || 0) / 100)).toFixed(2);
+        } else {
+            row.cost = ((parseFloat(row.qty) || 0) * (parseFloat(row.rate) || 0)).toFixed(2);
+        }
+    });
+},
+
+        canDeleteQuoteRow(row) {
+            return !row.is_default;
+        },
+calculateProfit() {
+    const revenue = parseFloat(this.calculateTotal(this.quote.customer_rows)) || 0;
+    const expenses = parseFloat(this.calculateTotal(this.quote.carrier_rows)) || 0;
+    return (revenue - expenses).toFixed(2);
+},
+
+calculateMargin() {
+    const revenue = parseFloat(this.calculateTotal(this.quote.customer_rows)) || 0;
+    const profit = parseFloat(this.calculateProfit()) || 0;
+    if (revenue === 0) return 0;
+    return ((profit / revenue) * 100).toFixed(1);
+},
+     duplicateQuoteRow(tableType, index) {
+    const rows = tableType === 'customer' ? this.quote.customer_rows : this.quote.carrier_rows;
+    const rowToCopy = rows[index];
+    const newRow = JSON.parse(JSON.stringify(rowToCopy));
+    newRow.is_default = false; // Duplicates are never protected
+    rows.splice(index + 1, 0, newRow);
+    this.normalizeQuoteRows(rows);
+},
+
+        handleQtyInput(rows) {
+            this.normalizeQuoteRows(rows);
+        },
+
+        addQuoteRow(type) {
+            this.quote[type + '_rows'].push({ 
+                type: 'Miscellaneous', 
+                description: '', 
+                qty: 1, 
+                rate: 0, 
+                cost: 0,
+                is_default: false 
             });
         },
 
-        calculateProfit() {
-            const rev = parseFloat(this.calculateTotal(this.quote.customer_rows));
-            const cost = parseFloat(this.calculateTotal(this.quote.carrier_rows));
-            return (rev - cost).toFixed(2);
-        },
-
-        calculateMargin() {
-            const rev = parseFloat(this.calculateTotal(this.quote.customer_rows));
-            const cost = parseFloat(this.calculateTotal(this.quote.carrier_rows));
-            if (rev === 0) return 0;
-            return (((rev - cost) / rev) * 100).toFixed(1);
-        },
+     
+freightSubtotal(rows) {
+    return rows.reduce((acc, row) => {
+        const type = String(row.type || '').toLowerCase();
+        // sum up all freight-related row costs
+        if (type === 'freight' || type === 'freight (per mile)') {
+            return acc + (parseFloat(row.qty || 0) * parseFloat(row.rate || 0));
+        }
+        return acc;
+    }, 0);
+},
 
         saveDraft() {
             this.saving = true;
             this.submissionMode = 'draft';
+            this.flushFormInputs();
             document.getElementById('orderForm').submit();
         },
 
@@ -1090,7 +936,26 @@ function orderForm() {
 
         submitAsNew() {
             this.submissionMode = 'new';
+            this.flushFormInputs();
             document.getElementById('orderForm').submit();
+        },
+
+        // ── Manually write Alpine state into hidden form inputs ─────────────────
+        // Alpine's x-bind:value updates are async (batched). If we call
+        // form.submit() synchronously after mutating data (e.g. setting
+        // manifest_id on stops), the hidden inputs may still hold the old
+        // values. This helper forces them in sync before submission.
+        flushFormInputs() {
+            const form = document.getElementById('orderForm');
+            if (!form) return;
+            const set = (name, value) => {
+                const el = form.querySelector(`[name="${name}"]`);
+                if (el) el.value = value;
+            };
+            set('stops',           JSON.stringify(this.stops));
+            set('quote_data',      JSON.stringify(this.quote));
+            set('submission_mode', this.submissionMode);
+            set('save_as_draft',   this.saving ? '1' : '0');
         },
 
         openConfirmModal() {
@@ -1112,6 +977,7 @@ function orderForm() {
                 await this.syncCarrierCostsToManifests(targetManifestIds);
             }
 
+            this.flushFormInputs();
             document.getElementById('orderForm').submit();
         },
 

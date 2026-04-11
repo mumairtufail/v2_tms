@@ -14,6 +14,8 @@ class QuoteCost extends Model
         'category',
         'type',
         'description',
+        'qty',
+        'rate',
         'cost',
         'percentage',
     ];
