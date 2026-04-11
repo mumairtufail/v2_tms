@@ -138,7 +138,7 @@ class OrderController extends Controller
             return [
                 'uid' => uniqid(),
                 'expanded' => false,
-                'manifest_id' => $stop->manifest_id ?? '',
+                'manifest_id' => $stop->manifest_id ? (string) $stop->manifest_id : '',
                 'service_type' => $stop->service_type ?? 'truckload',
                 'measurements' => $stop->measurement_type ?? 'in_lbs',
                 'shipper' => [

@@ -496,15 +496,22 @@
                                     bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/40">
                             <span class="text-[9px] font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap" x-text="'Stop ' + (sIdx + 1)"></span>
                             <span class="text-[9px] text-slate-300 dark:text-slate-600"
-                                  x-text="(stop.shipper.city || '–') + ' → ' + (stop.consignee.city || '–')"></span>
-                            <select x-model="stop.manifest_id"
-                                    class="text-[10px] py-0.5 px-1.5 rounded-md
-                                           border border-slate-200 dark:border-slate-600/40
-                                           bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-200
-                                           focus:ring-1 focus:ring-indigo-400 min-w-[100px]">
+                                  x-text="(stop.shipper?.city || '\u2013') + ' \u2192 ' + (stop.consignee?.city || '\u2013')"></span>
+                            {{-- Use :value + @change instead of x-model to avoid integer vs string mismatch --}}
+                            <select
+                                :value="String(stop.manifest_id || '')"
+                                @change="stop.manifest_id = $event.target.value"
+                                class="text-[10px] py-0.5 px-1.5 rounded-md
+                                       border border-slate-200 dark:border-slate-600/40
+                                       bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-200
+                                       focus:ring-1 focus:ring-indigo-400 min-w-[110px]">
                                 <option value="">No Manifest</option>
-                                <template x-for="manifest in manifests" :key="manifest.id">
-                                    <option :value="String(manifest.id)" x-text="manifest.code"></option>
+                                <template x-for="manifest in manifests" :key="String(manifest.id)">
+                                    <option
+                                        :value="String(manifest.id)"
+                                        :selected="String(stop.manifest_id || '') === String(manifest.id)"
+                                        x-text="manifest.code">
+                                    </option>
                                 </template>
                             </select>
                         </div>
