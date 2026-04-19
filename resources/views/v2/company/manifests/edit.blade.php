@@ -485,72 +485,95 @@ function manifestEdit() {
 }
 
 function costEstimates(initialData, initialRevenue = 0) {
-    // Robustly handle initialData as array or object
     let data = [];
     if (Array.isArray(initialData)) {
         data = initialData;
     } else if (initialData && typeof initialData === 'object') {
         data = Object.values(initialData);
     }
-    
-    console.log('Initializing costEstimates with data:', data);
+
+    const FREIGHT_TYPES = ['Freight', 'Freight (per mile)'];
+    const FUEL_TYPES    = ['Fuel (surcharge)', 'Fuel (per mile)', 'Fuel (flat)'];
+
+    function ensureDefaultRows(rows) {
+        if (rows.length === 0 || !FREIGHT_TYPES.includes(rows[0]?.type)) {
+            rows.unshift({ type: 'Freight', description: 'Freight', qty: 1, rate: 0, cost: 0, is_default: true });
+        } else {
+            rows[0].is_default = true;
+        }
+        if (rows.length < 2 || !FUEL_TYPES.includes(rows[1]?.type)) {
+            rows.splice(1, 0, { type: 'Fuel (surcharge)', description: 'Fuel Surcharge (0%)', qty: 0, rate: 0, cost: 0, is_default: true });
+        } else {
+            rows[1].is_default = true;
+        }
+        return rows;
+    }
+
+    let mappedRows = data.map(row => ({
+        type:        row.type        || 'Miscellaneous',
+        description: row.description || '',
+        qty:         Number(row.qty  || 0),
+        rate:        Number(row.rate || 0),
+        cost:        Number(row.cost ?? row.est_cost ?? 0),
+        is_default:  row.is_default  || false,
+    }));
+
+    mappedRows = ensureDefaultRows(mappedRows);
 
     return {
-        rows: data.length > 0
-            ? data.map(row => ({
-                type: row.type || 'miscellaneous',
-                description: row.description || '',
-                qty: Number(row.qty || 0),
-                rate: Number(row.rate || 0),
-            }))
-            : [
-                { type: 'fuel', description: '', qty: 0, rate: 0 },
-            ],
-        revenue: Number(initialRevenue || 0),
+        rows:       mappedRows,
+        revenue:    Number(initialRevenue || 0),
         submitting: false,
 
-        isFuelRow(row) {
-            return String(row.type || '').toLowerCase() === 'fuel';
-        },
-
-        get freightSubtotal() {
-            return this.rows.reduce((sum, row) => {
-                if (this.isFuelRow(row)) {
-                    return sum;
+        freightSubtotal() {
+            return this.rows.reduce((acc, row) => {
+                const t = String(row.type || '').toLowerCase();
+                if (t === 'freight' || t === 'freight (per mile)') {
+                    return acc + (parseFloat(row.qty || 0) * parseFloat(row.rate || 0));
                 }
-
-                const qty = Number(row.qty || 0);
-                const rate = Number(row.rate || 0);
-                return sum + (qty * rate);
+                return acc;
             }, 0);
         },
 
-        rowEstimatedCost(row) {
-            if (this.isFuelRow(row)) {
-                const percentage = Number(row.qty || 0);
-                return this.freightSubtotal * (Math.max(0, Math.min(100, percentage)) / 100);
-            }
-
-            return Number(row.qty || 0) * Number(row.rate || 0);
+        normalizeRows() {
+            const base = this.freightSubtotal();
+            this.rows.forEach(row => {
+                const t = String(row.type || '').toLowerCase();
+                if (t === 'fuel (surcharge)') {
+                    row.rate        = base.toFixed(2);
+                    row.description = `Fuel Surcharge (${row.qty || 0}%)`;
+                    row.cost        = (base * ((parseFloat(row.qty) || 0) / 100)).toFixed(2);
+                } else {
+                    row.cost = ((parseFloat(row.qty) || 0) * (parseFloat(row.rate) || 0)).toFixed(2);
+                }
+            });
         },
-        
+
+        calculateRowAmount(row) {
+            const t = String(row.type || '').toLowerCase();
+            if (t === 'fuel (surcharge)') {
+                return this.freightSubtotal() * ((parseFloat(row.qty) || 0) / 100);
+            }
+            return (parseFloat(row.qty) || 0) * (parseFloat(row.rate) || 0);
+        },
+
         get total() {
-            return this.rows.reduce((sum, row) => sum + this.rowEstimatedCost(row), 0);
+            return this.rows.reduce((acc, row) => acc + this.calculateRowAmount(row), 0);
         },
 
         get profit() {
             return this.revenue - this.total;
         },
-        
+
         addRow() {
-            console.log('Adding new row');
-            this.rows.push({ type: 'miscellaneous', description: '', qty: 1, rate: 0 });
+            this.rows.push({ type: 'Miscellaneous', description: '', qty: 1, rate: 0, cost: 0, is_default: false });
         },
-        
-        removeRow(index) {
-            if (this.rows.length > 1) {
-                this.rows.splice(index, 1);
-            }
+
+        duplicateRow(index) {
+            const newRow = JSON.parse(JSON.stringify(this.rows[index]));
+            newRow.is_default = false;
+            this.rows.splice(index + 1, 0, newRow);
+            this.normalizeRows();
         },
 
         formatCurrency(value) {
@@ -558,8 +581,8 @@ function costEstimates(initialData, initialRevenue = 0) {
                 style: 'currency',
                 currency: 'USD',
             }).format(value);
-        }
-    }
+        },
+    };
 }
 </script>
 @endpush

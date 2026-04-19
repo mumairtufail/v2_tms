@@ -65,32 +65,28 @@ class ManifestService
                 $manifest->costEstimates()->delete();
 
                 $freightSubtotal = $this->extractFreightSubtotal($data['cost_estimates']);
-                
+
                 foreach ($data['cost_estimates'] as $estimate) {
-                    // Skip empty rows if any
                     if (empty($estimate['type']) && empty($estimate['description'])) {
                         continue;
                     }
 
-                    $type = strtolower((string) ($estimate['type'] ?? 'miscellaneous'));
+                    $type        = (string) ($estimate['type'] ?? 'Miscellaneous');
+                    $typeLower   = strtolower($type);
                     $description = (string) ($estimate['description'] ?? '');
-                    $qty = (float) ($estimate['qty'] ?? 0);
-                    $rate = (float) ($estimate['rate'] ?? 0);
+                    $qty         = (float) ($estimate['qty'] ?? 0);
+                    $rate        = (float) ($estimate['rate'] ?? 0);
 
-                    if ($type === 'fuel') {
-                        $percentage = max(0, min(100, $qty));
+                    if ($typeLower === 'fuel (surcharge)') {
+                        $percentage     = max(0, min(100, $qty));
                         $calculatedCost = round($freightSubtotal * ($percentage / 100), 2);
 
-                        if ($calculatedCost <= 0 && $description === '' && $percentage <= 0) {
-                            continue;
-                        }
-
                         $manifest->costEstimates()->create([
-                            'type' => 'fuel',
-                            'description' => $description,
-                            'qty' => $percentage,
-                            'rate' => $freightSubtotal,
-                            'est_cost' => $calculatedCost,
+                            'type'        => $type,
+                            'description' => $description ?: "Fuel Surcharge ({$percentage}%)",
+                            'qty'         => $percentage,
+                            'rate'        => $freightSubtotal,
+                            'est_cost'    => $calculatedCost,
                         ]);
                         continue;
                     }
@@ -101,11 +97,11 @@ class ManifestService
                     }
 
                     $manifest->costEstimates()->create([
-                        'type' => $type,
+                        'type'        => $type,
                         'description' => $description,
-                        'qty' => $qty,
-                        'rate' => $rate,
-                        'est_cost' => $estCost,
+                        'qty'         => $qty,
+                        'rate'        => $rate,
+                        'est_cost'    => $estCost,
                     ]);
                 }
 
@@ -121,14 +117,15 @@ class ManifestService
         $manifest->loadMissing('costEstimates', 'orderStops.order.quote.costs');
 
         $carrierRows = $manifest->costEstimates->map(function ($estimate) {
-            $type = strtolower((string) ($estimate->type ?? 'miscellaneous'));
-            $percentage = $type === 'fuel'
+            $type       = (string) ($estimate->type ?? 'Miscellaneous');
+            $typeLower  = strtolower($type);
+            $percentage = $typeLower === 'fuel (surcharge)'
                 ? max(0, min(100, (float) ($estimate->qty ?? 0)))
                 : null;
 
             return [
                 'category' => 'carrier',
-                'type' => ucwords(str_replace('_', ' ', $type)),
+                'type' => $type,
                 'description' => (string) ($estimate->description ?? ''),
                 'cost' => (float) ($estimate->est_cost ?? 0),
                 'percentage' => $percentage,
@@ -165,12 +162,11 @@ class ManifestService
     {
         return collect($estimates)
             ->filter(function ($estimate) {
-                return strtolower((string) ($estimate['type'] ?? '')) !== 'fuel';
+                $t = strtolower((string) ($estimate['type'] ?? ''));
+                return $t === 'freight' || $t === 'freight (per mile)';
             })
             ->sum(function ($estimate) {
-                $qty = (float) ($estimate['qty'] ?? 0);
-                $rate = (float) ($estimate['rate'] ?? 0);
-                return $qty * $rate;
+                return (float) ($estimate['qty'] ?? 0) * (float) ($estimate['rate'] ?? 0);
             });
     }
 
