@@ -89,37 +89,37 @@
                placeholder="email@example.com">
     </div>
 
-    {{-- Row 8: Opening & Closing Times --}}
+    {{-- Row 8: Opening & Closing Times –– 24h custom picker, no AM/PM --}}
     <div class="grid grid-cols-2 gap-3">
         <div>
             <label class="block text-[10px] font-medium text-gray-400 uppercase">Opening</label>
-            <input type="time" lang="sv" x-model="stop.{{ $prefix }}.opening_time" class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500">
+            <x-time-picker x-model="stop.{{ $prefix }}.opening_time" class="mt-0.5 w-full" />
         </div>
         <div>
             <label class="block text-[10px] font-medium text-gray-400 uppercase">Closing</label>
-            <input type="time" lang="sv" x-model="stop.{{ $prefix }}.closing_time" class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500">
+            <x-time-picker x-model="stop.{{ $prefix }}.closing_time" class="mt-0.5 w-full" />
         </div>
     </div>
 
-    {{-- Row 9: Ready/Requested Date & Time --}}
+    {{-- Row 9: Ready/Requested Date & Time –– 24h custom picker, no AM/PM --}}
     <div class="pt-3 border-t border-gray-100 dark:border-gray-700">
         <label class="block text-[10px] font-bold text-gray-500 uppercase mb-2">{{ $prefix === 'shipper' ? 'Ready Date' : 'Requested Date' }}</label>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-                <label class="block text-[10px] font-medium text-gray-400 uppercase">Start Date Time (24-hour)</label>
-                <input type="datetime-local"
-                       x-model="stop.{{ $prefix }}.{{ $prefix === 'shipper' ? 'ready_start_at_picker' : 'requested_start_at_picker' }}"
-                       @change="syncStopDateTime(stop, '{{ $prefix }}', 'start')"
-                       @input="syncStopDateTime(stop, '{{ $prefix }}', 'start')"
-                       class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500">
+                <label class="block text-[10px] font-medium text-gray-400 uppercase">Start</label>
+                <x-datetime-picker
+                    x-model="stop.{{ $prefix }}.{{ $prefix === 'shipper' ? 'ready_start_at_picker' : 'requested_start_at_picker' }}"
+                    @change="syncStopDateTime(stop, '{{ $prefix }}', 'start')"
+                    class="mt-0.5 w-full"
+                />
             </div>
             <div>
-                <label class="block text-[10px] font-medium text-gray-400 uppercase">End Date Time (24-hour)</label>
-                <input type="datetime-local"
-                       x-model="stop.{{ $prefix }}.{{ $prefix === 'shipper' ? 'ready_end_at_picker' : 'requested_end_at_picker' }}"
-                       @change="syncStopDateTime(stop, '{{ $prefix }}', 'end')"
-                       @input="syncStopDateTime(stop, '{{ $prefix }}', 'end')"
-                       class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500">
+                <label class="block text-[10px] font-medium text-gray-400 uppercase">End</label>
+                <x-datetime-picker
+                    x-model="stop.{{ $prefix }}.{{ $prefix === 'shipper' ? 'ready_end_at_picker' : 'requested_end_at_picker' }}"
+                    @change="syncStopDateTime(stop, '{{ $prefix }}', 'end')"
+                    class="mt-0.5 w-full"
+                />
             </div>
         </div>
         <p class="text-[10px] text-gray-400 mt-1">Saved as MM/DD/YY HH:MM (24-hour).</p>
