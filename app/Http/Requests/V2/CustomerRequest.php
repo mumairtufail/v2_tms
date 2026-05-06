@@ -15,7 +15,7 @@ class CustomerRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'short_code' => ['nullable', 'string', 'max:50'],
+            'short_code' => ['nullable', 'string', 'max:3'],
             'customer_email' => ['nullable', 'email', 'max:255'],
             'address' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:100'],

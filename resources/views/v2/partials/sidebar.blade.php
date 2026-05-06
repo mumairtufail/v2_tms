@@ -112,7 +112,6 @@
 
             <div class="space-y-1.5">
                 <!-- Dashboard - Always show if user has dashboard permission -->
-                @if(auth()->user()->hasPermission('dashboard', 'view'))
                 <a href="{{ $currentCompany ? route('v2.dashboard', ['company' => $companySlug]) : route('admin.dashboard') }}"
                    class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group {{ request()->routeIs('v2.dashboard*') || request()->routeIs('admin.dashboard') ? $activeClasses : $inactiveClasses }}">
                     <div class="w-5 h-5 flex items-center justify-center {{ request()->routeIs('v2.dashboard*') || request()->routeIs('admin.dashboard') ? $activeIconClasses : '' }}">
@@ -122,7 +121,6 @@
                     </div>
                     <span class="font-medium text-[14px]">Dashboard</span>
                 </a>
-                @endif
 
                 <!-- Orders -->
                 @if(auth()->user()->hasPermission('orders', 'view'))

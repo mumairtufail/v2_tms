@@ -133,7 +133,11 @@
                 </div>
                 <div class="hidden md:block text-left">
                     <p class="text-sm font-medium text-gray-700 dark:text-white">{{ auth()->user()->name }}</p>
-                    <!-- <p class="text-xs text-gray-500 dark:text-gray-400">Administrator</p> -->
+                    @if($currentCompany)
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            {{ $currentCompany->name }}@if($currentCompany->shortcode) <span class="font-semibold text-primary-500">[{{ $currentCompany->shortcode }}]</span>@endif
+                        </p>
+                    @endif
                 </div>
                 <svg class="hidden md:block w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
@@ -157,6 +161,11 @@
                 <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
                     <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ auth()->user()->name }}</p>
                     <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ auth()->user()->email }}</p>
+                    @if($currentCompany)
+                        <p class="text-xs text-gray-500 dark:text-gray-400 truncate mt-1">
+                            {{ $currentCompany->name }}@if($currentCompany->shortcode) &nbsp;<span class="font-semibold text-primary-500">[{{ $currentCompany->shortcode }}]</span>@endif
+                        </p>
+                    @endif
                 </div>
                 
                 <!-- Menu Items -->

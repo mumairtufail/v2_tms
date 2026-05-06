@@ -18,6 +18,62 @@ class CompanyController extends Controller
     }
 
     /**
+     * Generate a unique 3-char shortcode suggestion from a company name.
+     */
+    public function generateShortcode(Request $request)
+    {
+        $name = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $request->input('name', '')));
+
+        if (strlen($name) < 1) {
+            return response()->json(['shortcode' => '']);
+        }
+
+        // Build candidate list: first 3 chars, then try picking chars at different positions
+        $candidates = [];
+        $len = strlen($name);
+
+        // Primary: first 3 chars (padded with digits if short)
+        $base = str_pad(substr($name, 0, 3), 3, '0');
+        $candidates[] = $base;
+
+        // Variations: replace last char with 1,2,3...
+        for ($i = 1; $i <= 9; $i++) {
+            $candidates[] = substr($base, 0, 2) . $i;
+        }
+        // Variations: middle char replaced
+        for ($i = 1; $i <= 9; $i++) {
+            $candidates[] = substr($base, 0, 1) . $i . substr($base, 2, 1);
+        }
+        // Variations: pick chars spread across the name
+        for ($offset = 1; $offset < $len - 1; $offset++) {
+            $spread = $name[0] . $name[min($offset, $len - 1)] . $name[min($offset * 2, $len - 1)];
+            $candidates[] = str_pad(substr($spread, 0, 3), 3, '0');
+        }
+
+        $excludeId = $request->input('exclude_id'); // current company id on edit
+
+        foreach ($candidates as $candidate) {
+            $candidate = strtoupper(substr($candidate, 0, 3));
+            $exists = Company::where('shortcode', $candidate)
+                ->when($excludeId, fn($q) => $q->where('id', '!=', $excludeId))
+                ->exists();
+            if (!$exists) {
+                return response()->json(['shortcode' => $candidate]);
+            }
+        }
+
+        // Last resort: random alphanumeric
+        do {
+            $random = strtoupper(substr(str_shuffle('ABCDEFGHJKLMNPQRSTUVWXYZ23456789'), 0, 3));
+            $exists = Company::where('shortcode', $random)
+                ->when($excludeId, fn($q) => $q->where('id', '!=', $excludeId))
+                ->exists();
+        } while ($exists);
+
+        return response()->json(['shortcode' => $random]);
+    }
+
+    /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
@@ -63,6 +119,7 @@ class CompanyController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255|unique:companies,name',
+            'shortcode' => 'nullable|string|max:3|regex:/^[A-Za-z0-9]+$/|unique:companies,shortcode',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:500',
             'is_active' => 'boolean'
@@ -79,6 +136,7 @@ class CompanyController extends Controller
             $company = Company::create([
                 'name' => $request->name,
                 'slug' => Str::slug($request->name),
+                'shortcode' => $request->shortcode ? strtoupper($request->shortcode) : null,
                 'phone' => $request->phone,
                 'address' => $request->address,
                 'is_active' => $request->has('is_active') ? true : false,
@@ -121,6 +179,7 @@ class CompanyController extends Controller
 
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255|unique:companies,name,' . $company->id,
+            'shortcode' => 'nullable|string|max:3|regex:/^[A-Za-z0-9]+$/|unique:companies,shortcode,' . $company->id,
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:500',
             'is_active' => 'boolean'
@@ -137,6 +196,7 @@ class CompanyController extends Controller
             $company->update([
                 'name' => $request->name,
                 'slug' => Str::slug($request->name),
+                'shortcode' => $request->shortcode ? strtoupper($request->shortcode) : null,
                 'phone' => $request->phone,
                 'address' => $request->address,
                 'is_active' => $request->has('is_active') ? true : false

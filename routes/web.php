@@ -44,6 +44,7 @@ Route::get('/dashboard', function () {
 // Global Admin Routes (Super Admin Only)
 Route::middleware(['auth', 'verified', \App\Http\Middleware\IsSuperAdmin::class])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [App\Http\Controllers\AdminController::class, 'index'])->name('dashboard');
+    Route::get('/companies/generate-shortcode', [App\Http\Controllers\CompanyController::class, 'generateShortcode'])->name('companies.generate-shortcode');
     Route::resource('companies', App\Http\Controllers\CompanyController::class);
     Route::resource('users', App\Http\Controllers\Admin\UserController::class);
     Route::get('/logs', [App\Http\Controllers\HomeController::class, 'activity_logs'])->name('logs');

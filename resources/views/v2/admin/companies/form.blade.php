@@ -25,10 +25,29 @@
 
     <!-- Form Container -->
     <x-table-container>
-        <form 
-            action="{{ isset($company) ? route('admin.companies.update', $company) : route('admin.companies.store') }}" 
+        <form
+            action="{{ isset($company) ? route('admin.companies.update', $company) : route('admin.companies.store') }}"
             method="POST"
-            x-data="{ submitting: false }"
+            x-data="{
+                submitting: false,
+                shortcodeLocked: {{ isset($company) && $company->shortcode ? 'true' : 'false' }},
+                shortcodeStatus: '',
+                nameDebounce: null,
+                fetchShortcode(name) {
+                    clearTimeout(this.nameDebounce);
+                    if (!name || name.trim().length < 1) return;
+                    this.nameDebounce = setTimeout(() => {
+                        fetch('{{ route('admin.companies.generate-shortcode') }}?name=' + encodeURIComponent(name) + '&exclude_id={{ $company->id ?? '' }}')
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.shortcode) {
+                                    document.getElementById('shortcode').value = data.shortcode;
+                                    this.shortcodeStatus = 'auto';
+                                }
+                            });
+                    }, 400);
+                }
+            }"
             @submit="submitting = true"
         >
             @csrf
@@ -49,27 +68,53 @@
                         <!-- Company Name -->
                         <div>
                             <x-input-label for="name" value="Company Name" :required="true" />
-                            <x-text-input 
-                                id="name" 
-                                name="name" 
+                            <x-text-input
+                                id="name"
+                                name="name"
                                 type="text"
                                 :value="old('name', $company->name ?? '')"
                                 required
+                                maxlength="255"
                                 placeholder="Enter company name"
                                 class="mt-1 w-full"
+                                @input="fetchShortcode($event.target.value)"
                             />
                             <x-input-error :messages="$errors->get('name')" class="mt-2" />
+                        </div>
+
+                        <!-- Short Code -->
+                        <div>
+                            <div class="flex items-center justify-between">
+                                <x-input-label for="shortcode" value="Short Code" />
+                                <span x-show="shortcodeStatus === 'auto'" class="text-xs text-primary-500 font-medium">Auto-generated</span>
+                            </div>
+                            <x-text-input
+                                id="shortcode"
+                                name="shortcode"
+                                type="text"
+                                :value="old('shortcode', $company->shortcode ?? '')"
+                                placeholder="Auto-generated from name"
+                                maxlength="3"
+                                pattern="[A-Za-z0-9]{1,3}"
+                                title="Up to 3 alphanumeric characters"
+                                style="text-transform:uppercase"
+                                @input="shortcodeStatus = 'manual'; $event.target.value = $event.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
+                                class="mt-1 w-full"
+                            />
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Up to 3 alphanumeric characters. Auto-filled from company name — must be unique.</p>
+                            <x-input-error :messages="$errors->get('shortcode')" class="mt-2" />
                         </div>
 
                         <!-- Phone -->
                         <div>
                             <x-input-label for="phone" value="Phone" />
-                            <x-text-input 
-                                id="phone" 
-                                name="phone" 
+                            <x-text-input
+                                id="phone"
+                                name="phone"
                                 type="text"
                                 :value="old('phone', $company->phone ?? '')"
                                 placeholder="+1-000-000-0000"
+                                maxlength="20"
                                 class="mt-1 w-full"
                             />
                             <x-input-error :messages="$errors->get('phone')" class="mt-2" />

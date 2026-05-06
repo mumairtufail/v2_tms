@@ -50,12 +50,18 @@
                             :value="old('name', $customer->name ?? '')"
                             placeholder="Enter customer name"
                             required
+                            maxlength="255"
                         />
                         <x-text-input
                             label="Short Code"
                             name="short_code"
                             :value="old('short_code', $customer->short_code ?? '')"
-                            placeholder="e.g. CUST001"
+                            placeholder="e.g. ABC"
+                            maxlength="3"
+                            pattern="[A-Za-z0-9]{1,3}"
+                            title="Up to 3 alphanumeric characters"
+                            style="text-transform:uppercase"
+                            oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
                         />
                         <x-text-input
                             label="Email Address"
@@ -63,6 +69,7 @@
                             type="email"
                             :value="old('customer_email', $customer->customer_email ?? '')"
                             placeholder="email@example.com"
+                            maxlength="255"
                         />
                         <x-select-input
                             label="Customer Type"
@@ -94,6 +101,7 @@
                                 name="address"
                                 :value="old('address', $customer->address ?? '')"
                                 placeholder="Street address"
+                                maxlength="255"
                             />
                         </div>
                         <x-text-input
@@ -101,24 +109,28 @@
                             name="city"
                             :value="old('city', $customer->city ?? '')"
                             placeholder="City"
+                            maxlength="100"
                         />
                         <x-text-input
                             label="State/Province"
                             name="state"
                             :value="old('state', $customer->state ?? '')"
                             placeholder="State"
+                            maxlength="100"
                         />
                         <x-text-input
                             label="Postal Code"
                             name="postal_code"
                             :value="old('postal_code', $customer->postal_code ?? '')"
                             placeholder="ZIP/Postal Code"
+                            maxlength="20"
                         />
                         <x-text-input
                             label="Country"
                             name="country"
                             :value="old('country', $customer->country ?? '')"
                             placeholder="Country"
+                            maxlength="100"
                         />
                     </div>
                 </div>
@@ -138,6 +150,11 @@
                             name="currency"
                             :value="old('currency', $customer->currency ?? 'USD')"
                             placeholder="e.g. USD"
+                            maxlength="3"
+                            pattern="[A-Za-z]{3}"
+                            title="3-letter currency code (e.g. USD)"
+                            style="text-transform:uppercase"
+                            oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')"
                         />
                         
                         <div class="space-y-4">

@@ -16,11 +16,9 @@ use App\Http\Controllers\V2\DashboardController;
 
 Route::middleware(['auth', CompanyScope::class])->prefix('{company}')->name('v2.')->group(function () {
     
-    // Dashboard - Everyone with view permission can access
-    Route::middleware(['permission:dashboard,view'])->group(function () {
-        Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
-    });
+    // Dashboard - accessible to all authenticated users
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
 
     // Users Management - Order matters! Specific routes before parameterized ones
     Route::middleware(['permission:users,create'])->group(function () {

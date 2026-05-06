@@ -46,15 +46,8 @@ class CheckPermission
         $user = $request->user();
         
         if ($user && $user->company) {
-            // Try to redirect to dashboard if user has dashboard permission
-            if ($user->hasPermission('dashboard', 'view')) {
-                Toast::error($message);
-                return redirect()->route('v2.dashboard', ['company' => $user->company->slug]);
-            }
-            
-            // If no dashboard access, show profile page
             Toast::error($message);
-            return redirect()->route('v2.profile.edit', ['company' => $user->company->slug]);
+            return redirect()->route('v2.dashboard', ['company' => $user->company->slug]);
         }
         
         // Fallback: abort with 403
