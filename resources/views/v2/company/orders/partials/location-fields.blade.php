@@ -115,10 +115,13 @@
                     class="mt-0.5 w-full"
                 />
                 @if($prefix === 'consignee')
-                <p x-show="stop._requestedStartError" x-text="stop._requestedStartError"
-                   data-date-error
-                   class="date-error-msg mt-1 text-[10px] text-red-600 font-semibold flex items-center gap-1 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded">
-                </p>
+                <div x-show="stop._requestedStartError" data-date-error
+                     class="date-error-msg mt-1.5 flex items-center gap-1.5 text-[11px] text-red-600 dark:text-red-400 font-medium bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-2.5 py-1.5 rounded-md">
+                    <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                    </svg>
+                    <span x-text="stop._requestedStartError"></span>
+                </div>
                 @endif
             </div>
             <div>
@@ -129,15 +132,21 @@
                     class="mt-0.5 w-full"
                 />
                 @if($prefix === 'shipper')
-                <p x-show="stop._readyEndError" x-text="stop._readyEndError"
-                   data-date-error
-                   class="date-error-msg mt-1 text-[10px] text-red-600 font-semibold flex items-center gap-1 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded">
-                </p>
+                <div x-show="stop._readyEndError" data-date-error
+                     class="date-error-msg mt-1.5 flex items-center gap-1.5 text-[11px] text-red-600 dark:text-red-400 font-medium bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-2.5 py-1.5 rounded-md">
+                    <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                    </svg>
+                    <span x-text="stop._readyEndError"></span>
+                </div>
                 @else
-                <p x-show="stop._requestedEndError" x-text="stop._requestedEndError"
-                   data-date-error
-                   class="date-error-msg mt-1 text-[10px] text-red-600 font-semibold flex items-center gap-1 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded">
-                </p>
+                <div x-show="stop._requestedEndError" data-date-error
+                     class="date-error-msg mt-1.5 flex items-center gap-1.5 text-[11px] text-red-600 dark:text-red-400 font-medium bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-2.5 py-1.5 rounded-md">
+                    <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                    </svg>
+                    <span x-text="stop._requestedEndError"></span>
+                </div>
                 @endif
             </div>
         </div>

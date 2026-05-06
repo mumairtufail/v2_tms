@@ -810,22 +810,22 @@ function orderForm() {
 
             // Ready End must be >= Ready Start
             if (readyStart && readyEnd && readyEnd < readyStart) {
-                stop._readyEndError = '⚠ Ready end date must be on or after the ready start date.';
+                stop._readyEndError = 'Pickup end must be on or after the pickup start.';
             }
 
             // Requested Start must be >= Ready Start (can't request delivery before pickup is ready)
             if (readyStart && reqStart && reqStart < readyStart) {
-                stop._requestedStartError = '⚠ Requested delivery start cannot be before the pickup ready date.';
+                stop._requestedStartError = 'Delivery start cannot be before the pickup start date.';
             }
 
             // Requested End must be >= Requested Start
             if (reqStart && reqEnd && reqEnd < reqStart) {
-                stop._requestedEndError = '⚠ Requested delivery end must be on or after the delivery start.';
+                stop._requestedEndError = 'Delivery end must be on or after the delivery start.';
             }
 
             // Requested End must be >= Ready End
             if (readyEnd && reqEnd && reqEnd < readyEnd) {
-                stop._requestedEndError = stop._requestedEndError || '⚠ Delivery end cannot be before the pickup ready end date.';
+                stop._requestedEndError = stop._requestedEndError || 'Delivery end cannot be before the pickup end date.';
             }
         },
 
