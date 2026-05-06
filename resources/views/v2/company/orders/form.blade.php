@@ -119,6 +119,34 @@
         <input type="hidden" name="stops" x-bind:value="JSON.stringify(stops)">
         <input type="hidden" name="quote_data" x-bind:value="JSON.stringify(quote)">
         
+        {{-- Validation error banner --}}
+        <div id="form-error-banner"
+             x-show="formErrors.length > 0"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 -translate-y-2"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             class="mb-4 rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 p-4"
+             style="display:none">
+            <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                </svg>
+                <div class="flex-1">
+                    <p class="text-sm font-semibold text-red-700 dark:text-red-400">Please fix the following errors before submitting:</p>
+                    <ul class="mt-1 space-y-0.5 list-disc list-inside">
+                        <template x-for="err in formErrors" :key="err">
+                            <li class="text-xs text-red-600 dark:text-red-400" x-text="err"></li>
+                        </template>
+                    </ul>
+                </div>
+                <button type="button" @click="formErrors = []" class="text-red-400 hover:text-red-600 dark:hover:text-red-300">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 gap-6">
             {{-- General Info Section --}}
             <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
@@ -180,8 +208,14 @@
                                     <td class="px-3 py-2">
                                         <a :href="'#leg-' + stop.uid" @click.stop="stop.expanded = true" class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 text-[10px] font-bold hover:bg-primary-200 dark:hover:bg-primary-900/50" x-text="stopIndex + 1"></a>
                                     </td>
-                                    <td class="px-3 py-2" x-text="stop.shipper.city ? stop.shipper.city + ', ' + stop.shipper.state : '-'"></td>
-                                    <td class="px-3 py-2" x-text="stop.consignee.city ? stop.consignee.city + ', ' + stop.consignee.state : '-'"></td>
+                                    <td class="px-3 py-2">
+                                        <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="stop.shipper.company_name || '-'"></div>
+                                        <div class="text-[10px] text-gray-400" x-show="stop.shipper.city" x-text="stop.shipper.city + ', ' + stop.shipper.state"></div>
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="stop.consignee.company_name || '-'"></div>
+                                        <div class="text-[10px] text-gray-400" x-show="stop.consignee.city" x-text="stop.consignee.city + ', ' + stop.consignee.state"></div>
+                                    </td>
                                     <td class="px-3 py-2">
                                         <template x-if="stop.manifest_id && manifestsMap[stop.manifest_id]">
                                             <a :href="manifestEditUrl(stop.manifest_id)" @click.stop class="text-primary-600 hover:text-primary-700 hover:underline" x-text="manifestsMap[stop.manifest_id]"></a>
@@ -561,6 +595,7 @@ function orderForm() {
         showProcessModal: false,
         massManifestId: '',
         submissionMode: 'new',
+        formErrors: [],
         orderStatus: @json($order->status),
         topContainerNumber: @json(old('container_number', $order->container_number ?? '')),
 
@@ -628,6 +663,9 @@ function orderForm() {
                 if (!stop.measurements) stop.measurements = 'in_lbs';
                 if (stop._containerError === undefined) stop._containerError = false;
                 if (stop._siError === undefined) stop._siError = false;
+                if (stop._readyEndError === undefined) stop._readyEndError = '';
+                if (stop._requestedStartError === undefined) stop._requestedStartError = '';
+                if (stop._requestedEndError === undefined) stop._requestedEndError = '';
 
                 ['shipper', 'consignee'].forEach(role => {
                     if (!stop[role].ready_at && (stop[role].ready_date || stop[role].ready_time)) {
@@ -735,6 +773,85 @@ function orderForm() {
                     stop[role].ready_at = stop[role][valueField];
                 }
             }
+
+            // Validate dates in real-time and refresh banner
+            this.validateStopDates(stop);
+            // Rebuild banner errors from all stops so banner stays accurate
+            const errs = [];
+            this.stops.forEach((s, i) => {
+                if (s._readyEndError) errs.push(`Stop ${i + 1}: ${s._readyEndError}`);
+                if (s._requestedStartError) errs.push(`Stop ${i + 1}: ${s._requestedStartError}`);
+                if (s._requestedEndError) errs.push(`Stop ${i + 1}: ${s._requestedEndError}`);
+            });
+            if (this.formErrors.length > 0) this.formErrors = errs;
+        },
+
+        parseDateValue(val) {
+            if (!val) return null;
+            // Handle both picker format (YYYY-MM-DDTHH:mm) and stored format (MM/DD/YY HH:mm)
+            const iso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(val);
+            if (iso) return new Date(val);
+            const stored = /^(\d{2})\/(\d{2})\/(\d{2})\s(\d{2}):(\d{2})$/.exec(val);
+            if (stored) return new Date(`20${stored[3]}-${stored[1]}-${stored[2]}T${stored[4]}:${stored[5]}`);
+            const d = new Date(val);
+            return isNaN(d.getTime()) ? null : d;
+        },
+
+        validateStopDates(stop) {
+            // Clear previous errors
+            stop._readyEndError = '';
+            stop._requestedStartError = '';
+            stop._requestedEndError = '';
+
+            const readyStart = this.parseDateValue(stop.shipper.ready_start_at_picker || stop.shipper.ready_start_at);
+            const readyEnd   = this.parseDateValue(stop.shipper.ready_end_at_picker   || stop.shipper.ready_end_at);
+            const reqStart   = this.parseDateValue(stop.consignee.requested_start_at_picker || stop.consignee.requested_start_at);
+            const reqEnd     = this.parseDateValue(stop.consignee.requested_end_at_picker   || stop.consignee.requested_end_at);
+
+            // Ready End must be >= Ready Start
+            if (readyStart && readyEnd && readyEnd < readyStart) {
+                stop._readyEndError = '⚠ Ready end date must be on or after the ready start date.';
+            }
+
+            // Requested Start must be >= Ready Start (can't request delivery before pickup is ready)
+            if (readyStart && reqStart && reqStart < readyStart) {
+                stop._requestedStartError = '⚠ Requested delivery start cannot be before the pickup ready date.';
+            }
+
+            // Requested End must be >= Requested Start
+            if (reqStart && reqEnd && reqEnd < reqStart) {
+                stop._requestedEndError = '⚠ Requested delivery end must be on or after the delivery start.';
+            }
+
+            // Requested End must be >= Ready End
+            if (readyEnd && reqEnd && reqEnd < readyEnd) {
+                stop._requestedEndError = stop._requestedEndError || '⚠ Delivery end cannot be before the pickup ready end date.';
+            }
+        },
+
+        validateAllDates() {
+            let valid = true;
+            const errors = [];
+            this.stops.forEach((stop, idx) => {
+                this.validateStopDates(stop);
+                if (stop._readyEndError) {
+                    stop.expanded = true;
+                    errors.push(`Stop ${idx + 1}: ${stop._readyEndError}`);
+                    valid = false;
+                }
+                if (stop._requestedStartError) {
+                    stop.expanded = true;
+                    errors.push(`Stop ${idx + 1}: ${stop._requestedStartError}`);
+                    valid = false;
+                }
+                if (stop._requestedEndError) {
+                    stop.expanded = true;
+                    errors.push(`Stop ${idx + 1}: ${stop._requestedEndError}`);
+                    valid = false;
+                }
+            });
+            this.formErrors = errors;
+            return valid;
         },
 
         addStop() {
@@ -766,6 +883,9 @@ function orderForm() {
                 shipper: { ...autofill },
                 consignee: { company_name: '', address_1: '', address_2: '', city: '', state: '', zip: '', country: 'US', contact_name: '', phone: '', email: '', opening_time: '08:00', closing_time: '17:00', ready_at: '', requested_start_at: '', requested_end_at: '', requested_start_at_picker: '', requested_end_at_picker: '', appointment: false, notes: '' },
                 _containerError: false,
+                _readyEndError: '',
+                _requestedStartError: '',
+                _requestedEndError: '',
                 billing: { customs_broker: '', port_of_entry: '', container_number: this.topContainerNumber || '', declared_value: 0, currency: 'USD', ref_number: '', customer_po_number: '' },
                 commodities: [this.newCommodity()],
                 accessorials: []
@@ -945,6 +1065,23 @@ freightSubtotal(rows) {
 },
 
         saveDraft() {
+            // Validate date logic even for drafts
+            this.stops.forEach(stop => {
+                if (stop.shipper.ready_start_at_picker) this.syncStopDateTime(stop, 'shipper', 'start');
+                if (stop.shipper.ready_end_at_picker) this.syncStopDateTime(stop, 'shipper', 'end');
+                if (stop.consignee.requested_start_at_picker) this.syncStopDateTime(stop, 'consignee', 'start');
+                if (stop.consignee.requested_end_at_picker) this.syncStopDateTime(stop, 'consignee', 'end');
+            });
+            if (!this.validateAllDates()) {
+                setTimeout(() => {
+                    const errBanner = document.getElementById('form-error-banner');
+                    if (errBanner) { errBanner.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+                    const candidates = [...document.querySelectorAll('[data-date-error]')];
+                    const visible = candidates.find(el => el.offsetParent !== null && el.textContent.trim());
+                    if (visible) visible.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 150);
+                return;
+            }
             this.saving = true;
             this.submissionMode = 'draft';
             this.flushFormInputs();
@@ -1031,23 +1168,39 @@ freightSubtotal(rows) {
 
             // ── Validate required fields ────────────────────────────────────
             let formValid = true;
+            const siErrors = [];
 
-            this.stops.forEach(stop => {
+            this.stops.forEach((stop, idx) => {
                 stop._containerError = false;
                 stop._siError = !stop.special_instructions || !stop.special_instructions.trim();
                 if (stop._siError) {
-                    stop.expanded = true; // auto-expand leg so error is visible
+                    stop.expanded = true;
+                    siErrors.push(`Stop ${idx + 1}: Special instructions are required.`);
                     formValid = false;
                 }
             });
 
+            // ── Validate date logic ─────────────────────────────────────────
+            if (!this.validateAllDates()) {
+                formValid = false;
+            }
+
+            this.formErrors = [...siErrors, ...this.formErrors];
+
             if (!formValid) {
                 this.submitting = false;
-                // Scroll to first error after Alpine flushes the DOM open
+                // Wait for Alpine to re-render error elements then scroll to first visible one
                 setTimeout(() => {
-                    const el = document.querySelector('.border-red-400');
-                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 80);
+                    const errBanner = document.getElementById('form-error-banner');
+                    if (errBanner) {
+                        errBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        return;
+                    }
+                    // Fallback: find first visible date-error or red-border element
+                    const candidates = [...document.querySelectorAll('[data-date-error], .border-red-400')];
+                    const visible = candidates.find(el => el.offsetParent !== null && el.textContent.trim());
+                    if (visible) visible.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 150);
                 return false;
             }
 

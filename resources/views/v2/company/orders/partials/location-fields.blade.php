@@ -103,7 +103,9 @@
 
     {{-- Row 9: Ready/Requested Date & Time –– 24h custom picker, no AM/PM --}}
     <div class="pt-3 border-t border-gray-100 dark:border-gray-700">
-        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-2">{{ $prefix === 'shipper' ? 'Ready Date' : 'Requested Date' }}</label>
+        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-2">
+            {{ $prefix === 'shipper' ? 'Ready Date (Pickup Window)' : 'Requested Date (Delivery Window)' }}
+        </label>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
                 <label class="block text-[10px] font-medium text-gray-400 uppercase">Start</label>
@@ -112,6 +114,12 @@
                     @change="syncStopDateTime(stop, '{{ $prefix }}', 'start')"
                     class="mt-0.5 w-full"
                 />
+                @if($prefix === 'consignee')
+                <p x-show="stop._requestedStartError" x-text="stop._requestedStartError"
+                   data-date-error
+                   class="date-error-msg mt-1 text-[10px] text-red-600 font-semibold flex items-center gap-1 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded">
+                </p>
+                @endif
             </div>
             <div>
                 <label class="block text-[10px] font-medium text-gray-400 uppercase">End</label>
@@ -120,9 +128,20 @@
                     @change="syncStopDateTime(stop, '{{ $prefix }}', 'end')"
                     class="mt-0.5 w-full"
                 />
+                @if($prefix === 'shipper')
+                <p x-show="stop._readyEndError" x-text="stop._readyEndError"
+                   data-date-error
+                   class="date-error-msg mt-1 text-[10px] text-red-600 font-semibold flex items-center gap-1 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded">
+                </p>
+                @else
+                <p x-show="stop._requestedEndError" x-text="stop._requestedEndError"
+                   data-date-error
+                   class="date-error-msg mt-1 text-[10px] text-red-600 font-semibold flex items-center gap-1 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded">
+                </p>
+                @endif
             </div>
         </div>
-        <p class="text-[10px] text-gray-400 mt-1">Saved as MM/DD/YY HH:MM (24-hour).</p>
+        <p class="text-[10px] text-gray-400 mt-1">24-hour format. End must be on or after Start.</p>
         <label class="flex items-center gap-2 mt-2 cursor-pointer">
             <input type="checkbox" x-model="stop.{{ $prefix }}.appointment" class="rounded border-gray-300 text-primary-600 shadow-sm focus:ring-primary-500 w-4 h-4">
             <span class="text-xs text-gray-600 dark:text-gray-400">Make this an appointment</span>

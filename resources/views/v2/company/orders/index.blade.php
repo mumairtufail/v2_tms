@@ -110,7 +110,7 @@
                     <th class="w-12 px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">#</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Order Details</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Customer</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Stops</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Shipper / Consignee</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
                     <!-- <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Invoice</th> -->
                     <th class="w-24 px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
@@ -152,22 +152,32 @@
                     </td>
                     
                     <td class="px-4 py-2 align-top hidden lg:table-cell">
+                        @php
+                            $shipper = $order->stops->firstWhere('stop_type', 'pickup') ?? $order->stops->first();
+                            $consignee = $order->stops->last(fn($s) => $s->stop_type === 'delivery') ?? ($order->stops->count() > 1 ? $order->stops->last() : null);
+                            if ($shipper && $consignee && $shipper->id === $consignee->id) $consignee = null;
+                        @endphp
                         <div class="flex flex-col gap-1">
-                            @if($order->stops->count() > 0)
-                                <div class="flex items-center gap-1 text-xs">
-                                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
-                                    <span class="text-gray-600 dark:text-gray-400">{{ $order->stops->first()->city }}, {{ $order->stops->first()->state }}</span>
+                            @if($shipper)
+                                <div class="flex items-center gap-1.5 text-xs">
+                                    <span class="w-2 h-2 rounded-full bg-green-500 shrink-0"></span>
+                                    <div class="flex flex-col">
+                                        <span class="font-medium text-gray-800 dark:text-gray-200">{{ $shipper->company_name }}</span>
+                                        <span class="text-gray-400">{{ $shipper->city }}, {{ $shipper->state }}</span>
+                                    </div>
                                 </div>
-                                @if($order->stops->count() > 1)
+                                @if($consignee)
                                 <div class="w-px h-2 ml-1 bg-gray-300 dark:bg-gray-700"></div>
-                                <div class="flex items-center gap-1 text-xs">
-                                    <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-                                    <span class="text-gray-600 dark:text-gray-400">{{ $order->stops->last()->city }}, {{ $order->stops->last()->state }}</span>
+                                <div class="flex items-center gap-1.5 text-xs">
+                                    <span class="w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>
+                                    <div class="flex flex-col">
+                                        <span class="font-medium text-gray-800 dark:text-gray-200">{{ $consignee->company_name }}</span>
+                                        <span class="text-gray-400">{{ $consignee->city }}, {{ $consignee->state }}</span>
+                                    </div>
                                 </div>
-                                <!-- <div class="text-[10px] text-primary-500 font-medium ml-4 mt-1">+{{ $order->stops->count() - 2 }} intermediate stops</div> -->
                                 @endif
                             @else
-                                <span class="text-gray-400 text-xs font-italic">No stops defined</span>
+                                <span class="text-gray-400 text-xs italic">No stops defined</span>
                             @endif
                         </div>
                     </td>

@@ -22,11 +22,6 @@ class HomeController extends Controller
      *
      * @return \Illuminate\Contracts\Support\Renderable
      */
-    public function index()
-    {
-        return view('dashboard.index');
-    }
-
     /**
      * Display activity logs with search and pagination.
      */
@@ -57,9 +52,4 @@ class HomeController extends Controller
         return view('v2.admin.logs.index', compact('activity_logs'));
     }
 
-    public function viewLogs($id)
-    {
-        $logs = ActivityLogs::find($id);
-        return view('dashboard.activity_logs.view', compact('logs'));
-    }
 }

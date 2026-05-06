@@ -13,19 +13,19 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Left: Profile Card -->
         <div class="lg:col-span-1">
-            <x-table-container>
+            <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="p-6 text-center">
                     <!-- Avatar -->
                     <div class="w-24 h-24 mx-auto bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center text-white text-3xl font-bold shadow-lg">
                         {{ strtoupper(substr($user->f_name ?? $user->name ?? 'U', 0, 1)) }}{{ strtoupper(substr($user->l_name ?? '', 0, 1)) }}
                     </div>
-                    
+
                     <!-- Name & Email -->
                     <h2 class="mt-4 text-xl font-bold text-gray-900 dark:text-white">{{ $user->name }}</h2>
                     <p class="text-sm text-gray-500 dark:text-gray-400">{{ $user->email }}</p>
-                    
+
                     <!-- Status & Role -->
-                    <div class="mt-4 flex items-center justify-center gap-2">
+                    <div class="mt-4 flex items-center justify-center gap-2 flex-wrap">
                         @if($user->status === 'active' || $user->is_active)
                         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
                             <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
@@ -37,14 +37,14 @@
                             Inactive
                         </span>
                         @endif
-                        
+
                         @if($user->roles->first())
                         <span class="px-3 py-1 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300">
                             {{ $user->roles->first()->name }}
                         </span>
                         @endif
                     </div>
-                    
+
                     <!-- Quick Actions -->
                     <div class="mt-6 flex gap-2">
                         <a href="{{ route('admin.users.edit', $user) }}" class="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors text-center">
@@ -57,7 +57,7 @@
                         @endif
                     </div>
                 </div>
-                
+
                 <!-- Quick Stats -->
                 <div class="border-t border-gray-200 dark:border-gray-700 p-4 grid grid-cols-2 gap-4">
                     <div class="text-center">
@@ -69,7 +69,7 @@
                         <p class="text-xs text-gray-500 dark:text-gray-400">Member since</p>
                     </div>
                 </div>
-            </x-table-container>
+            </div>
         </div>
 
         <!-- Right: Details -->
