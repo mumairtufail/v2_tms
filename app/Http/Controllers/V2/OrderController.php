@@ -294,6 +294,7 @@ class OrderController extends Controller
 
             // Update order basic fields
             $order->update([
+                'order_type' => $validated['order_type'] ?? $order->order_type,
                 'ref_number' => $validated['ref_number'] ?? $order->ref_number,
                 'customer_po_number' => $validated['customer_po_number'] ?? $order->customer_po_number,
                 'container_number' => $validated['container_number'] ?? $order->container_number,

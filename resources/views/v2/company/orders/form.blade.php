@@ -61,51 +61,95 @@
         @endif
     </div>
 
-    {{-- 3. Order Type Tabs --}}
-    <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
-        <div class="border-b border-gray-200 dark:border-gray-800">
-            <nav class="flex -mb-px" aria-label="Order Types">
-                @php
-                    $orderTypes = [
-                        'point_to_point' => 'Point-to-Point',
-                        'single_shipper' => 'Single Shipper',
-                        'single_consignee' => 'Single Consignee',
-                        'sequence' => 'Sequence',
-                    ];
-                @endphp
-                @foreach($orderTypes as $typeKey => $typeLabel)
-                    <button type="button"
-                        class="flex-1 py-3 px-4 text-center text-sm font-medium border-b-2 transition-colors
-                            {{ $order->order_type === $typeKey 
-                                ? 'border-primary-500 text-primary-600 bg-primary-50 dark:bg-primary-900/20' 
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' }}"
-                        {{ $order->order_type === $typeKey ? 'disabled' : '' }}
-                        @if($order->order_type !== $typeKey)
-                            onclick="window.location.href='{{ route('v2.orders.edit', ['company' => $company->slug, 'order' => $order->id]) }}?type={{ $typeKey }}'"
-                        @endif
-                    >
-                        {{ $typeLabel }}
-                    </button>
-                @endforeach
-            </nav>
+    {{-- 3. Order Type Selection (Modern Radio Style) --}}
+    <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm p-5">
+        <div class="mb-5 flex items-center justify-between">
+            <div>
+                <h3 class="text-[11px] font-bold text-gray-900 dark:text-white uppercase tracking-widest">Select Strategy</h3>
+                <p class="text-[10px] text-gray-400">Choose the move type for this order</p>
+            </div>
+            <div class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase tracking-tighter dark:bg-emerald-900/20">
+                Mode: {{ str_replace('_', ' ', $order->order_type) }}
+            </div>
         </div>
-        
-        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 text-xs text-gray-500">
-            <span class="font-medium">{{ $orderTypes[$order->order_type] ?? 'Unknown' }}:</span>
-            @switch($order->order_type)
-                @case('point_to_point')
-                    Simple 1 pickup → 1 delivery flow.
-                    @break
-                @case('single_shipper')
-                    1 pickup stop with multiple delivery destinations.
-                    @break
-                @case('single_consignee')
-                    Multiple pickup locations delivered to a single destination.
-                    @break
-                @case('sequence')
-                    A sequence of stops, each stop starts where the previous one ended.
-                    @break
-            @endswitch
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            @php
+                $orderTypes = [
+                    'point_to_point' => [
+                        'label' => 'Origin-to-Destination',
+                        'desc' => '1 Pickup / 1 Drop'
+                    ],
+                    'single_shipper' => [
+                        'label' => 'Multi-Destination',
+                        'desc' => '1 Origin / Multi-Drop'
+                    ],
+                    'single_consignee' => [
+                        'label' => 'Milk Run',
+                        'desc' => 'Multi-Pickup / 1 Drop'
+                    ],
+                    'sequence' => [
+                        'label' => 'Shuttle Loop',
+                        'desc' => 'Sequential Chained Legs'
+                    ],
+                ];
+            @endphp
+
+            @foreach($orderTypes as $typeKey => $typeData)
+                @php 
+                    $isSelected = $order->order_type === $typeKey; 
+                    $isLocked = !in_array($typeKey, ['sequence']); // Sequence is Shuttle Loop
+                @endphp
+                <label 
+                    @if($isLocked)
+                        @click.prevent="window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'This strategy is currently under development.', type: 'info' }}))"
+                    @endif
+                    class="relative flex flex-col rounded-xl border-2 p-4 transition-all duration-300 group
+                    {{ $isLocked ? 'cursor-not-allowed opacity-75 bg-gray-50/50 grayscale-[0.5]' : 'cursor-pointer' }}
+                    {{ $isSelected 
+                        ? 'bg-emerald-500 border-emerald-600 shadow-[0_4px_20px_rgba(16,185,129,0.25)]' 
+                        : ($isLocked ? 'border-gray-200' : 'bg-white border-gray-100 hover:border-emerald-200 hover:bg-gray-50/50 dark:bg-gray-900 dark:border-gray-800') }}">
+                    
+                    <input type="radio" name="order_type_selector" value="{{ $typeKey }}" class="sr-only" 
+                        {{ $isSelected ? 'checked' : '' }}
+                        {{ $isLocked ? 'disabled' : '' }}
+                        @if(!$isLocked)
+                            onchange="window.location.href='{{ route('v2.orders.edit', ['company' => $company->slug, 'order' => $order->id]) }}?type={{ $typeKey }}'"
+                        @endif>
+                    
+                    <div class="flex items-center justify-between mb-3">
+                        {{-- Circular Radio --}}
+                        <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300 
+                            {{ $isSelected ? 'border-white bg-white' : ($isLocked ? 'border-gray-200 bg-gray-100' : 'border-gray-300 bg-white group-hover:border-emerald-400') }}">
+                            @if($isSelected)
+                                <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+                            @elseif($isLocked)
+                                <svg class="w-2.5 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path></svg>
+                            @endif
+                        </div>
+                        
+                        @if($isSelected)
+                            <div class="bg-white/20 rounded-full p-1">
+                                <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                            </div>
+                        @elseif($isLocked)
+                             <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400 flex items-center gap-1">
+                                <svg class="w-2 h-2" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+                                Coming Soon
+                             </span>
+                        @endif
+                    </div>
+
+                    <div class="mt-auto">
+                        <span class="block text-[12px] font-bold leading-tight {{ $isSelected ? 'text-white' : 'text-gray-900 dark:text-gray-100' }}">
+                            {{ $typeData['label'] }}
+                        </span>
+                        <span class="block text-[10px] mt-1 font-medium {{ $isSelected ? 'text-emerald-50' : 'text-gray-400' }}">
+                            {{ $isLocked ? 'Feature Locked' : $typeData['desc'] }}
+                        </span>
+                    </div>
+                </label>
+            @endforeach
         </div>
     </div>
 
@@ -195,11 +239,12 @@
                         <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                             <tr>
                                 <th class="px-3 py-2 text-left text-[10px] font-bold text-gray-500 uppercase">Stop #</th>
-                                <th class="px-3 py-2 text-left text-[10px] font-bold text-gray-500 uppercase">Shipper</th>
-                                <th class="px-3 py-2 text-left text-[10px] font-bold text-gray-500 uppercase">Consignee</th>
+                                <th class="px-3 py-2 text-left text-[10px] font-bold text-gray-500 uppercase"
+                                    x-text="orderType === 'single_consignee' ? 'Pickup (Shipper)' : 'Shipper'"></th>
+                                <th class="px-3 py-2 text-left text-[10px] font-bold text-gray-500 uppercase"
+                                    x-text="orderType === 'single_shipper' ? 'Delivery (Consignee)' : 'Consignee'"></th>
                                 <th class="px-3 py-2 text-left text-[10px] font-bold text-gray-500 uppercase">Manifest</th>
                                 <th class="px-3 py-2 text-left text-[10px] font-bold text-gray-500 uppercase">Items</th>
-
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -280,8 +325,22 @@
                                                 <div class="flex items-center gap-2">
                                                     <div class="w-2 h-2 rounded-full bg-green-500 ring-4 ring-green-100 dark:ring-green-900/30"></div>
                                                     <h4 class="text-xs font-bold text-gray-500 uppercase">Shipper Information (Pickup)</h4>
+                                                    {{-- Locked badge for single_shipper stops after first --}}
+                                                    <template x-if="orderType === 'single_shipper' && stopIndex > 0">
+                                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                                            Shared
+                                                        </span>
+                                                    </template>
                                                 </div>
-                                                @include('v2.company.orders.partials.location-fields', ['prefix' => 'shipper'])
+                                                <div class="relative">
+                                                    <div x-show="orderType === 'single_shipper' && stopIndex > 0"
+                                                         class="absolute inset-0 z-10 rounded-lg cursor-not-allowed"
+                                                         title="Shared shipper — edit on Stop 1"></div>
+                                                    <div :class="(orderType === 'single_shipper' && stopIndex > 0) ? 'opacity-50 pointer-events-none select-none' : ''">
+                                                        @include('v2.company.orders.partials.location-fields', ['prefix' => 'shipper'])
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             {{-- Consignee Section --}}
@@ -289,8 +348,22 @@
                                                 <div class="flex items-center gap-2">
                                                     <div class="w-2 h-2 rounded-full bg-blue-500 ring-4 ring-blue-100 dark:ring-blue-900/30"></div>
                                                     <h4 class="text-xs font-bold text-gray-500 uppercase">Consignee Information (Delivery)</h4>
+                                                    {{-- Locked badge for single_consignee stops after first --}}
+                                                    <template x-if="orderType === 'single_consignee' && stopIndex > 0">
+                                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                                            Shared
+                                                        </span>
+                                                    </template>
                                                 </div>
-                                                @include('v2.company.orders.partials.location-fields', ['prefix' => 'consignee'])
+                                                <div class="relative">
+                                                    <div x-show="orderType === 'single_consignee' && stopIndex > 0"
+                                                         class="absolute inset-0 z-10 rounded-lg cursor-not-allowed"
+                                                         title="Shared consignee — edit on Stop 1"></div>
+                                                    <div :class="(orderType === 'single_consignee' && stopIndex > 0) ? 'opacity-50 pointer-events-none select-none' : ''">
+                                                        @include('v2.company.orders.partials.location-fields', ['prefix' => 'consignee'])
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -437,7 +510,9 @@
                                                                         <input type="text" x-model="commodity.description" class="w-full border-0 bg-transparent focus:ring-1 focus:ring-primary-500 rounded p-1 text-xs dark:text-white" placeholder="Description">
                                                                     </td>
                                                                     <td class="px-2 py-1.5 text-center">
-                                                                        <input type="number" x-model="commodity.qty" class="w-full border-0 bg-transparent focus:ring-1 focus:ring-primary-500 rounded p-1 text-xs text-center dark:text-white" placeholder="1" min="1">
+                                                                        <input type="number" x-model="commodity.qty" 
+                                                                            @focus="$event.target.select()"
+                                                                            class="w-full border-0 bg-transparent focus:ring-1 focus:ring-primary-500 rounded p-1 text-xs text-center dark:text-white" placeholder="1" min="1">
                                                                     </td>
                                                                     <td class="px-2 py-1.5 text-center">
                                                                         <select x-model="commodity.type" class="w-full border-0 bg-transparent focus:ring-1 focus:ring-primary-500 rounded p-1 text-xs dark:text-white dark:bg-gray-900">
@@ -562,11 +637,15 @@
                     </template>
                 </div>
 
-                {{-- Add Leg Button --}}
-                <button type="button" @click="addStop()" class="w-full py-5 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl flex flex-col items-center justify-center text-gray-400 hover:text-primary-600 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all group">
+                {{-- Add Leg Button (hidden for point_to_point) --}}
+                <button type="button" @click="addStop()"
+                        x-show="orderType !== 'point_to_point'"
+                        class="w-full py-5 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl flex flex-col items-center justify-center text-gray-400 hover:text-primary-600 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all group">
                     <svg class="w-8 h-8 mb-1 text-gray-300 group-hover:text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <span class="text-sm font-bold">Add Next Leg</span>
-                    <span class="text-[10px] text-gray-400">Autofills from previous consignee</span>
+                    <span class="text-sm font-bold"
+                          x-text="orderType === 'single_shipper' ? 'Add Delivery Stop' : orderType === 'single_consignee' ? 'Add Pickup Stop' : 'Add Next Leg'"></span>
+                    <span class="text-[10px] text-gray-400"
+                          x-text="orderType === 'single_shipper' ? 'Shared shipper auto-filled' : orderType === 'single_consignee' ? 'Shared consignee auto-filled' : 'Autofills from previous consignee'"></span>
                 </button>
             </div>
         </div>
@@ -597,6 +676,7 @@ function orderForm() {
         submissionMode: 'new',
         formErrors: [],
         orderStatus: @json($order->status),
+        orderType: @json($order->order_type),
         topContainerNumber: @json(old('container_number', $order->container_number ?? '')),
 
         init() {
@@ -625,6 +705,8 @@ function orderForm() {
                 // Row 0: must be a Freight-type row
                 if (r.length === 0 || (r[0].type !== 'Freight' && r[0].type !== 'Freight (per mile)')) {
                     r.unshift({ type: 'Freight', description: freightDesc, qty: 1, rate: 0, cost: 0, is_default: true });
+                } else if (!r[0].qty) {
+                    r[0].qty = 1;
                 }
 
                 // Row 1: must be a Fuel-type row
@@ -703,6 +785,17 @@ function orderForm() {
 
             if (this.topContainerNumber && this.topContainerNumber.trim()) {
                 this.applyTopContainerNumberToAllStops();
+            }
+
+            // Live-sync shared side when stop 1 is edited
+            if (this.orderType === 'single_shipper') {
+                this.$watch('stops[0].shipper', (val) => {
+                    this.stops.forEach((stop, i) => { if (i > 0) stop.shipper = { ...val }; });
+                }, { deep: true });
+            } else if (this.orderType === 'single_consignee') {
+                this.$watch('stops[0].consignee', (val) => {
+                    this.stops.forEach((stop, i) => { if (i > 0) stop.consignee = { ...val }; });
+                }, { deep: true });
             }
         },
 
@@ -854,23 +947,35 @@ function orderForm() {
             return valid;
         },
 
+        blankConsignee() {
+            return { company_name: '', address_1: '', address_2: '', city: '', state: '', zip: '', country: 'US', contact_name: '', phone: '', email: '', opening_time: '08:00', closing_time: '17:00', ready_at: '', requested_start_at: '', requested_end_at: '', requested_start_at_picker: '', requested_end_at_picker: '', appointment: false, notes: '' };
+        },
+
+        blankShipper() {
+            return { company_name: '', address_1: '', address_2: '', city: '', state: '', zip: '', country: 'US', contact_name: '', phone: '', email: '', opening_time: '08:00', closing_time: '17:00', ready_at: '', ready_start_at: '', ready_end_at: '', ready_start_at_picker: '', ready_end_at_picker: '', appointment: false, notes: '' };
+        },
+
         addStop() {
-            let autofill = {
-                company_name: '', address_1: '', address_2: '', city: '', state: '', zip: '', country: 'US',
-                contact_name: '', phone: '', email: '', opening_time: '08:00', closing_time: '17:00',
-                ready_at: '',
-                ready_start_at: '',
-                ready_end_at: '',
-                ready_start_at_picker: '',
-                ready_end_at_picker: '',
-                appointment: false,
-                notes: ''
-            };
+            let shipperData = this.blankShipper();
+            let consigneeData = this.blankConsignee();
 
             if (this.stops.length > 0) {
                 const lastStop = this.stops[this.stops.length - 1];
-                autofill = { ...lastStop.consignee };
                 lastStop.expanded = false;
+
+                if (this.orderType === 'sequence') {
+                    // Sequence: new shipper autofills from previous consignee
+                    shipperData = { ...lastStop.consignee };
+                } else if (this.orderType === 'single_shipper') {
+                    // Shared shipper: always copy stop 1's shipper
+                    shipperData = { ...this.stops[0].shipper };
+                } else if (this.orderType === 'single_consignee') {
+                    // Shared consignee: always copy stop 1's consignee
+                    consigneeData = { ...this.stops[0].consignee };
+                } else {
+                    // point_to_point: only 1 stop allowed, should not reach here
+                    shipperData = { ...lastStop.consignee };
+                }
             }
 
             this.stops.push({
@@ -880,8 +985,8 @@ function orderForm() {
                 service_type: 'truckload',
                 measurements: 'in_lbs',
                 special_instructions: '',
-                shipper: { ...autofill },
-                consignee: { company_name: '', address_1: '', address_2: '', city: '', state: '', zip: '', country: 'US', contact_name: '', phone: '', email: '', opening_time: '08:00', closing_time: '17:00', ready_at: '', requested_start_at: '', requested_end_at: '', requested_start_at_picker: '', requested_end_at_picker: '', appointment: false, notes: '' },
+                shipper: shipperData,
+                consignee: consigneeData,
                 _containerError: false,
                 _readyEndError: '',
                 _requestedStartError: '',
@@ -951,7 +1056,14 @@ function orderForm() {
         },
 
         addQuoteRow(type) {
-            this.quote[type + '_rows'].push({ type: 'Freight', description: '', cost: 0, percentage: 0 });
+            this.quote[type + '_rows'].push({ 
+                type: 'Miscellaneous', 
+                description: '', 
+                qty: 1, 
+                rate: 0, 
+                cost: 0,
+                is_default: false 
+            });
         },
 
         applyMassManifest() {

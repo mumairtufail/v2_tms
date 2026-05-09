@@ -217,12 +217,13 @@
                                         <td class="px-2 py-1.5">
                                             <div class="relative">
                                                 <input type="number" step="0.01" x-model="row.qty"
+                                                       @focus="$event.target.select()"
                                                        @input="normalizeQuoteRows(quote.carrier_rows)"
                                                        class="w-full text-[10px] py-1 px-1.5 rounded-md text-center
                                                               border border-slate-200 dark:border-slate-600/40
                                                               bg-white dark:bg-slate-800/60 text-slate-700 dark:text-slate-200
                                                               focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
-                                                       :placeholder="(row.type === 'Fuel (surcharge)' && idx === 1) ? '%' : '0'">
+                                                       :placeholder="(row.type === 'Fuel (surcharge)' && idx === 1) ? '%' : '1'">
                                                 {{-- % suffix badge for fuel surcharge --}}
                                                 <template x-if="row.type === 'Fuel (surcharge)' && idx === 1">
                                                     <span class="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-orange-400 pointer-events-none select-none">%</span>
@@ -399,12 +400,13 @@
                                         <td class="px-2 py-1.5">
                                             <div class="relative">
                                                 <input type="number" step="0.01" x-model="row.qty"
+                                                       @focus="$event.target.select()"
                                                        @input="normalizeQuoteRows(quote.customer_rows)"
                                                        class="w-full text-[10px] py-1 px-1.5 rounded-md text-center
                                                               border border-slate-200 dark:border-slate-600/40
                                                               bg-white dark:bg-slate-800/60 text-slate-700 dark:text-slate-200
                                                               focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
-                                                       :placeholder="(row.type === 'Fuel (surcharge)' && idx === 1) ? '%' : '0'">
+                                                       :placeholder="(row.type === 'Fuel (surcharge)' && idx === 1) ? '%' : '1'">
                                                 <template x-if="row.type === 'Fuel (surcharge)' && idx === 1">
                                                     <span class="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none select-none">%</span>
                                                 </template>

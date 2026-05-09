@@ -109,6 +109,7 @@
                     </th>
                     <th class="w-12 px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">#</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Order Details</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Customer</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Shipper / Consignee</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
@@ -129,11 +130,25 @@
                             <a href="{{ route('v2.orders.edit', ['company' => $company->slug, 'order' => $order->id]) }}" class="font-bold text-gray-900 dark:text-white group-hover:text-primary-600 transition-colors hover:underline" @click.stop>
                                 <x-search-highlight :text="$order->order_number" :search="request('search')" />
                             </a>
-                            <span class="text-xs text-gray-500 mt-0.5">Type: {{ str_replace('_', ' ', ucfirst($order->order_type)) }}</span>
                             @if($order->ref_number)
                                 <span class="text-xs text-gray-400 mt-0.5">Ref: {{ $order->ref_number }}</span>
                             @endif
                         </div>
+                    </td>
+
+                    <td class="px-4 py-2 align-top whitespace-nowrap">
+                        @php
+                            $typeConfig = [
+                                'point_to_point' => ['label' => 'Origin-to-Destination', 'class' => 'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800'],
+                                'single_shipper' => ['label' => 'Multi-Destination', 'class' => 'bg-purple-50 text-purple-700 border-purple-100 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800'],
+                                'single_consignee' => ['label' => 'Milk Run', 'class' => 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800'],
+                                'sequence' => ['label' => 'Shuttle Loop', 'class' => 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800'],
+                            ];
+                            $config = $typeConfig[$order->order_type] ?? ['label' => ucfirst(str_replace('_', ' ', $order->order_type)), 'class' => 'bg-gray-50 text-gray-700 border-gray-100'];
+                        @endphp
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border {{ $config['class'] }}">
+                            {{ $config['label'] }}
+                        </span>
                     </td>
 
                     <td class="px-4 py-2 align-top">
@@ -265,12 +280,13 @@
 
     <!-- 6. Create Order Modal -->
     <x-confirm-modal name="create-order" title="Create New Order">
-        <div x-data="{ 
+        <div x-data="{
             selectedCustomer: null,
             searchCustomer: '',
             customers: [],
             loadingCustomers: false,
-            
+            orderType: 'sequence',
+
             async fetchCustomers() {
                 this.loadingCustomers = true;
                 const res = await fetch(`{{ route('v2.orders.search-customers', ['company' => $company->slug]) }}?q=${this.searchCustomer}`);
@@ -279,7 +295,6 @@
             },
 
             init() {
-                // Initial fetch when opened
                 this.$watch('$store.modal.active', value => {
                     if (value === 'create-order' && this.customers.length === 0) {
                         this.fetchCustomers();
@@ -287,42 +302,42 @@
                 });
             }
         }" @open-modal.window="if($event.detail === 'create-order') fetchCustomers()">
-            
+
             <form action="{{ route('v2.orders.store', $company) }}" method="POST" id="createOrderForm">
                 @csrf
-                <input type="hidden" name="order_type" value="sequence">
-                
+                <input type="hidden" name="order_type" :value="orderType">
+                <input type="hidden" name="customer_id" :value="selectedCustomer?.id">
+
                 <div class="space-y-4">
+                    {{-- Customer Search --}}
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Customer</label>
                         <div class="relative">
-                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                                 </svg>
                             </div>
-                            <input type="text" x-model="searchCustomer" @input.debounce.500ms="fetchCustomers()" 
-                                placeholder="Search customer by name..." 
+                            <input type="text" x-model="searchCustomer" @input.debounce.500ms="fetchCustomers()"
+                                placeholder="Search customer by name..."
                                 class="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-primary-500 focus:border-primary-500 dark:text-white transition-all">
-                            
                             <div x-show="loadingCustomers" class="absolute right-3 top-2.5">
                                 <x-loader size="sm" />
                             </div>
                         </div>
-                        
-                        <!-- Customer List (Scrollable) -->
+
                         <div class="mt-2 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-800/50">
-                            <div class="max-h-60 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
+                            <div class="max-h-48 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
                                 <template x-for="customer in customers" :key="customer.id">
-                                    <button type="button" @click="selectedCustomer = customer; searchCustomer = customer.name" 
+                                    <button type="button" @click="selectedCustomer = customer; searchCustomer = customer.name"
                                         :class="selectedCustomer?.id === customer.id ? 'bg-primary-50 dark:bg-primary-900/40 ring-1 ring-inset ring-primary-500' : 'hover:bg-white dark:hover:bg-gray-800'"
-                                        class="w-full text-left px-4 py-3 text-sm transition-colors flex items-center justify-between group">
+                                        class="w-full text-left px-4 py-3 text-sm transition-colors flex items-center justify-between">
                                         <div>
                                             <div class="font-bold text-gray-900 dark:text-white" x-text="customer.name"></div>
                                             <div class="text-[10px] text-gray-500" x-text="`${customer.address}, ${customer.city}, ${customer.state}`"></div>
                                         </div>
                                         <div x-show="selectedCustomer?.id === customer.id" class="text-primary-600">
-                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
                                         </div>
                                     </button>
                                 </template>
@@ -331,24 +346,13 @@
                                 </template>
                             </div>
                         </div>
-                        <input type="hidden" name="customer_id" :value="selectedCustomer?.id">
-                    </div>
-
-                    <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800/50">
-                        <div class="flex gap-3">
-                            <svg class="w-5 h-5 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <div class="text-xs text-blue-700 dark:text-blue-300">
-                                <p class="font-bold mb-1">Order Type: Sequence</p>
-                                <p>This will create a multi-stop order draft. You can add more legs in the next step.</p>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </form>
         </div>
 
         <x-slot name="footer">
-            <button type="button" @click="$dispatch('close-modal', 'create-order')" 
+            <button type="button" @click="$dispatch('close-modal', 'create-order')"
                 class="px-4 py-2 text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors">Cancel</button>
             <button type="submit" form="createOrderForm" :disabled="!selectedCustomer"
                 class="px-4 py-2 text-sm font-medium bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
