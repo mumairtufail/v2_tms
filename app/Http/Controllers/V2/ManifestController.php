@@ -9,6 +9,7 @@ use App\Services\ManifestService;
 use App\Support\Toast;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ManifestController extends Controller
 {
@@ -262,6 +263,30 @@ class ManifestController extends Controller
             'equipment' => $allEquipment,
             'assigned' => $assigned
         ]);
+    }
+
+    /**
+     * Download the Rate Confirmation PDF for the manifest.
+     */
+    public function downloadRateConfirmation(Company $company, Manifest $manifest)
+    {
+        $manifest->load([
+            'carriers',
+            'orderStops.order.customer',
+            'orderStops.commodities',
+        ]);
+
+        $pdf = Pdf::loadView('v2.company.manifests.pdf.rate-confirmation', [
+            'manifest' => $manifest,
+            'company' => $company,
+            'user' => auth()->user(),
+        ]);
+
+        // Standard setup for TMS documents
+        $pdf->setPaper('a4', 'portrait');
+        $pdf->setOption(['isRemoteEnabled' => true, 'isHtml5ParserEnabled' => true]);
+
+        return $pdf->download("Rate-Confirmation-{$manifest->code}.pdf");
     }
 
     public function syncEquipment(Request $request, Company $company, Manifest $manifest)

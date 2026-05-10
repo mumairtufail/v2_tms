@@ -150,6 +150,7 @@ Route::middleware(['auth', CompanyScope::class])->prefix('{company}')->name('v2.
     Route::middleware(['permission:manifests,view'])->group(function () {
         Route::get('manifests', [\App\Http\Controllers\V2\ManifestController::class, 'index'])->name('manifests.index');
         Route::get('manifests/{manifest}/edit', [\App\Http\Controllers\V2\ManifestController::class, 'edit'])->name('manifests.edit');
+        Route::get('manifests/{manifest}/rate-confirmation/download', [\App\Http\Controllers\V2\ManifestController::class, 'downloadRateConfirmation'])->name('manifests.rate-confirmation.download');
         Route::get('manifests/{manifest}/drivers/available', [\App\Http\Controllers\V2\ManifestController::class, 'availableDrivers'])->name('manifests.drivers.available');
         Route::get('manifests/{manifest}/equipment/available', [\App\Http\Controllers\V2\ManifestController::class, 'availableEquipment'])->name('manifests.equipment.available');
         Route::get('manifests/{manifest}/carriers/available', [\App\Http\Controllers\V2\ManifestController::class, 'availableCarriers'])->name('manifests.carriers.available');
