@@ -64,3 +64,14 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+// Storage Fallback for environments where symlinks are disabled (e.g. Shared Hosting)
+Route::get('storage/{path}', function ($path) {
+    $fullPath = storage_path("app/public/" . $path);
+    
+    if (!file_exists($fullPath)) {
+        abort(404);
+    }
+
+    return response()->file($fullPath);
+})->where('path', '.*');

@@ -28,10 +28,10 @@ class BrandingHelper
             return null;
         }
 
-        // In environments where symlink is disabled, we can serve via a controller
-        // or just return the standard URL if we assume it should work.
-        // For now, we return asset('storage/' . $path) but provide a hook for a local-path bypass.
-        return asset('storage/' . $path);
+        // In environments where symlink is disabled, the 'storage/{path}' route in web.php
+        // will handle serving the file via PHP. We use 'url' instead of 'asset'
+        // to ensure it hits our custom route if pathing is strict.
+        return url('storage/' . $path);
     }
 
     /**
