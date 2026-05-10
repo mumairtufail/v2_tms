@@ -44,9 +44,13 @@ class CustomerController extends Controller
                       ->orWhere('customer_email', 'LIKE', "%{$query}%")
                       ->orWhere('city', 'LIKE', "%{$query}%")
                       ->orWhere('state', 'LIKE', "%{$query}%")
-                      ->orWhere('short_code', 'LIKE', "%{$query}%")
-                      ->orWhere('company_id', auth()->user()->company_id);
+                      ->orWhere('short_code', 'LIKE', "%{$query}%");
                 });
+            }
+
+            // Ensure company filtering is ALWAYS applied if authenticated
+            if (auth()->check() && auth()->user()->company_id) {
+                $customers->where('company_id', auth()->user()->company_id);
             }
             
             $customers = $customers

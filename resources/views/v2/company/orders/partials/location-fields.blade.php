@@ -1,45 +1,90 @@
-{{-- Location Fields Partial for Order Form --}}
+﻿{{-- Location Fields Partial for Order Form --}}
 {{-- $prefix: 'shipper' or 'consignee' --}}
 
-<div class="grid grid-cols-1 gap-4 p-4 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-800 shadow-sm">
+<div class="grid grid-cols-1 gap-4 p-4 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-800 shadow-sm"
+     x-data="{
+        ...companyAutocomplete({ 
+            initialQuery: stop.{{ $prefix }}.company_name,
+            prefix: '{{ $prefix }}',
+            stopIndex: stopIndex
+        }),
+        _stopIndex: stopIndex
+     }"
+     @google-place-selected.window="
+        if ($event.detail.targetIndex === _stopIndex && $event.detail.targetPrefix === '{{ $prefix }}') {
+            console.log('--- TRIPLE FAILSAFE SYNC ({{ $prefix }}) ---');
+            const data = $event.detail;
+            const idx = _stopIndex;
+            const pfx = '{{ $prefix }}';
+
+            // 1. Sync search box
+            query = data.company_name || '';
+
+            // 2. DIRECT DOM INJECTION (Bypasses all reactivity/cache issues)
+            const fieldMap = {
+                'address_1': data.address_1 || '',
+                'address_2': '',
+                'city':      data.city || '',
+                'state':     data.state || '',
+                'zip':       data.zip || '',
+                'country':   data.country || '',
+            };
+
+            Object.entries(fieldMap).forEach(([field, value]) => {
+                const el = document.getElementById(`field-${pfx}-${field}-${idx}`);
+                if (el) {
+                    console.log('Injecting ' + field + ':', value);
+                    el.value = value;
+                    el.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            });
+
+            // 3. Update background coordinates and state
+            stop.{{ $prefix }}.company_name = data.company_name || '';
+            stop.{{ $prefix }}.address_1    = data.address_1 || '';
+            stop.{{ $prefix }}.address_2    = '';
+            stop.{{ $prefix }}.city         = data.city || '';
+            stop.{{ $prefix }}.state        = data.state || '';
+            stop.{{ $prefix }}.zip          = data.zip || '';
+            stop.{{ $prefix }}.country      = data.country || '';
+            stop.{{ $prefix }}.lat          = data.lat || null;
+            stop.{{ $prefix }}.lng          = data.lng || null;
+
+            console.log('--- Failsafe Sync Complete ---');
+        }
+     ">
+
     {{-- Row 1: Company Name with Google Places Autocomplete --}}
-    <div class="relative"
-         @places-fill-{{ $prefix }}.window="
-            stop.{{ $prefix }}.company_name = $event.detail.company_name;
-            stop.{{ $prefix }}.address_1    = $event.detail.address_1;
-            stop.{{ $prefix }}.city         = $event.detail.city;
-            stop.{{ $prefix }}.state        = $event.detail.state;
-            stop.{{ $prefix }}.zip          = $event.detail.zip;
-            stop.{{ $prefix }}.country      = $event.detail.country;
-            stop.{{ $prefix }}.lat          = $event.detail.lat;
-            stop.{{ $prefix }}.lng          = $event.detail.lng;
-         ">
+    <div class="relative" @input="stop.{{ $prefix }}.company_name = query">
         @include('livewire.places-autocomplete')
     </div>
 
     {{-- Row 2: Address 1 --}}
-    <div>
+    <div :class="isGoogleLoading ? 'opacity-50 animate-pulse' : ''">
         <label class="block text-[10px] font-medium text-gray-400 uppercase">Address 1</label>
         <input type="text"
+               :id="`field-{{ $prefix }}-address_1-${_stopIndex}`"
                x-model="stop.{{ $prefix }}.address_1"
                class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500"
                placeholder="Street address">
     </div>
 
     {{-- Row 3: Address 2 --}}
-    <div>
+    <div :class="isGoogleLoading ? 'opacity-50 animate-pulse' : ''">
         <label class="block text-[10px] font-medium text-gray-400 uppercase">Address 2</label>
         <input type="text"
+               :id="`field-{{ $prefix }}-address_2-${_stopIndex}`"
                x-model="stop.{{ $prefix }}.address_2"
                class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500"
                placeholder="Suite, unit, building, floor, etc.">
     </div>
 
     {{-- Row 4: City, State, Zip --}}
-    <div class="grid grid-cols-3 gap-3">
+    <div class="grid grid-cols-3 gap-3" :class="isGoogleLoading ? 'opacity-50 animate-pulse' : ''">
         <div>
             <label class="block text-[10px] font-medium text-gray-400 uppercase">City</label>
             <input type="text"
+                   :id="`field-{{ $prefix }}-city-${_stopIndex}`"
                    x-model="stop.{{ $prefix }}.city"
                    class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500"
                    placeholder="City">
@@ -47,6 +92,7 @@
         <div>
             <label class="block text-[10px] font-medium text-gray-400 uppercase">State</label>
             <input type="text"
+                   :id="`field-{{ $prefix }}-state-${_stopIndex}`"
                    x-model="stop.{{ $prefix }}.state"
                    class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500"
                    placeholder="ST">
@@ -54,6 +100,7 @@
         <div>
             <label class="block text-[10px] font-medium text-gray-400 uppercase">Zip</label>
             <input type="text"
+                   :id="`field-{{ $prefix }}-zip-${_stopIndex}`"
                    x-model="stop.{{ $prefix }}.zip"
                    class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500"
                    placeholder="12345">
@@ -61,17 +108,17 @@
     </div>
 
     {{-- Row 5: Country --}}
-    <div>
+    <div :class="isGoogleLoading ? 'opacity-50 animate-pulse' : ''">
         <label class="block text-[10px] font-medium text-gray-400 uppercase">Country</label>
-        <select x-model="stop.{{ $prefix }}.country" class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500">
-            <option value="US">United States</option>
-            <option value="CA">Canada</option>
-            <option value="MX">Mexico</option>
-        </select>
+        <input type="text"
+               :id="`field-{{ $prefix }}-country-${_stopIndex}`"
+               x-model="stop.{{ $prefix }}.country"
+               class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500"
+               placeholder="Country (e.g. US, DE)">
     </div>
 
     {{-- Row 6: Contact Name & Phone --}}
-    <div class="grid grid-cols-2 gap-3">
+    <div class="grid grid-cols-2 gap-3" :class="isGoogleLoading ? 'opacity-50 animate-pulse' : ''">
         <div>
             <label class="block text-[10px] font-medium text-gray-400 uppercase">Contact Name</label>
             <input type="text"
@@ -87,7 +134,7 @@
     </div>
 
     {{-- Row 7: Contact Email --}}
-    <div>
+    <div :class="isGoogleLoading ? 'opacity-50 animate-pulse' : ''">
         <label class="block text-[10px] font-medium text-gray-400 uppercase">Contact Email</label>
         <input type="email"
                x-model="stop.{{ $prefix }}.email"

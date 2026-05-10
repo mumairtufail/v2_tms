@@ -53,17 +53,31 @@ class GooglePlacesController extends Controller
                 $validated['sessionToken'] ?? null
             );
 
+            $parsed = $this->googlePlacesService->parseAddress($place);
+
+            \Illuminate\Support\Facades\Log::channel('orderedit-location')->info('Google Place Selected', [
+                'placeId' => $placeId,
+                'parsed' => $parsed,
+                'raw_place' => $place,
+            ]);
+
             return response()->json([
                 'success' => true,
                 'data' => $place,
-                'parsed' => $this->googlePlacesService->parseAddress($place),
+                'parsed' => $parsed,
             ]);
         } catch (Throwable $exception) {
+            \Illuminate\Support\Facades\Log::channel('orderedit-location')->error('Google Place Selection Failed', [
+                'placeId' => $placeId,
+                'message' => $exception->getMessage(),
+                'trace'   => $exception->getTraceAsString()
+            ]);
+            
             report($exception);
 
             return response()->json([
                 'success' => false,
-                'message' => $exception->getMessage(),
+                'message' => 'Failed to fetch place details: ' . $exception->getMessage(),
             ], 500);
         }
     }

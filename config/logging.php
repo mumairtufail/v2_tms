@@ -52,6 +52,13 @@ return [
     */
 
     'channels' => [
+        'orderedit-location' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/orderedit-location.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'replace_placeholders' => true,
+        ],
+
         'stack' => [
             'driver' => 'stack',
             'channels' => ['single'],

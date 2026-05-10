@@ -283,8 +283,7 @@
                 {{-- Dynamic Stops List (Expanded Details) --}}
                 <div class="space-y-6">
                     <template x-for="(stop, stopIndex) in stops" :key="stop.uid">
-                        <div class="relative" :id="'leg-' + stop.uid">
-                            {{-- Connection Line --}}
+                        <div class="relative" :id="'leg-' + stop.uid">                            {{-- Connection Line --}}
                             <div x-show="stopIndex < stops.length - 1" class="absolute left-6 top-12 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-800 z-0"></div>
                             
                             {{-- Stop Card --}}
@@ -342,8 +341,7 @@
                                                          title="Shared shipper — edit on Stop 1"></div>
                                                     <div :class="(orderType === 'single_shipper' && stopIndex > 0) ? 'opacity-50 pointer-events-none select-none' : ''">
                                                         @include('v2.company.orders.partials.location-fields', ['prefix' => 'shipper'])
-                                                    </div>
-                                                </div>
+                                                    </div>                                                </div>
                                             </div>
 
                                             {{-- Consignee Section --}}
@@ -365,8 +363,7 @@
                                                          title="Shared consignee — edit on Stop 1"></div>
                                                     <div :class="(orderType === 'single_consignee' && stopIndex > 0) ? 'opacity-50 pointer-events-none select-none' : ''">
                                                         @include('v2.company.orders.partials.location-fields', ['prefix' => 'consignee'])
-                                                    </div>
-                                                </div>
+                                                    </div>                                                </div>
                                             </div>
                                         </div>
 

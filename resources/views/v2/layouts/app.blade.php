@@ -23,16 +23,8 @@
     <!-- Critical CSS for Alpine.js x-cloak (must load before JS) -->
     <style>[x-cloak] { display: none !important; }</style>
 
-    @livewireStyles
-
-    <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-
-    <!-- Alpine.js Plugins (must load before Livewire/Alpine starts) -->
-    <script src="https://cdn.jsdelivr.net/npm/@alpinejs/anchor@3.x.x/dist/cdn.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@alpinejs/persist@3.x.x/dist/cdn.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
-
+    @livewireStyles
     @stack('styles')
 </head>
 <body class="font-sans antialiased bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">

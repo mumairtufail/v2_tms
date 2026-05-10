@@ -32,7 +32,7 @@ class GooglePlacesService
             'sessionToken' => $sessionToken,
         ], static fn ($v) => $v !== null && $v !== '');
 
-        $this->log('AUTOCOMPLETE REQUEST', [
+        $this->log('Step 1 | AUTOCOMPLETE REQUEST', [
             'query'         => $input,
             'session_token' => $sessionToken ?? '(none)',
         ]);
@@ -42,7 +42,7 @@ class GooglePlacesService
         $body            = $response->json() ?? [];
         $suggestionCount = count(data_get($body, 'suggestions', []));
 
-        $this->log('AUTOCOMPLETE RESPONSE', [
+        $this->log('Step 1 | AUTOCOMPLETE RESPONSE', [
             'http_status'       => $response->status(),
             'success'           => $response->successful() ? 'YES' : 'NO',
             'suggestions_found' => $suggestionCount,
@@ -92,7 +92,7 @@ class GooglePlacesService
 
         $fields = ['id', 'displayName', 'formattedAddress', 'addressComponents', 'location'];
 
-        $this->log('DETAILS REQUEST', [
+        $this->log('Step 2 | DETAILS REQUEST', [
             'place_id'      => $placeId,
             'session_token' => $sessionToken ?? '(none)',
             'fields'        => implode(', ', $fields),
@@ -107,7 +107,7 @@ class GooglePlacesService
 
         $body = $response->json() ?? [];
 
-        $this->log('DETAILS RESPONSE', [
+        $this->log('Step 2 | DETAILS RESPONSE', [
             'http_status'      => $response->status(),
             'success'          => $response->successful() ? 'YES' : 'NO',
             'display_name'     => data_get($body, 'displayName.text', '(none)'),
@@ -166,7 +166,7 @@ class GooglePlacesService
             'formatted_address' => (string) data_get($place, 'formattedAddress', ''),
         ];
 
-        $this->log('ADDRESS PARSED', [
+        $this->log('Step 2 | ADDRESS PARSED', [
             'company'  => $parsed['company_name'],
             'address'  => $parsed['address_1'],
             'city'     => $parsed['city'],
@@ -190,6 +190,8 @@ class GooglePlacesService
         }
 
         return Http::baseUrl('https://places.googleapis.com/v1')
+            ->timeout(30)
+            ->connectTimeout(10)
             ->acceptJson()
             ->asJson()
             ->withHeaders(['X-Goog-Api-Key' => $this->apiKey]);
@@ -202,6 +204,8 @@ class GooglePlacesService
 
     private function log(string $event, array $context = []): void
     {
+        // Log to both the default places log and the orderedit-location log for unified visibility
         Log::channel($this->logChannel)->debug($event, $context);
+        Log::channel('orderedit-location')->info("Google API | " . $event, $context);
     }
 }
