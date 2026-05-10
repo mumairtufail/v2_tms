@@ -10,9 +10,10 @@
     @php
         $faviconCompany = app()->bound('current.company') ? app('current.company') : null;
         $faviconLogo = $faviconCompany?->logo_light ?? \App\Models\SystemSetting::instance()->logo_light ?? null;
+        $faviconUrl = \App\Support\BrandingHelper::getUrl($faviconLogo);
     @endphp
-    @if($faviconLogo)
-    <link rel="icon" type="image/png" href="{{ asset('storage/' . $faviconLogo) }}">
+    @if($faviconUrl)
+    <link rel="icon" type="image/png" href="{{ $faviconUrl }}">
     @endif
 
     <!-- Fonts -->

@@ -230,8 +230,11 @@
                         <div class="subtitle">Confirmation # {{ $manifest->code }}</div>
                     </td>
                     <td class="logo">
-                        @if($company->logo)
-                            <img src="{{ public_path('storage/'.$company->logo) }}" alt="Logo">
+                        @php
+                            $logoPath = \App\Support\BrandingHelper::getLocalPath($company->logo_light);
+                        @endphp
+                        @if($logoPath)
+                            <img src="{{ $logoPath }}" alt="Logo">
                         @endif
                     </td>
                 </tr>

@@ -25,21 +25,25 @@
     <!-- Logo Section -->
     <div class="h-16 flex items-center justify-between px-4 border-b border-gray-100 dark:border-gray-800/50">
         <a href="{{ $currentCompany ? route('v2.dashboard', ['company' => $companySlug]) : route('admin.dashboard') }}" class="flex items-center gap-3 group">
-            @if($sidebarLogoLight || $sidebarLogoDark)
+            @php
+                $logoUrlLight = \App\Support\BrandingHelper::getUrl($sidebarLogoLight);
+                $logoUrlDark  = \App\Support\BrandingHelper::getUrl($sidebarLogoDark);
+            @endphp
+            @if($logoUrlLight || $logoUrlDark)
                 {{-- Show uploaded logo; toggle between light/dark via CSS --}}
-                @if($sidebarLogoLight)
-                <img src="{{ asset('storage/' . $sidebarLogoLight) }}"
+                @if($logoUrlLight)
+                <img src="{{ $logoUrlLight }}"
                      alt="Logo"
                      class="h-9 max-w-[140px] object-contain dark:hidden group-hover:opacity-90 transition-opacity">
                 @endif
-                @if($sidebarLogoDark)
-                <img src="{{ asset('storage/' . $sidebarLogoDark) }}"
+                @if($logoUrlDark)
+                <img src="{{ $logoUrlDark }}"
                      alt="Logo"
                      class="h-9 max-w-[140px] object-contain hidden dark:block group-hover:opacity-90 transition-opacity">
                 @endif
-                @if(!$sidebarLogoDark && $sidebarLogoLight)
+                @if(!$logoUrlDark && $logoUrlLight)
                 {{-- Fallback: show light logo in dark mode too if no dark variant --}}
-                <img src="{{ asset('storage/' . $sidebarLogoLight) }}"
+                <img src="{{ $logoUrlLight }}"
                      alt="Logo"
                      class="h-9 max-w-[140px] object-contain hidden dark:block group-hover:opacity-90 transition-opacity">
                 @endif

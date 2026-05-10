@@ -57,7 +57,7 @@
                             <img :src="previews.{{ $card['key'] }}" alt="{{ $card['label'] }} preview" class="max-h-32 max-w-full object-contain">
                         </template>
                         <template x-if="!previews.{{ $card['key'] }} && existing.{{ $card['key'] }}">
-                            <img src="{{ asset('storage/' . $card['value']) }}" alt="{{ $card['label'] }} current" class="max-h-32 max-w-full object-contain">
+                            <img src="{{ \App\Support\BrandingHelper::getUrl($card['value']) }}" alt="{{ $card['label'] }} current" class="max-h-32 max-w-full object-contain">
                         </template>
                         <template x-if="!previews.{{ $card['key'] }} && !existing.{{ $card['key'] }}">
                             <div class="text-center">

@@ -50,8 +50,11 @@
                         <div class="text-primary-600 font-bold tracking-widest uppercase text-sm mt-1"># {{ $manifest->code }}</div>
                     </div>
                     <div class="text-right">
-                        @if($company->logo)
-                            <img src="{{ asset('storage/'.$company->logo) }}" alt="Logo" class="h-16 w-auto mb-2 ml-auto">
+                        @php
+                            $logoUrl = \App\Support\BrandingHelper::getUrl($company->logo_light);
+                        @endphp
+                        @if($logoUrl)
+                            <img src="{{ $logoUrl }}" alt="Logo" class="h-16 w-auto mb-2 ml-auto">
                         @else
                             <div class="h-16 w-48 bg-gray-100 dark:bg-gray-800 rounded flex items-center justify-center text-gray-400 font-bold italic border-2 border-dashed border-gray-200 dark:border-gray-700">Logo</div>
                         @endif
