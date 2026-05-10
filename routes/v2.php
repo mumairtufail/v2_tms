@@ -2,7 +2,9 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Middleware\CompanyScope;
+use App\Models\Company;
 use App\Http\Controllers\V2\DashboardController;
+use App\Http\Controllers\V2\CompanySettingsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -131,19 +133,18 @@ Route::middleware(['auth', CompanyScope::class])->prefix('{company}')->name('v2.
         Route::delete('equipment/{equipment}', [\App\Http\Controllers\V2\EquipmentController::class, 'destroy'])->name('equipment.destroy');
     });
 
-    // Plugins - Require settings permission (typically admin only)
-    Route::middleware(['permission:settings,view'])->group(function () {
-        Route::get('plugins', [\App\Http\Controllers\V2\PluginController::class, 'index'])->name('plugins.index');
-        Route::get('plugins/{slug}/settings', [\App\Http\Controllers\V2\PluginController::class, 'settings'])->name('plugins.settings');
-    });
-    Route::middleware(['permission:settings,update'])->group(function () {
-        Route::post('plugins/toggle', [\App\Http\Controllers\V2\PluginController::class, 'toggle'])->name('plugins.toggle');
-        Route::post('plugins/{slug}/install', [\App\Http\Controllers\V2\PluginController::class, 'install'])->name('plugins.install');
-        Route::delete('plugins/{slug}/uninstall', [\App\Http\Controllers\V2\PluginController::class, 'uninstall'])->name('plugins.uninstall');
-        Route::post('plugins/{slug}/settings', [\App\Http\Controllers\V2\PluginController::class, 'updateSettings'])->name('plugins.settings.update');
-        Route::get('plugins/quickbooks/connect', [\App\Http\Controllers\V2\PluginController::class, 'connectQuickBooks'])->name('plugins.quickbooks.connect');
-        Route::get('plugins/quickbooks/callback', [\App\Http\Controllers\V2\PluginController::class, 'callbackQuickBooks'])->name('plugins.quickbooks.callback');
-    });
+    // Settings & Plugins (permission check temporarily disabled — open to all authenticated users)
+    Route::get('settings', [CompanySettingsController::class, 'index'])->name('settings.index');
+    Route::get('settings/branding', [CompanySettingsController::class, 'branding'])->name('settings.branding');
+    Route::put('settings/branding', [CompanySettingsController::class, 'updateBranding'])->name('settings.branding.update');
+    Route::get('plugins', [\App\Http\Controllers\V2\PluginController::class, 'index'])->name('plugins.index');
+    Route::get('plugins/{slug}/settings', [\App\Http\Controllers\V2\PluginController::class, 'settings'])->name('plugins.settings');
+    Route::post('plugins/toggle', [\App\Http\Controllers\V2\PluginController::class, 'toggle'])->name('plugins.toggle');
+    Route::post('plugins/{slug}/install', [\App\Http\Controllers\V2\PluginController::class, 'install'])->name('plugins.install');
+    Route::delete('plugins/{slug}/uninstall', [\App\Http\Controllers\V2\PluginController::class, 'uninstall'])->name('plugins.uninstall');
+    Route::post('plugins/{slug}/settings', [\App\Http\Controllers\V2\PluginController::class, 'updateSettings'])->name('plugins.settings.update');
+    Route::get('plugins/quickbooks/connect', [\App\Http\Controllers\V2\PluginController::class, 'connectQuickBooks'])->name('plugins.quickbooks.connect');
+    Route::get('plugins/quickbooks/callback', [\App\Http\Controllers\V2\PluginController::class, 'callbackQuickBooks'])->name('plugins.quickbooks.callback');
 
     // Manifests
     Route::middleware(['permission:manifests,view'])->group(function () {

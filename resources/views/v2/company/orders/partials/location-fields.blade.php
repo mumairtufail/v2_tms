@@ -2,20 +2,26 @@
 {{-- $prefix: 'shipper' or 'consignee' --}}
 
 <div class="grid grid-cols-1 gap-4 p-4 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-800 shadow-sm">
-    {{-- Row 1: Company Name --}}
-    <div>
-        <label class="block text-[10px] font-medium text-gray-400 uppercase">Company Name</label>
-        <input type="text" 
-               x-model="stop.{{ $prefix }}.company_name" 
-               class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500"
-               placeholder="Enter company name...">
+    {{-- Row 1: Company Name with Google Places Autocomplete --}}
+    <div class="relative"
+         @places-fill-{{ $prefix }}.window="
+            stop.{{ $prefix }}.company_name = $event.detail.company_name;
+            stop.{{ $prefix }}.address_1    = $event.detail.address_1;
+            stop.{{ $prefix }}.city         = $event.detail.city;
+            stop.{{ $prefix }}.state        = $event.detail.state;
+            stop.{{ $prefix }}.zip          = $event.detail.zip;
+            stop.{{ $prefix }}.country      = $event.detail.country;
+            stop.{{ $prefix }}.lat          = $event.detail.lat;
+            stop.{{ $prefix }}.lng          = $event.detail.lng;
+         ">
+        @include('livewire.places-autocomplete')
     </div>
 
     {{-- Row 2: Address 1 --}}
     <div>
         <label class="block text-[10px] font-medium text-gray-400 uppercase">Address 1</label>
-        <input type="text" 
-               x-model="stop.{{ $prefix }}.address_1" 
+        <input type="text"
+               x-model="stop.{{ $prefix }}.address_1"
                class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500"
                placeholder="Street address">
     </div>
@@ -23,8 +29,8 @@
     {{-- Row 3: Address 2 --}}
     <div>
         <label class="block text-[10px] font-medium text-gray-400 uppercase">Address 2</label>
-        <input type="text" 
-               x-model="stop.{{ $prefix }}.address_2" 
+        <input type="text"
+               x-model="stop.{{ $prefix }}.address_2"
                class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500"
                placeholder="Suite, unit, building, floor, etc.">
     </div>
@@ -33,22 +39,22 @@
     <div class="grid grid-cols-3 gap-3">
         <div>
             <label class="block text-[10px] font-medium text-gray-400 uppercase">City</label>
-            <input type="text" 
-                   x-model="stop.{{ $prefix }}.city" 
+            <input type="text"
+                   x-model="stop.{{ $prefix }}.city"
                    class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500"
                    placeholder="City">
         </div>
         <div>
             <label class="block text-[10px] font-medium text-gray-400 uppercase">State</label>
-            <input type="text" 
-                   x-model="stop.{{ $prefix }}.state" 
+            <input type="text"
+                   x-model="stop.{{ $prefix }}.state"
                    class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500"
                    placeholder="ST">
         </div>
         <div>
             <label class="block text-[10px] font-medium text-gray-400 uppercase">Zip</label>
-            <input type="text" 
-                   x-model="stop.{{ $prefix }}.zip" 
+            <input type="text"
+                   x-model="stop.{{ $prefix }}.zip"
                    class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500"
                    placeholder="12345">
         </div>
@@ -68,14 +74,14 @@
     <div class="grid grid-cols-2 gap-3">
         <div>
             <label class="block text-[10px] font-medium text-gray-400 uppercase">Contact Name</label>
-            <input type="text" 
-                   x-model="stop.{{ $prefix }}.contact_name" 
+            <input type="text"
+                   x-model="stop.{{ $prefix }}.contact_name"
                    class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500">
         </div>
         <div>
             <label class="block text-[10px] font-medium text-gray-400 uppercase">Phone</label>
-            <input type="text" 
-                   x-model="stop.{{ $prefix }}.phone" 
+            <input type="text"
+                   x-model="stop.{{ $prefix }}.phone"
                    class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500">
         </div>
     </div>
@@ -83,8 +89,8 @@
     {{-- Row 7: Contact Email --}}
     <div>
         <label class="block text-[10px] font-medium text-gray-400 uppercase">Contact Email</label>
-        <input type="email" 
-               x-model="stop.{{ $prefix }}.email" 
+        <input type="email"
+               x-model="stop.{{ $prefix }}.email"
                class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500"
                placeholder="email@example.com">
     </div>

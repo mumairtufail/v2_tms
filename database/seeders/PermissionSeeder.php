@@ -31,7 +31,7 @@ class PermissionSeeder extends Seeder
             // 'reports',
             
             // Additional modules that might be added
-            // 'settings',
+            'settings',
             // 'dashboard',
             // 'notifications'
         ];

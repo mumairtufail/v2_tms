@@ -1,7 +1,8 @@
 import './bootstrap';
 
-import Alpine from 'alpinejs';
+import { Livewire, Alpine } from '../../vendor/livewire/livewire/dist/livewire.esm';
+import companyAutocomplete from './company-autocomplete';
 
-window.Alpine = Alpine;
+Alpine.data('companyAutocomplete', companyAutocomplete);
 
-Alpine.start();
+Livewire.start();

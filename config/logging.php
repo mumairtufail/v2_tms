@@ -140,6 +140,14 @@ return [
             'days' => 30,
             'replace_placeholders' => true,
         ],
+
+        'google_places' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/google-places.log'),
+            'level' => 'debug',
+            'days' => 14,
+            'tap' => [\App\Logging\GooglePlacesFormatter::class],
+        ],
     ],
 
 ];

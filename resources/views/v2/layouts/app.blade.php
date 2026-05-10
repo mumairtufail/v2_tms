@@ -7,6 +7,14 @@
 
     <title>{{ config('app.name', 'TMS') }} - @yield('title', 'Dashboard')</title>
 
+    @php
+        $faviconCompany = app()->bound('current.company') ? app('current.company') : null;
+        $faviconLogo = $faviconCompany?->logo_light ?? \App\Models\SystemSetting::instance()->logo_light ?? null;
+    @endphp
+    @if($faviconLogo)
+    <link rel="icon" type="image/png" href="{{ asset('storage/' . $faviconLogo) }}">
+    @endif
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet" />
@@ -14,13 +22,16 @@
     <!-- Critical CSS for Alpine.js x-cloak (must load before JS) -->
     <style>[x-cloak] { display: none !important; }</style>
 
+    @livewireStyles
+
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    <!-- Alpine.js Plugins -->
-    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/persist@3.x.x/dist/cdn.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
-    
+    <!-- Alpine.js Plugins (must load before Livewire/Alpine starts) -->
+    <script src="https://cdn.jsdelivr.net/npm/@alpinejs/anchor@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@alpinejs/persist@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+
     @stack('styles')
 </head>
 <body class="font-sans antialiased bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">

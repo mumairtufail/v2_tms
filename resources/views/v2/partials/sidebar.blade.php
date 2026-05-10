@@ -3,11 +3,15 @@
     $currentCompany = app()->bound('current.company') ? app('current.company') : null;
     $companySlug = $currentCompany?->slug ?? 'system-administration';
     $isAdminPanel = !$currentCompany && auth()->user()->is_super_admin;
-    
+
     // Active link classes using centralized primary colors
     $activeClasses = 'text-primary-600 dark:text-white bg-primary-50 dark:bg-primary-600/10 border border-primary-100 dark:border-primary-500/20 shadow-lg shadow-primary-500/5';
     $inactiveClasses = 'text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5';
     $activeIconClasses = 'text-primary-600 dark:text-primary-500';
+
+    // Resolve logo: company logo takes priority, fall back to system logo
+    $sidebarLogoLight = $currentCompany?->logo_light ?? \App\Models\SystemSetting::instance()->logo_light ?? null;
+    $sidebarLogoDark  = $currentCompany?->logo_dark  ?? \App\Models\SystemSetting::instance()->logo_dark  ?? null;
 @endphp
 <aside
     class="fixed left-0 top-0 z-50 h-screen w-64 bg-white dark:bg-[#0B1120] border-r border-gray-200 dark:border-gray-800/50
@@ -21,15 +25,36 @@
     <!-- Logo Section -->
     <div class="h-16 flex items-center justify-between px-4 border-b border-gray-100 dark:border-gray-800/50">
         <a href="{{ $currentCompany ? route('v2.dashboard', ['company' => $companySlug]) : route('admin.dashboard') }}" class="flex items-center gap-3 group">
-            <div class="w-9 h-9 bg-gradient-to-br from-primary-500 to-accent-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary-500/20 group-hover:scale-105 transition-transform duration-300">
-                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                </svg>
-            </div>
-            <div class="flex flex-col">
-                <span class="text-lg font-bold text-gray-900 dark:text-white tracking-tight leading-none">TMS</span>
-                <span class="text-[9px] font-medium text-primary-600 dark:text-primary-400 uppercase tracking-[0.15em]">{{ $isAdminPanel ? 'Admin' : 'Pro' }}</span>
-            </div>
+            @if($sidebarLogoLight || $sidebarLogoDark)
+                {{-- Show uploaded logo; toggle between light/dark via CSS --}}
+                @if($sidebarLogoLight)
+                <img src="{{ asset('storage/' . $sidebarLogoLight) }}"
+                     alt="Logo"
+                     class="h-9 max-w-[140px] object-contain dark:hidden group-hover:opacity-90 transition-opacity">
+                @endif
+                @if($sidebarLogoDark)
+                <img src="{{ asset('storage/' . $sidebarLogoDark) }}"
+                     alt="Logo"
+                     class="h-9 max-w-[140px] object-contain hidden dark:block group-hover:opacity-90 transition-opacity">
+                @endif
+                @if(!$sidebarLogoDark && $sidebarLogoLight)
+                {{-- Fallback: show light logo in dark mode too if no dark variant --}}
+                <img src="{{ asset('storage/' . $sidebarLogoLight) }}"
+                     alt="Logo"
+                     class="h-9 max-w-[140px] object-contain hidden dark:block group-hover:opacity-90 transition-opacity">
+                @endif
+            @else
+                {{-- Default TMS icon --}}
+                <div class="w-9 h-9 bg-gradient-to-br from-primary-500 to-accent-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary-500/20 group-hover:scale-105 transition-transform duration-300">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-lg font-bold text-gray-900 dark:text-white tracking-tight leading-none">TMS</span>
+                    <span class="text-[9px] font-medium text-primary-600 dark:text-primary-400 uppercase tracking-[0.15em]">{{ $isAdminPanel ? 'Admin' : 'Pro' }}</span>
+                </div>
+            @endif
         </a>
         <!-- Mobile Close Button -->
         <button 
@@ -98,9 +123,20 @@
                     </div>
                     <span class="font-medium text-[14px]">Activity Logs</span>
                 </a>
+
+                <!-- Settings -->
+                <a href="{{ route('admin.settings.index') }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group {{ request()->routeIs('admin.settings.*') ? $activeClasses : $inactiveClasses }}">
+                    <div class="w-5 h-5 flex items-center justify-center {{ request()->routeIs('admin.settings.*') ? $activeIconClasses : '' }}">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                    </div>
+                    <span class="font-medium text-[14px]">Settings</span>
+                </a>
             </div>
         </div>
-        
+
         @else
         <!-- Company Context - Show regular menu -->
         
@@ -188,7 +224,7 @@
                 @endif
 
                 <!-- Plugins (Settings permission) -->
-                @if(auth()->user()->hasPermission('settings', 'view'))
+                {{-- @if(auth()->user()->hasPermission('settings', 'view')) --}}
                 <a href="{{ $currentCompany ? route('v2.plugins.index', ['company' => $companySlug]) : '#' }}"
                    class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group {{ request()->routeIs('v2.plugins.*') ? $activeClasses : $inactiveClasses }}">
                     <div class="w-5 h-5 flex items-center justify-center {{ request()->routeIs('v2.plugins.*') ? $activeIconClasses : '' }}">
@@ -198,7 +234,7 @@
                     </div>
                     <span class="font-medium text-[14px]">Plugins</span>
                 </a>
-                @endif
+                {{-- @endif --}}
 
                 <!-- Users -->
                 @if(auth()->user()->hasPermission('users', 'view'))
@@ -272,16 +308,16 @@
         </div>
         @endif
 
-        <!-- Management Section -->
+        <!-- Settings Section -->
         <div>
             <p class="px-4 mb-4 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.15em]">
-                Management
+                Settings
             </p>
 
             <div class="space-y-1.5">
-                <a href="#"
-                   class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group {{ request()->routeIs('v2.settings*') ? $activeClasses : $inactiveClasses }}">
-                    <div class="w-5 h-5 flex items-center justify-center {{ request()->routeIs('v2.settings*') ? $activeIconClasses : '' }}">
+                <a href="{{ $currentCompany ? route('v2.settings.index', ['company' => $companySlug]) : '#' }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group {{ request()->routeIs('v2.settings.*') ? $activeClasses : $inactiveClasses }}">
+                    <div class="w-5 h-5 flex items-center justify-center {{ request()->routeIs('v2.settings.*') ? $activeIconClasses : '' }}">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>

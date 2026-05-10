@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Company;
 use App\Models\Manifest;
 use App\Models\ManifestDriver;
 use App\Models\ManifestCarrier;
@@ -9,6 +10,7 @@ use App\Models\ManifestEquipment;
 use App\Models\OrderQuote;
 use App\Models\Stop;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class ManifestService
@@ -41,11 +43,14 @@ class ManifestService
             }
             
             $manifest = Manifest::create($data);
-            
-            // Update with sequential serial number
+
+            // Update with shortcode-based manifest code: {SC}M{zero-padded-id}
+            // e.g. INVOM0013 — always unique because id is unique
             if ($isAutoCode) {
+                $company = Company::find($companyId);
+                $sc = strtoupper($company?->shortcode ?: Str::upper(Str::substr($company?->name ?? 'MAN', 0, 4)));
                 $manifest->update([
-                    'code' => 'MAN-' . str_pad($manifest->id, 6, '0', STR_PAD_LEFT)
+                    'code' => $sc . 'M' . str_pad($manifest->id, 4, '0', STR_PAD_LEFT),
                 ]);
             }
             

@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\Api\GooglePlacesController;
 
 /*
 |--------------------------------------------------------------------------
@@ -25,4 +26,9 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 // Customer search API
 Route::get('customers/search', [App\Http\Controllers\Api\CustomerController::class, 'search']);
 Route::get('/customers/{customer}', [App\Http\Controllers\Api\CustomerController::class, 'viewcustomers']);
+
+Route::prefix('google/places')->group(function () {
+    Route::post('autocomplete', [GooglePlacesController::class, 'autocomplete']);
+    Route::get('{placeId}', [GooglePlacesController::class, 'details']);
+});
 

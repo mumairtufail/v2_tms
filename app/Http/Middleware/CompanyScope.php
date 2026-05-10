@@ -29,7 +29,9 @@ class CompanyScope
         }
 
         // Check if user has access to this company
-        if (!$request->user()->is_super_admin && !$request->user()->canAccessCompany($company)) {
+        // Super admin impersonation disabled — super admins must belong to the company like any other user
+        // if (!$request->user()->is_super_admin && !$request->user()->canAccessCompany($company)) {
+        if (!$request->user()->canAccessCompany($company)) {
             abort(403, 'You do not have access to this company');
         }
 

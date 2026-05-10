@@ -13,6 +13,7 @@ use App\Plugins\QuickBooks\Services\ApiClient;
 use App\Support\Toast;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Carbon\Carbon;
 
 class OrderController extends Controller
@@ -68,15 +69,20 @@ class OrderController extends Controller
         ]);
 
         $order = \Illuminate\Support\Facades\DB::transaction(function () use ($request, $company) {
+            $customer = Customer::findOrFail($request->customer_id);
+
             $order = Order::create([
-                'customer_id' => $request->customer_id,
-                'order_type' => $request->order_type,
-                'company_id' => $company->id,
-                'status' => 'draft',
-                'order_number' => 'TEMP'
+                'customer_id'  => $customer->id,
+                'order_type'   => $request->order_type,
+                'company_id'   => $company->id,
+                'status'       => 'draft',
+                'order_number' => 'TEMP-' . uniqid(),
             ]);
 
-            $order->order_number = 'ORD-' . str_pad($order->id, 6, '0', STR_PAD_LEFT);
+            // Format: {COMPANY_SC}-{CUSTOMER_SC}-{ID}  e.g. INVO-AFSL-45
+            $companySc  = strtoupper($company->shortcode ?: Str::upper(Str::substr($company->name, 0, 4)));
+            $customerSc = strtoupper($customer->short_code ?: Str::upper(Str::substr($customer->name, 0, 4)));
+            $order->order_number = "{$companySc}-{$customerSc}-{$order->id}";
             $order->save();
 
             return $order;
@@ -127,6 +133,7 @@ class OrderController extends Controller
             // Default consignee structure with all fields
             $consigneeDefaults = [
                 'company_name' => '', 'address_1' => '', 'address_2' => '', 'city' => '', 'state' => '', 'zip' => '', 'country' => 'US',
+                'lat' => null, 'lng' => null,
                 'contact_name' => '', 'phone' => '', 'email' => '', 'opening_time' => '08:00', 'closing_time' => '17:00',
                 'ready_at' => '',
                 'requested_start_at' => '',
@@ -149,6 +156,8 @@ class OrderController extends Controller
                     'state' => $stop->state ?? '',
                     'zip' => $stop->postal_code ?? '',
                     'country' => $stop->country ?? 'US',
+                    'lat' => $stop->lat,
+                    'lng' => $stop->lng,
                     'contact_name' => $stop->contact_name ?? '',
                     'phone' => $stop->contact_phone ?? '',
                     'email' => $stop->contact_email ?? '',
@@ -413,6 +422,8 @@ class OrderController extends Controller
                 'state' => $stopData['shipper']['state'] ?? '',
                 'postal_code' => $stopData['shipper']['zip'] ?? '',
                 'country' => $stopData['shipper']['country'] ?? 'US',
+                'lat' => $stopData['shipper']['lat'] ?? null,
+                'lng' => $stopData['shipper']['lng'] ?? null,
                 'contact_name' => $stopData['shipper']['contact_name'] ?? '',
                 'contact_phone' => $stopData['shipper']['phone'] ?? '',
                 'contact_email' => $stopData['shipper']['email'] ?? '',

@@ -279,87 +279,137 @@
     </x-table-container>
 
     <!-- 6. Create Order Modal -->
-    <x-confirm-modal name="create-order" title="Create New Order">
-        <div x-data="{
-            selectedCustomer: null,
-            searchCustomer: '',
-            customers: [],
-            loadingCustomers: false,
-            orderType: 'sequence',
+    <div x-data="{
+        selectedCustomer: null,
+        searchCustomer: '',
+        customers: [],
+        loadingCustomers: false,
+        submitting: false,
+        orderType: 'sequence',
 
-            async fetchCustomers() {
-                this.loadingCustomers = true;
-                const res = await fetch(`{{ route('v2.orders.search-customers', ['company' => $company->slug]) }}?q=${this.searchCustomer}`);
+        async fetchCustomers() {
+            this.loadingCustomers = true;
+            try {
+                const res = await fetch(`{{ route('v2.orders.search-customers', ['company' => $company->slug]) }}?q=${encodeURIComponent(this.searchCustomer)}`);
                 this.customers = await res.json();
+            } catch (e) {
+                this.customers = [];
+            } finally {
                 this.loadingCustomers = false;
-            },
-
-            init() {
-                this.$watch('$store.modal.active', value => {
-                    if (value === 'create-order' && this.customers.length === 0) {
-                        this.fetchCustomers();
-                    }
-                });
             }
-        }" @open-modal.window="if($event.detail === 'create-order') fetchCustomers()">
+        },
 
-            <form action="{{ route('v2.orders.store', $company) }}" method="POST" id="createOrderForm">
-                @csrf
-                <input type="hidden" name="order_type" :value="orderType">
-                <input type="hidden" name="customer_id" :value="selectedCustomer?.id">
+        submitForm() {
+            if (!this.selectedCustomer || this.submitting) return;
+            this.submitting = true;
+            document.getElementById('createOrderForm').submit();
+        },
+    }" @open-modal.window="if($event.detail === 'create-order') { fetchCustomers(); submitting = false; selectedCustomer = null; searchCustomer = ''; }">
 
-                <div class="space-y-4">
-                    {{-- Customer Search --}}
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Customer</label>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                                </svg>
-                            </div>
-                            <input type="text" x-model="searchCustomer" @input.debounce.500ms="fetchCustomers()"
-                                placeholder="Search customer by name..."
-                                class="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-primary-500 focus:border-primary-500 dark:text-white transition-all">
-                            <div x-show="loadingCustomers" class="absolute right-3 top-2.5">
-                                <x-loader size="sm" />
-                            </div>
+    <x-confirm-modal name="create-order" title="Create New Order">
+        <form action="{{ route('v2.orders.store', $company) }}" method="POST" id="createOrderForm" @submit.prevent="submitForm()">
+            @csrf
+            <input type="hidden" name="order_type" value="sequence">
+            <input type="hidden" name="customer_id" :value="selectedCustomer?.id">
+
+            <div class="space-y-5">
+
+                {{-- Order Type (Shuttle Loop only) --}}
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Order Type</label>
+                    <div class="flex items-center gap-3 px-4 py-3 rounded-lg border border-primary-200 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/30">
+                        <svg class="w-4 h-4 shrink-0 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        <div>
+                            <p class="text-xs font-semibold text-primary-700 dark:text-primary-300">Shuttle Loop</p>
+                            <p class="text-[10px] text-gray-400 dark:text-gray-500">Sequential chained legs</p>
                         </div>
+                        <svg class="w-4 h-4 text-primary-600 dark:text-primary-400 ml-auto shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                </div>
 
-                        <div class="mt-2 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-800/50">
-                            <div class="max-h-48 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
-                                <template x-for="customer in customers" :key="customer.id">
-                                    <button type="button" @click="selectedCustomer = customer; searchCustomer = customer.name"
-                                        :class="selectedCustomer?.id === customer.id ? 'bg-primary-50 dark:bg-primary-900/40 ring-1 ring-inset ring-primary-500' : 'hover:bg-white dark:hover:bg-gray-800'"
-                                        class="w-full text-left px-4 py-3 text-sm transition-colors flex items-center justify-between">
-                                        <div>
-                                            <div class="font-bold text-gray-900 dark:text-white" x-text="customer.name"></div>
-                                            <div class="text-[10px] text-gray-500" x-text="`${customer.address}, ${customer.city}, ${customer.state}`"></div>
-                                        </div>
-                                        <div x-show="selectedCustomer?.id === customer.id" class="text-primary-600">
-                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                                        </div>
-                                    </button>
-                                </template>
-                                <template x-if="customers.length === 0 && !loadingCustomers">
-                                    <div class="p-4 text-center text-gray-500 text-xs">No customers found</div>
-                                </template>
-                            </div>
+                {{-- Customer Search --}}
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Customer</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                        </div>
+                        <input type="text" x-model="searchCustomer" @input.debounce.400ms="fetchCustomers()"
+                            placeholder="Search by customer name..."
+                            class="w-full pl-9 pr-8 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-primary-500 focus:border-primary-500 dark:text-white transition-all">
+                        <div x-show="loadingCustomers" class="absolute right-3 top-2.5">
+                            <x-loader size="sm" />
+                        </div>
+                    </div>
+
+                    {{-- Selected Customer Badge --}}
+                    <div x-show="selectedCustomer" x-cloak class="mt-2 flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                        <svg class="w-4 h-4 text-green-600 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                        <span class="text-sm font-medium text-green-700 dark:text-green-300 truncate" x-text="selectedCustomer?.name"></span>
+                        <button type="button" @click="selectedCustomer = null; searchCustomer = ''" class="ml-auto text-green-500 hover:text-green-700 shrink-0">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+
+                    {{-- Customer List --}}
+                    <div x-show="!selectedCustomer" class="mt-2 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-800/50">
+                        <div class="max-h-44 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
+                            <template x-for="customer in customers" :key="customer.id">
+                                <button type="button" @click="selectedCustomer = customer; searchCustomer = customer.name"
+                                    class="w-full text-left px-4 py-2.5 text-sm hover:bg-white dark:hover:bg-gray-800 transition-colors flex items-center gap-3">
+                                    <div class="w-7 h-7 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 flex items-center justify-center text-[10px] font-bold shrink-0"
+                                        x-text="customer.name.substring(0,2).toUpperCase()"></div>
+                                    <div class="min-w-0">
+                                        <div class="font-medium text-gray-900 dark:text-white truncate" x-text="customer.name"></div>
+                                        <div class="text-[10px] text-gray-400 truncate" x-text="`${customer.city ?? ''}, ${customer.state ?? ''}`"></div>
+                                    </div>
+                                </button>
+                            </template>
+                            <template x-if="customers.length === 0 && !loadingCustomers">
+                                <div class="py-6 text-center text-gray-400 text-xs">No customers found</div>
+                            </template>
+                            <template x-if="loadingCustomers && customers.length === 0">
+                                <div class="py-6 flex items-center justify-center gap-2 text-gray-400 text-xs">
+                                    <x-loader size="sm" /> Loading...
+                                </div>
+                            </template>
                         </div>
                     </div>
                 </div>
-            </form>
-        </div>
+
+            </div>
+        </form>
 
         <x-slot name="footer">
             <button type="button" @click="$dispatch('close-modal', 'create-order')"
-                class="px-4 py-2 text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors">Cancel</button>
-            <button type="submit" form="createOrderForm" :disabled="!selectedCustomer"
-                class="px-4 py-2 text-sm font-medium bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                Create Draft
+                class="px-4 py-2 text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                Cancel
+            </button>
+            <button type="button" @click="submitForm()"
+                :disabled="!selectedCustomer || submitting"
+                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                <template x-if="submitting">
+                    <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                </template>
+                <template x-if="!submitting">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                </template>
+                <span x-text="submitting ? 'Creating...' : 'Create Draft'"></span>
             </button>
         </x-slot>
     </x-confirm-modal>
+    </div>
 
     <!-- 7. Delete Modal -->
     @foreach($orders as $order)

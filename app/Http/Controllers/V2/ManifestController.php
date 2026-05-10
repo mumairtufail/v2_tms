@@ -85,14 +85,19 @@ class ManifestController extends Controller
             'orderStops.accessorials',
         ]);
         
-        // Users belong to a company
-        $drivers = \App\Models\User::where('company_id', $company->id)->get(); 
-        
-        // Carriers belong to a company
-        $carriers = \App\Models\Carrier::where('company_id', $company->id)->get();
-        
-        // Equipment belongs to a company
-        $equipment = \App\Models\Equipment::where('company_id', $company->id)->get();
+        $drivers = \App\Models\User::where('company_id', $company->id)
+            ->where('is_active', true)
+            ->where('is_deleted', false)
+            ->whereHas('roles', fn($q) => $q->where('name', 'driver'))
+            ->get();
+
+        $carriers = \App\Models\Carrier::where('company_id', $company->id)
+            ->where('is_active', true)
+            ->get();
+
+        $equipment = \App\Models\Equipment::where('company_id', $company->id)
+            ->where('status', 'Available')
+            ->get();
 
         return view('v2.company.manifests.edit', compact('company', 'manifest', 'drivers', 'carriers', 'equipment'));
     }
@@ -202,6 +207,8 @@ class ManifestController extends Controller
     {
         $allDrivers = \App\Models\User::where('company_id', $company->id)
             ->where('is_active', true)
+            ->where('is_deleted', false)
+            ->whereHas('roles', fn($q) => $q->where('name', 'driver'))
             ->get(['id', 'f_name', 'l_name', 'email'])
             ->map(function($user) {
                 return [
@@ -240,6 +247,7 @@ class ManifestController extends Controller
     public function availableEquipment(Company $company, Manifest $manifest)
     {
         $allEquipment = \App\Models\Equipment::where('company_id', $company->id)
+            ->where('status', 'Available')
             ->get(['id', 'name', 'type', 'status']);
         
         $assigned = $manifest->equipments->map(function($eq) {
@@ -271,6 +279,7 @@ class ManifestController extends Controller
     public function availableCarriers(Company $company, Manifest $manifest)
     {
         $allCarriers = \App\Models\Carrier::where('company_id', $company->id)
+            ->where('is_active', true)
             ->get(['id', 'carrier_name', 'dot_id', 'docket_number']);
         
         $assigned = $manifest->carriers->map(function($carrier) {

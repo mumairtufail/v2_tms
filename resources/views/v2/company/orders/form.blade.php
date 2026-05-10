@@ -3,6 +3,9 @@
 @section('title', isset($order) ? "Edit Order #{$order->order_number}" : "New Order Draft")
 
 @section('content')
+<script>
+    window.googleMapsApiKey = @json(config('services.google.maps_api_key'));
+</script>
 <div class="space-y-6" x-data="orderForm()">
     {{-- 1. Breadcrumb --}}
     <x-v2-breadcrumb :items="[
@@ -948,11 +951,11 @@ function orderForm() {
         },
 
         blankConsignee() {
-            return { company_name: '', address_1: '', address_2: '', city: '', state: '', zip: '', country: 'US', contact_name: '', phone: '', email: '', opening_time: '08:00', closing_time: '17:00', ready_at: '', requested_start_at: '', requested_end_at: '', requested_start_at_picker: '', requested_end_at_picker: '', appointment: false, notes: '' };
+            return { company_name: '', address_1: '', address_2: '', city: '', state: '', zip: '', country: 'US', lat: null, lng: null, contact_name: '', phone: '', email: '', opening_time: '08:00', closing_time: '17:00', ready_at: '', requested_start_at: '', requested_end_at: '', requested_start_at_picker: '', requested_end_at_picker: '', appointment: false, notes: '' };
         },
 
         blankShipper() {
-            return { company_name: '', address_1: '', address_2: '', city: '', state: '', zip: '', country: 'US', contact_name: '', phone: '', email: '', opening_time: '08:00', closing_time: '17:00', ready_at: '', ready_start_at: '', ready_end_at: '', ready_start_at_picker: '', ready_end_at_picker: '', appointment: false, notes: '' };
+            return { company_name: '', address_1: '', address_2: '', city: '', state: '', zip: '', country: 'US', lat: null, lng: null, contact_name: '', phone: '', email: '', opening_time: '08:00', closing_time: '17:00', ready_at: '', ready_start_at: '', ready_end_at: '', ready_start_at_picker: '', ready_end_at_picker: '', appointment: false, notes: '' };
         },
 
         addStop() {

@@ -1,12 +1,12 @@
 @php
     $manifestOrders = $manifest->orderStops->pluck('order')->filter()->unique('id');
-    $manifestRevenue = $manifestOrders->sum(function ($order) {
-        return optional($order->quote)
-            ? $order->quote->costs->where('category', 'customer')->sum(function ($cost) {
-                return (float) ($cost->cost ?? 0);
-            })
-            : 0;
-    });
+   $manifestRevenue = $manifestOrders->sum(function ($order) {
+    return optional($order->quote)->costs
+        ?->where('category', 'customer')
+        ->sum(function ($cost) {
+            return (float) ($cost->cost ?? 0);
+        }) ?? 0;
+});
 @endphp
 
 <div class="space-y-6" x-data="costEstimates({{ $manifest->costEstimates->toJson() }}, {{ (float) $manifestRevenue }})">

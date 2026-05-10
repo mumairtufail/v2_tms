@@ -16,6 +16,9 @@ class Company extends Model
         'address',
         'is_active',
         'phone',
+        'logo_light',
+        'logo_dark',
+        'logo_icon',
         'is_deleted'
     ];
 
