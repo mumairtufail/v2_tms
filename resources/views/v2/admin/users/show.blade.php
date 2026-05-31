@@ -46,15 +46,25 @@
                     </div>
 
                     <!-- Quick Actions -->
-                    <div class="mt-6 flex gap-2">
-                        <a href="{{ route('admin.users.edit', $user) }}" class="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors text-center">
+                    <div class="mt-6 flex flex-col gap-2">
+                        <a href="{{ route('admin.users.edit', $user) }}" class="w-full px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors text-center">
                             Edit
                         </a>
-                        @if($user->id !== auth()->id())
+                        @if(!$user->is_super_admin && $user->company)
+                        <form action="{{ route('admin.users.impersonate', $user) }}" method="POST">
+                            @csrf
+                            <button type="submit" class="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors text-center flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                Login as {{ $user->f_name ?? $user->name }}
+                            </button>
+                        </form>
+                        @endif
+                        {{-- Delete button hidden --}}
+                        {{-- @if($user->id !== auth()->id())
                         <button type="button" x-data @click="$dispatch('open-modal', 'delete-user')" class="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 text-sm font-medium rounded-lg transition-colors text-center">
                             Delete
                         </button>
-                        @endif
+                        @endif --}}
                     </div>
                 </div>
 
@@ -162,8 +172,8 @@
     </div>
 </div>
 
-<!-- Delete Modal -->
-@if($user->id !== auth()->id())
+{{-- Delete Modal hidden --}}
+{{-- @if($user->id !== auth()->id())
 <x-confirm-modal name="delete-user" title="Delete User">
     <p class="text-gray-600 dark:text-gray-400">Are you sure you want to delete <strong class="text-gray-900 dark:text-white">{{ $user->name }}</strong>?</p>
     <x-slot name="footer">
@@ -174,5 +184,5 @@
         </form>
     </x-slot>
 </x-confirm-modal>
-@endif
+@endif --}}
 @endsection

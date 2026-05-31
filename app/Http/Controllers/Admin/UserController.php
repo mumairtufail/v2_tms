@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Company;
 use App\Models\Role;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
@@ -19,7 +20,8 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $query = User::with(['company', 'roles'])
-            ->where('is_deleted', false);
+            ->where('is_deleted', false)
+            ->where('is_super_admin', false);
 
         // Search by name or email
         if ($request->filled('search')) {
@@ -163,7 +165,6 @@ class UserController extends Controller
         $validator = Validator::make($request->all(), [
             'f_name' => 'required|string|max:255',
             'l_name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
             'password' => ['nullable', 'confirmed', Password::min(8)],
             'phone' => 'nullable|string|max:20',
             'company_id' => 'required|exists:companies,id',
@@ -183,7 +184,6 @@ class UserController extends Controller
                 'f_name' => $request->f_name,
                 'l_name' => $request->l_name,
                 'name' => $request->f_name . ' ' . $request->l_name,
-                'email' => $request->email,
                 'phone' => $request->phone,
                 'company_id' => $request->company_id,
                 'status' => $request->status,
@@ -205,6 +205,51 @@ class UserController extends Controller
                 ->with('error', 'Failed to update user: ' . $e->getMessage())
                 ->withInput();
         }
+    }
+
+    /**
+     * Impersonate a company user as super admin.
+     */
+    public function impersonate(User $user)
+    {
+        if ($user->is_super_admin) {
+            return redirect()->back()->with('error', 'You cannot impersonate a super admin.');
+        }
+
+        if (!$user->company) {
+            return redirect()->back()->with('error', 'This user has no company assigned.');
+        }
+
+        session(['impersonating_original_id' => auth()->id()]);
+
+        Auth::login($user);
+
+        return redirect()->route('v2.dashboard', ['company' => $user->company->slug])
+            ->with('success', 'You are now logged in as ' . $user->name . '.');
+    }
+
+    /**
+     * Stop impersonating and return to the original super admin account.
+     */
+    public function stopImpersonating(Request $request)
+    {
+        $originalId = session()->pull('impersonating_original_id');
+
+        if (!$originalId) {
+            return redirect()->route('admin.dashboard');
+        }
+
+        $originalUser = User::find($originalId);
+
+        if (!$originalUser || !$originalUser->is_super_admin) {
+            Auth::logout();
+            return redirect()->route('login')->with('error', 'Session expired. Please log in again.');
+        }
+
+        Auth::login($originalUser);
+
+        return redirect()->route('admin.users.index')
+            ->with('success', 'You have returned to your super admin account.');
     }
 
     /**

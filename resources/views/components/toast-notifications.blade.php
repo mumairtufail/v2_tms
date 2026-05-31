@@ -41,6 +41,7 @@
         }
     }"
     x-init="{{ $initCode }}"
+    x-on:notify.window="addToast($event.detail.type ?? 'success', $event.detail.message ?? '')"
     class="fixed bottom-4 right-4 z-[9999] space-y-3 pointer-events-none"
     aria-live="polite"
 >

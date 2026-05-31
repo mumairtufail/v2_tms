@@ -47,21 +47,30 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\IsSuperAdmin::class]
     Route::get('/companies/generate-shortcode', [App\Http\Controllers\CompanyController::class, 'generateShortcode'])->name('companies.generate-shortcode');
     Route::resource('companies', App\Http\Controllers\CompanyController::class);
     Route::resource('users', App\Http\Controllers\Admin\UserController::class);
+    Route::post('/users/{user}/impersonate', [App\Http\Controllers\Admin\UserController::class, 'impersonate'])->name('users.impersonate');
     Route::get('/logs', [App\Http\Controllers\HomeController::class, 'activity_logs'])->name('logs');
     Route::get('/settings', [App\Http\Controllers\Admin\SystemSettingsController::class, 'index'])->name('settings.index');
     Route::get('/settings/branding', [App\Http\Controllers\Admin\SystemSettingsController::class, 'branding'])->name('settings.branding');
     Route::put('/settings/branding', [App\Http\Controllers\Admin\SystemSettingsController::class, 'updateBranding'])->name('settings.branding.update');
+    // Super admin profile — lives under /admin/profile
+    Route::get('/profile', function () {
+        return view('v2.admin.profile.index');
+    })->name('profile');
+
+    // 2FA setup confirm/cancel (controller-based, avoids Livewire state loss)
+    Route::post('/2fa/confirm', [\App\Http\Controllers\Admin\TwoFactorSetupController::class, 'confirm'])->name('2fa.confirm');
+    Route::post('/2fa/cancel', [\App\Http\Controllers\Admin\TwoFactorSetupController::class, 'cancel'])->name('2fa.cancel');
 });
 
 Route::get('/home', function () {
     return redirect('/');
 });
 
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
+// Stop impersonating — accessible by any authenticated user (the impersonated user)
+Route::middleware('auth')->post('/admin/impersonate/stop', [App\Http\Controllers\Admin\UserController::class, 'stopImpersonating'])->name('admin.impersonate.stop');
+
+// 2FA challenge — no auth middleware; user is logged out before redirected here
+Route::get('/two-factor-challenge', \App\Livewire\Auth\TwoFactorChallenge::class)->name('two-factor.challenge');
 
 require __DIR__.'/auth.php';
 

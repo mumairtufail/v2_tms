@@ -179,10 +179,10 @@ Route::middleware(['auth', CompanyScope::class])->prefix('{company}')->name('v2.
         Route::post('manifests/bulk-delete', [\App\Http\Controllers\V2\ManifestController::class, 'bulkDestroy'])->name('manifests.bulk-destroy');
     });
 
-    // Profile - All authenticated users can manage their own profile
-    Route::get('profile', [\App\Http\Controllers\V2\ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('profile', [\App\Http\Controllers\V2\ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('profile', [\App\Http\Controllers\V2\ProfileController::class, 'destroy'])->name('profile.destroy');
+    // Profile — embedded Livewire component
+    Route::get('profile', function () {
+        return view('v2.company.profile.index');
+    })->name('profile.edit');
 
 });
 

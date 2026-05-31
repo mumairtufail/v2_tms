@@ -27,9 +27,23 @@ class AuthenticatedSessionController extends Controller
     {
         $request->authenticate();
 
+        $user = $request->user();
+
+        // If 2FA is enabled and confirmed, challenge before granting access
+        if ($user->two_factor_enabled && $user->two_factor_confirmed_at) {
+            Auth::logout();
+            $request->session()->put('2fa.user_id', $user->id);
+            $request->session()->put('2fa.remember', $request->boolean('remember'));
+            return redirect()->route('two-factor.challenge');
+        }
+
         $request->session()->regenerate();
 
-        $user = $request->user();
+        $rememberExpiry = $request->boolean('remember') ? now()->addDays(30) : null;
+        $user->update([
+            'last_login_at' => now(),
+            'remember_token_expires_at' => $rememberExpiry,
+        ]);
 
         if ($user->is_super_admin) {
             return redirect()->route('admin.dashboard');

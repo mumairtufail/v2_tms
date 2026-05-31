@@ -52,6 +52,13 @@ return [
     */
 
     'channels' => [
+        '2fa' => [
+            'driver' => 'single',
+            'path'   => storage_path('logs/2fa.log'),
+            'level'  => 'debug',
+            'replace_placeholders' => true,
+        ],
+
         'orderedit-location' => [
             'driver' => 'single',
             'path' => storage_path('logs/orderedit-location.log'),

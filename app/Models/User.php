@@ -30,17 +30,25 @@ class User extends Authenticatable
         'status',
         'last_login_at',
         'email_notifications',
-        'two_factor_enabled'
+        'two_factor_enabled',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+        'two_factor_confirmed_at',
+        'remember_token_expires_at',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
     ];
 
     protected $casts = [
         'email_verified_at' => 'datetime',
         'last_login_at' => 'datetime',
+        'two_factor_confirmed_at' => 'datetime',
+        'remember_token_expires_at' => 'datetime',
         'password' => 'hashed',
         'is_super_admin' => 'boolean',
         'is_deleted' => 'boolean',

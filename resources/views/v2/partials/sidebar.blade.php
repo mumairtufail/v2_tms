@@ -14,11 +14,12 @@
     $sidebarLogoDark  = $currentCompany?->logo_dark  ?? \App\Models\SystemSetting::instance()->logo_dark  ?? null;
 @endphp
 <aside
-    class="fixed left-0 top-0 z-50 h-screen w-64 bg-white dark:bg-[#0B1120] border-r border-gray-200 dark:border-gray-800/50
+    class="fixed left-0 z-50 w-64 bg-white dark:bg-[#0B1120] border-r border-gray-200 dark:border-gray-800/50
            transition-transform duration-300 ease-in-out
-           lg:translate-x-0"
+           lg:translate-x-0
+           {{ ($impersonating ?? false) ? 'top-10 h-[calc(100vh-2.5rem)]' : 'top-0 h-screen' }}"
     :class="{
-        '-translate-x-full': !sidebarMobileOpen,                                                             
+        '-translate-x-full': !sidebarMobileOpen,
         'translate-x-0': sidebarMobileOpen
     }"
 >
@@ -337,7 +338,7 @@
     <!-- User Profile Section -->
     <div class="absolute bottom-0 left-0 w-full p-4 bg-white dark:bg-[#0B1120] border-t border-gray-200 dark:border-gray-800/50">
         <div class="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-gray-800/30 border border-gray-100 dark:border-gray-700/30">
-            <a href="{{ $currentCompany ? route('v2.profile.edit', ['company' => $companySlug]) : route('profile.edit') }}" class="flex items-center gap-3 flex-1 min-w-0 group">
+            <a href="{{ $currentCompany ? route('v2.profile.edit', ['company' => $companySlug]) : route('admin.profile') }}" class="flex items-center gap-3 flex-1 min-w-0 group">
                 <div class="relative">
                     <div class="w-10 h-10 bg-gradient-to-tr from-primary-500 to-accent-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-primary-500/10 group-hover:scale-105 transition-transform">
                         {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}

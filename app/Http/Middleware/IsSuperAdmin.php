@@ -19,9 +19,14 @@ class IsSuperAdmin
             if ($request->expectsJson()) {
                 return response()->json(['message' => 'Unauthorized. Super Admin access required.'], 403);
             }
-            
-            return redirect()->route('v2.dashboard', ['company' => app('current.company') ?? 'system-administration'])
-                ->with('error', 'Unauthorized. Super Admin access required.');
+
+            $user = $request->user();
+            if ($user && $user->company?->slug) {
+                return redirect()->route('v2.dashboard', ['company' => $user->company->slug])
+                    ->with('error', 'Unauthorized. Super Admin access required.');
+            }
+
+            return redirect()->route('login');
         }
 
         return $next($request);
