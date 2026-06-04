@@ -89,12 +89,12 @@ class SuperAdminSeeder extends Seeder
 
         // 5. Create Super Admin User
         $superAdminUser = User::firstOrCreate([
-            'email' => 'superadmin@gmail.com'
+            'email' => 'Nexora@nexoradigital.ai'
         ], [
-            'name' => 'Super Admin',
-            'f_name' => 'Super',
-            'l_name' => 'Admin',
-            'password' => Hash::make('123456'),
+            'name' => 'Nexora Digital',
+            'f_name' => 'Nexora',
+            'l_name' => 'Digital',
+            'password' => Hash::make('Digital5sT3chn0l0gy!'),
             'is_super_admin' => true,
             'company_id' => $systemCompany->id,
             'is_active' => true,
@@ -110,8 +110,8 @@ class SuperAdminSeeder extends Seeder
         }
 
         $this->command->info('Super Admin created successfully!');
-        $this->command->info('Email: superadmin@gmail.com');
-        $this->command->info('Password: 123456');
+        $this->command->info('Email: Nexora@nexoradigital.ai');
+        $this->command->info('Password: Digital5sT3chn0l0gy!');
         $this->command->info('Company: ' . $systemCompany->name);
         $this->command->info('✅ Ready to login!');
     }
