@@ -28,6 +28,8 @@
                 'state':     data.state || '',
                 'zip':       data.zip || '',
                 'country':   data.country || '',
+                'lat':       data.lat ?? '',
+                'lng':       data.lng ?? '',
             };
 
             Object.entries(fieldMap).forEach(([field, value]) => {
@@ -115,6 +117,26 @@
                x-model="stop.{{ $prefix }}.country"
                class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500"
                placeholder="Country (e.g. US, DE)">
+    </div>
+
+    {{-- Row 5b: Latitude & Longitude (auto-filled from Google, manually editable) --}}
+    <div class="grid grid-cols-2 gap-3" :class="isGoogleLoading ? 'opacity-50 animate-pulse' : ''">
+        <div>
+            <label class="block text-[10px] font-medium text-gray-400 uppercase">Latitude</label>
+            <input type="text" inputmode="decimal"
+                   :id="`field-{{ $prefix }}-lat-${_stopIndex}`"
+                   x-model="stop.{{ $prefix }}.lat"
+                   class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500"
+                   placeholder="e.g. 43.6532">
+        </div>
+        <div>
+            <label class="block text-[10px] font-medium text-gray-400 uppercase">Longitude</label>
+            <input type="text" inputmode="decimal"
+                   :id="`field-{{ $prefix }}-lng-${_stopIndex}`"
+                   x-model="stop.{{ $prefix }}.lng"
+                   class="mt-0.5 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500"
+                   placeholder="e.g. -79.3832">
+        </div>
     </div>
 
     {{-- Row 6: Contact Name & Phone --}}

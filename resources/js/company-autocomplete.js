@@ -80,6 +80,8 @@ export default function companyAutocomplete(config = {}) {
                         state:        p.state       || '',
                         zip:          p.zip         || '',
                         country:      p.country     || '',
+                        lat:          p.lat ?? '',
+                        lng:          p.lng ?? '',
                     };
 
                     Object.entries(fieldMap).forEach(([field, value]) => {
