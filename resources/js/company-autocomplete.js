@@ -10,6 +10,7 @@ export default function companyAutocomplete(config = {}) {
         isLoading: false,
         isGoogleLoading: false,
         showDropdown: false,
+        lastSearched: '', // last query actually sent to Google (cost dedupe)
         mode: 'google', // 'local' | 'google'
         debug: ['localhost', '127.0.0.1'].includes(window.location.hostname) || window.localStorage.getItem('googlePlacesDebug') === '1',
 
@@ -32,14 +33,23 @@ export default function companyAutocomplete(config = {}) {
         },
 
         async searchGoogle() {
-            if (this.query.length < 3) return;
+            const q = this.query.trim();
+            if (q.length < 3) return;
+
+            // Cost dedupe: skip re-billing Google if the query hasn't changed
+            // since the last request (re-focus, add-then-delete a char, etc.).
+            if (q === this.lastSearched) {
+                this.showDropdown = true;
+                return;
+            }
 
             this.mode = 'google';
+            this.lastSearched = q;
             this.isGoogleLoading = true;
             this.showDropdown = true;
 
             try {
-                const suggestions = await PlacesAPI.autocomplete(this.query);
+                const suggestions = await PlacesAPI.autocomplete(q);
                 this.googleResults = suggestions.map((s) => ({
                     placeId: s.placeId,
                     mainText: s.mainText,
