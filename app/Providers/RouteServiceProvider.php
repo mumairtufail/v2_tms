@@ -39,6 +39,10 @@ class RouteServiceProvider extends ServiceProvider
             // V2 Routes with company-based multi-tenancy
             Route::middleware('web')
                 ->group(base_path('routes/v2.php'));
+
+            // Customer portal routes
+            Route::middleware('web')
+                ->group(base_path('routes/portal.php'));
         });
     }
 }

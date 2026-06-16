@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Company;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 class CompanyFactory extends Factory
 {
@@ -11,16 +12,16 @@ class CompanyFactory extends Factory
 
     public function definition(): array
     {
+        $name = $this->faker->company();
+
         return [
-            'name' => $this->faker->company(),
-            'email' => $this->faker->unique()->safeEmail(),
+            'name' => $name,
+            'slug' => Str::slug($name) . '-' . $this->faker->unique()->randomNumber(4),
+            'shortcode' => strtoupper($this->faker->lexify('????')),
             'phone' => $this->faker->phoneNumber(),
-            'address_1' => $this->faker->streetAddress(),
-            'address_2' => $this->faker->optional()->secondaryAddress(),
-            'city' => $this->faker->city(),
-            'state' => $this->faker->stateAbbr(),
-            'postal_code' => $this->faker->postcode(),
-            'country' => 'US',
+            'address' => $this->faker->streetAddress(),
+            'is_active' => true,
+            'is_deleted' => false,
         ];
     }
 }

@@ -69,5 +69,8 @@ class Kernel extends HttpKernel
         'is_company' => \App\Http\Middleware\CheckCompany::class,
         'permission' => \App\Http\Middleware\CheckPermission::class,
         'company.scope' => \App\Http\Middleware\CompanyScope::class,
+        'portal.company' => \App\Http\Middleware\PortalCompanyContext::class,
+        'portal.scope' => \App\Http\Middleware\CustomerPortalScope::class,
+        'portal.guest' => \App\Http\Middleware\RedirectIfCustomerAuthenticated::class,
     ];
 }

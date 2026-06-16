@@ -73,4 +73,9 @@
             </button>
         </div>
     </form>
+
+    <p class="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+        Customer?
+        <a href="{{ route('portal.login', ['company' => 'innovations-freight-solutions']) }}" class="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">Sign in to Customer Portal</a>
+    </p>
 </x-guest-layout>

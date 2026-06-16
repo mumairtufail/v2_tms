@@ -3,11 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 
-class Customer extends Model
+class Customer extends Authenticatable
 {
-    use HasFactory;
+    use HasFactory, Notifiable;
+
     protected $fillable = [
         'company_id',
         'name',
@@ -27,7 +31,7 @@ class Customer extends Model
         'default_billing_option',
         'quote_required',
         'is_deleted',
-        'quickbooks_id'
+        'quickbooks_id',
     ];
 
     protected $casts = [
@@ -38,27 +42,37 @@ class Customer extends Model
         'is_deleted' => 'boolean',
     ];
 
-    // Relationship with users
-    public function users()
+    protected $hidden = [
+        'remember_token',
+    ];
+
+    public function getAuthPassword(): string
     {
-        return $this->hasMany(User::class);
+        return '';
     }
 
-    // Scope for active customers
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
     }
 
- public function company()
-    {
-        return $this->belongsTo(Company::class);
-    }
-
-
-    // Scope for non-deleted customers
     public function scopeNotDeleted($query)
     {
         return $query->where('is_deleted', false);
+    }
+
+    public function scopePortalEnabled($query)
+    {
+        return $query->where('portal', true);
     }
 }
