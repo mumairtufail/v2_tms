@@ -6,6 +6,7 @@ use App\Models\Customer;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -32,16 +33,6 @@ class CustomerLoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        $staticPassword = config('portal.static_password');
-
-        if ($this->password !== $staticPassword) {
-            RateLimiter::hit($this->throttleKey());
-
-            throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
-            ]);
-        }
-
         $company = app('current.company');
 
         $customer = Customer::query()
@@ -52,7 +43,7 @@ class CustomerLoginRequest extends FormRequest
             ->where('is_deleted', false)
             ->first();
 
-        if (!$customer) {
+        if (!$customer || !$customer->password || !Hash::check($this->password, $customer->password)) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([

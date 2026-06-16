@@ -4,8 +4,8 @@ namespace Tests\Feature\Portal;
 
 use App\Models\Company;
 use App\Models\Customer;
-use App\Models\Order;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class CustomerPortalLoginTest extends TestCase
@@ -20,8 +20,6 @@ class CustomerPortalLoginTest extends TestCase
     {
         parent::setUp();
 
-        config(['portal.static_password' => 'portal-password']);
-
         $this->company = Company::create([
             'name' => 'Test Freight Co',
             'slug' => 'test-freight-co',
@@ -34,6 +32,7 @@ class CustomerPortalLoginTest extends TestCase
             'company_id' => $this->company->id,
             'name' => 'Portal Customer Inc',
             'customer_email' => 'portal@customer.com',
+            'password' => Hash::make('portal-password'),
             'short_code' => 'PCI',
             'portal' => true,
             'is_active' => true,
@@ -48,7 +47,7 @@ class CustomerPortalLoginTest extends TestCase
         $response->assertStatus(200);
     }
 
-    public function test_customer_can_authenticate_with_static_password(): void
+    public function test_customer_can_authenticate_with_their_password(): void
     {
         $response = $this->post(route('portal.login', ['company' => $this->company->slug]), [
             'email' => $this->customer->customer_email,
@@ -84,6 +83,18 @@ class CustomerPortalLoginTest extends TestCase
     public function test_inactive_customer_cannot_login(): void
     {
         $this->customer->update(['is_active' => false]);
+
+        $this->post(route('portal.login', ['company' => $this->company->slug]), [
+            'email' => $this->customer->customer_email,
+            'password' => 'portal-password',
+        ]);
+
+        $this->assertGuest('customer');
+    }
+
+    public function test_customer_without_password_cannot_login(): void
+    {
+        $this->customer->update(['password' => null]);
 
         $this->post(route('portal.login', ['company' => $this->company->slug]), [
             'email' => $this->customer->customer_email,

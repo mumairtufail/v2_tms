@@ -9,8 +9,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('customers', function (Blueprint $table) {
-            $table->string('password')->nullable()->after('email');
-            $table->rememberToken()->after('quickbooks_id');
+            if (!Schema::hasColumn('customers', 'password')) {
+                $table->string('password')->nullable()->after('customer_email');
+            }
+            if (!Schema::hasColumn('customers', 'remember_token')) {
+                $table->rememberToken()->after('quickbooks_id');
+            }
         });
     }
 

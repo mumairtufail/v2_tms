@@ -186,6 +186,26 @@
                                 />
                             </div>
                         </div>
+
+                        <div class="md:col-span-2 space-y-4 pt-2 border-t border-gray-200 dark:border-gray-700">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Portal login credentials — required when portal access is enabled.</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <x-text-input
+                                    label="Portal Password"
+                                    name="password"
+                                    type="password"
+                                    autocomplete="new-password"
+                                    placeholder="{{ isset($customer) ? 'Leave blank to keep current' : 'Min. 8 characters' }}"
+                                />
+                                <x-text-input
+                                    label="Confirm Password"
+                                    name="password_confirmation"
+                                    type="password"
+                                    autocomplete="new-password"
+                                    placeholder="Confirm password"
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

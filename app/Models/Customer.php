@@ -15,6 +15,7 @@ class Customer extends Authenticatable
     protected $fillable = [
         'company_id',
         'name',
+        'password',
         'is_active',
         'short_code',
         'portal',
@@ -40,16 +41,13 @@ class Customer extends Authenticatable
         'network_customer' => 'boolean',
         'quote_required' => 'boolean',
         'is_deleted' => 'boolean',
+        'password' => 'hashed',
     ];
 
     protected $hidden = [
+        'password',
         'remember_token',
     ];
-
-    public function getAuthPassword(): string
-    {
-        return '';
-    }
 
     public function company(): BelongsTo
     {

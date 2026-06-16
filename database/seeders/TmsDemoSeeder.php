@@ -101,6 +101,7 @@ class TmsDemoSeeder extends Seeder
                 'is_deleted'             => false,
                 'quote_required'         => true,
                 'portal'                 => true,
+                'password'               => Hash::make('password'),
             ]
         );
 
@@ -108,8 +109,12 @@ class TmsDemoSeeder extends Seeder
             $customer->update(['portal' => true]);
         }
 
+        if (! $customer->password) {
+            $customer->update(['password' => Hash::make('password')]);
+        }
+
         $this->command->info("  ✔ Customer: {$customer->name} (short_code: {$customer->short_code})");
-        $this->command->info("  ✔ Portal login: {$customer->customer_email} / password (CUSTOMER_PORTAL_PASSWORD)");
+        $this->command->info("  ✔ Portal login: {$customer->customer_email} / password: password");
 
         // ── 5. Manifests ────────────────────────────────────────────────────────
         $manifests = $this->seedManifests($company);

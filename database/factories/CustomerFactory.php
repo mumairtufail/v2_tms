@@ -29,11 +29,15 @@ class CustomerFactory extends Factory
             'is_deleted' => false,
             'portal' => false,
             'quote_required' => false,
+            'password' => 'password',
         ];
     }
 
     public function withPortalAccess(): static
     {
-        return $this->state(fn () => ['portal' => true]);
+        return $this->state(fn () => [
+            'portal' => true,
+            'password' => 'password',
+        ]);
     }
 }
