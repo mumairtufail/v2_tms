@@ -2,89 +2,82 @@
 
 namespace App\Models\Traits;
 
-use App\Models\ActivityLogs;
+use App\Services\ActivityLog;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Auth;
 
 trait HasActivityLog
 {
-    /**
-     * Boot the trait.
-     */
     protected static function bootHasActivityLog(): void
     {
-        // Log creation
         static::created(function ($model) {
-            $model->logActivity('created', "Created {$model->getActivityEntityName()}: {$model->getActivityDescription()}");
+            $model->recordModelActivity('created');
         });
 
-        // Log updates
         static::updated(function ($model) {
-            if ($model->wasChanged() && !$model->wasRecentlyCreated) {
-                $changes = $model->getActivityChanges();
-                $model->logActivity('updated', "Updated {$model->getActivityEntityName()}: {$changes}");
+            if ($model->wasChanged() && ! $model->wasRecentlyCreated) {
+                $model->recordModelActivity('updated');
             }
         });
 
-        // Log deletion
         static::deleted(function ($model) {
-            $model->logActivity('deleted', "Deleted {$model->getActivityEntityName()}: {$model->getActivityDescription()}");
+            $model->recordModelActivity('deleted');
         });
     }
 
-    /**
-     * Log an activity.
-     */
-    public function logActivity(string $action, string $description, array $properties = []): void
+    public function recordModelActivity(string $action): void
     {
-        ActivityLogs::create([
-            'user_id' => Auth::id(),
-            'company_id' => $this->company_id ?? config('app.current_company_id'),
-            'model_type' => get_class($this),
-            'model_id' => $this->id,
-            'action' => $action,
-            'description' => $description,
-            'properties' => $properties,
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent(),
-        ]);
+        if (! Auth::user('web') && ! Auth::user('customer')) {
+            return;
+        }
+
+        $data = [
+            'description' => match ($action) {
+                'created' => "Created {$this->getActivityEntityName()}: {$this->getActivityDescription()}",
+                'updated' => "Updated {$this->getActivityEntityName()}: {$this->getActivityChanges()}",
+                'deleted' => "Deleted {$this->getActivityEntityName()}: {$this->getActivityDescription()}",
+                default => ucfirst($action).' '.$this->getActivityEntityName(),
+            },
+        ];
+
+        if ($action === 'updated') {
+            $data['changes'] = collect($this->getChanges())
+                ->except(['updated_at', 'created_at'])
+                ->all();
+        }
+
+        app(ActivityLog::class)->logModel($action, $this, $data);
     }
 
-    /**
-     * Get activity logs for this model.
-     */
-    public function activityLogs()
+    public function subjectActivityLogs(): HasMany
     {
-        return $this->morphMany(ActivityLogs::class, 'model');
+        return $this->hasMany(\App\Models\ActivityLogs::class, 'company_id', 'company_id')
+            ->where('data->model_type', static::class)
+            ->where('data->model_id', $this->getKey());
     }
 
-    /**
-     * Get the entity name for activity logging.
-     */
     protected function getActivityEntityName(): string
     {
         return class_basename($this);
     }
 
-    /**
-     * Get the description for activity logging.
-     */
     protected function getActivityDescription(): string
     {
         return $this->name ?? $this->title ?? "#{$this->id}";
     }
 
-    /**
-     * Get changes for activity logging.
-     */
     protected function getActivityChanges(): string
     {
         $changes = [];
+
         foreach ($this->getChanges() as $key => $value) {
-            if (in_array($key, ['updated_at', 'created_at'])) {
+            if (in_array($key, ['updated_at', 'created_at'], true)) {
                 continue;
             }
+
             $changes[] = "{$key}: {$this->getOriginal($key)} → {$value}";
         }
-        return implode(', ', $changes);
+
+        return implode(', ', $changes) ?: $this->getActivityDescription();
     }
 }

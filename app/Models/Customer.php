@@ -59,6 +59,11 @@ class Customer extends Authenticatable
         return $this->hasMany(Order::class);
     }
 
+    public function activityLogs(): HasMany
+    {
+        return $this->hasMany(ActivityLogs::class);
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);

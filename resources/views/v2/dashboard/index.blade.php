@@ -131,7 +131,7 @@
                     <div class="flex-1 min-w-0">
                         <p class="text-sm text-gray-900 dark:text-white">{{ $log->description }}</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                            {{ $log->user->name ?? 'System' }} • {{ $log->created_at->diffForHumans() }}
+                            {{ $log->actor_name }} • {{ $log->created_at->diffForHumans() }}
                         </p>
                     </div>
                 </div>

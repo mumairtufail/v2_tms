@@ -69,10 +69,10 @@
                     <td class="px-3 py-2">
                         <div class="flex items-center gap-2">
                             <div class="w-6 h-6 bg-gray-500 rounded-md flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                                {{ strtoupper(substr($log->user->name ?? 'S', 0, 1)) }}
+                                {{ strtoupper(substr($log->actor_name, 0, 1)) }}
                             </div>
                             <span class="font-medium text-gray-900 dark:text-white">
-                                <x-search-highlight :text="$log->user->name ?? 'System'" :search="request('search')" />
+                                <x-search-highlight :text="$log->actor_name" :search="request('search')" />
                             </span>
                         </div>
                     </td>
@@ -89,8 +89,8 @@
                         @endphp
                         <span class="px-2 py-0.5 text-xs rounded-full font-medium {{ $color }}">{{ $log->method }}</span>
                     </td>
-                    <td class="px-3 py-2 text-gray-900 dark:text-white max-w-xs truncate" title="{{ $log->action }}">
-                        <x-search-highlight :text="$log->action" :search="request('search')" />
+                    <td class="px-3 py-2 text-gray-900 dark:text-white max-w-xs truncate" title="{{ $log->description }}">
+                        <x-search-highlight :text="$log->description" :search="request('search')" />
                     </td>
                     <td class="px-3 py-2 hidden md:table-cell">
                         <code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs text-gray-600 dark:text-gray-400">{{ $log->ip_address ?? 'N/A' }}</code>

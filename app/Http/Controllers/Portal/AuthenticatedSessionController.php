@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Portal;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Portal\CustomerLoginRequest;
 use App\Models\Company;
+use App\Services\ActivityLog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,6 +29,17 @@ class AuthenticatedSessionController extends Controller
 
     public function destroy(Request $request, Company $company): RedirectResponse
     {
+        $customer = Auth::guard('customer')->user();
+
+        if ($customer) {
+            app(ActivityLog::class)->logAuth('portal.logout', [
+                'description' => 'Customer logged out of portal',
+                'email' => $customer->customer_email,
+                'customer_id' => $customer->id,
+                'company_id' => $company->id,
+            ]);
+        }
+
         Auth::guard('customer')->logout();
 
         $request->session()->invalidate();

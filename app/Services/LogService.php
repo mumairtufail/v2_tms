@@ -2,51 +2,34 @@
 
 namespace App\Services;
 
-use App\Models\ActivityLogs;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log as LaravelLog;
 
 class LogService
 {
-    /**
-     * Log user authentication activity
-     */
+    public function __construct(
+        protected ActivityLog $activityLog
+    ) {}
+
     public function logAuth(string $action, string $description, ?User $user = null, array $properties = []): void
     {
         try {
-            $user = $user ?? Auth::user();
-            
-            ActivityLogs::create([
-                'user_id' => $user?->id,
-                'company_id' => $user?->company_id ?? config('app.current_company_id'),
-                'model_type' => User::class,
-                'model_id' => $user?->id,
-                'action' => $action,
+            $this->activityLog->logAuth($action, array_merge($properties, [
                 'description' => $description,
-                'properties' => array_merge($properties, [
-                    'ip' => request()->ip(),
-                    'user_agent' => request()->userAgent(),
-                    'timestamp' => now()->toDateTimeString(),
-                ]),
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent(),
-            ]);
+                'email' => $user?->email ?? ($properties['email'] ?? null),
+            ]));
 
-            // Also log to Laravel log
             LaravelLog::info("[AUTH] {$action}: {$description}", [
                 'user_id' => $user?->id,
                 'email' => $user?->email,
                 'ip' => request()->ip(),
             ]);
         } catch (\Exception $e) {
-            LaravelLog::error('Failed to log auth activity: ' . $e->getMessage());
+            LaravelLog::error('Failed to log auth activity: '.$e->getMessage());
         }
     }
 
-    /**
-     * Log general activity
-     */
     public function log(
         string $action,
         string $description,
@@ -55,104 +38,57 @@ class LogService
         array $properties = []
     ): void {
         try {
-            $user = Auth::user();
-            
-            ActivityLogs::create([
-                'user_id' => $user?->id,
-                'company_id' => $user?->company_id ?? config('app.current_company_id'),
+            $this->activityLog->log($action, array_merge($properties, [
+                'description' => $description,
                 'model_type' => $modelType,
                 'model_id' => $modelId,
-                'action' => $action,
-                'description' => $description,
-                'properties' => array_merge($properties, [
-                    'ip' => request()->ip(),
-                    'user_agent' => request()->userAgent(),
-                    'timestamp' => now()->toDateTimeString(),
-                ]),
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent(),
-            ]);
+            ]));
 
-            // Also log to Laravel log
             LaravelLog::info("[ACTIVITY] {$action}: {$description}", [
-                'user_id' => $user?->id,
+                'user_id' => Auth::id(),
                 'model_type' => $modelType,
                 'model_id' => $modelId,
             ]);
         } catch (\Exception $e) {
-            LaravelLog::error('Failed to log activity: ' . $e->getMessage());
+            LaravelLog::error('Failed to log activity: '.$e->getMessage());
         }
     }
 
-    /**
-     * Log security events
-     */
     public function logSecurity(string $event, string $description, array $properties = []): void
     {
         try {
-            $user = Auth::user();
-            
-            ActivityLogs::create([
-                'user_id' => $user?->id,
-                'company_id' => $user?->company_id ?? config('app.current_company_id'),
-                'model_type' => null,
-                'model_id' => null,
-                'action' => 'security.' . $event,
+            $this->activityLog->log('security.'.$event, array_merge($properties, [
+                'category' => 'security',
                 'description' => $description,
-                'properties' => array_merge($properties, [
-                    'ip' => request()->ip(),
-                    'user_agent' => request()->userAgent(),
-                    'timestamp' => now()->toDateTimeString(),
-                ]),
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent(),
-            ]);
+            ]), false);
 
-            // Also log to Laravel log with WARNING level
             LaravelLog::warning("[SECURITY] {$event}: {$description}", [
-                'user_id' => $user?->id,
+                'user_id' => Auth::id(),
                 'ip' => request()->ip(),
                 'properties' => $properties,
             ]);
         } catch (\Exception $e) {
-            LaravelLog::error('Failed to log security event: ' . $e->getMessage());
+            LaravelLog::error('Failed to log security event: '.$e->getMessage());
         }
     }
 
-    /**
-     * Log error/exception
-     */
     public function logError(\Exception $exception, string $context = ''): void
     {
         try {
-            $user = Auth::user();
-            
-            ActivityLogs::create([
-                'user_id' => $user?->id,
-                'company_id' => $user?->company_id ?? config('app.current_company_id'),
-                'model_type' => null,
-                'model_id' => null,
-                'action' => 'error',
-                'description' => $context . ': ' . $exception->getMessage(),
-                'properties' => [
-                    'exception_class' => get_class($exception),
-                    'file' => $exception->getFile(),
-                    'line' => $exception->getLine(),
-                    'trace' => $exception->getTraceAsString(),
-                    'ip' => request()->ip(),
-                    'url' => request()->fullUrl(),
-                ],
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent(),
-            ]);
+            $this->activityLog->log('error', [
+                'category' => 'error',
+                'description' => $context.': '.$exception->getMessage(),
+                'exception_class' => get_class($exception),
+                'file' => $exception->getFile(),
+                'line' => $exception->getLine(),
+            ], false);
 
-            // Also log to Laravel log
-            LaravelLog::error($context . ': ' . $exception->getMessage(), [
+            LaravelLog::error($context.': '.$exception->getMessage(), [
                 'exception' => $exception,
-                'user_id' => $user?->id,
+                'user_id' => Auth::id(),
             ]);
         } catch (\Exception $e) {
-            LaravelLog::critical('Failed to log error: ' . $e->getMessage());
+            LaravelLog::critical('Failed to log error: '.$e->getMessage());
         }
     }
 }

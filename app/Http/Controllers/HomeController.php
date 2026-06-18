@@ -27,7 +27,7 @@ class HomeController extends Controller
      */
     public function activity_logs(Request $request)
     {
-        $query = ActivityLogs::with('user');
+        $query = ActivityLogs::with(['user', 'customer', 'company']);
 
         // Search functionality
         if ($request->has('search') && !empty($request->search)) {
@@ -38,6 +38,10 @@ class HomeController extends Controller
                         $q2->where('name', 'LIKE', "%{$searchTerm}%")
                             ->orWhere('f_name', 'LIKE', "%{$searchTerm}%")
                             ->orWhere('l_name', 'LIKE', "%{$searchTerm}%");
+                    })
+                    ->orWhereHas('customer', function ($q2) use ($searchTerm) {
+                        $q2->where('name', 'LIKE', "%{$searchTerm}%")
+                            ->orWhere('customer_email', 'LIKE', "%{$searchTerm}%");
                     });
             });
         }

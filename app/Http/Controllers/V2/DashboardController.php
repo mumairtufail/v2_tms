@@ -34,8 +34,9 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
-        // Get activity logs
-        $activityLogs = ActivityLogs::with('user')
+        // Get activity logs scoped to this company
+        $activityLogs = ActivityLogs::with(['user', 'customer'])
+            ->forCompany($company->id)
             ->latest()
             ->take(10)
             ->get();

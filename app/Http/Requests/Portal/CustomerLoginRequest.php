@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Portal;
 
 use App\Models\Customer;
+use App\Services\ActivityLog;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -46,6 +47,13 @@ class CustomerLoginRequest extends FormRequest
         if (!$customer || !$customer->password || !Hash::check($this->password, $customer->password)) {
             RateLimiter::hit($this->throttleKey());
 
+            app(ActivityLog::class)->logAuth('portal.login.failed', [
+                'allow_guest' => true,
+                'email' => $this->input('email'),
+                'company_id' => $company->id,
+                'description' => 'Failed customer portal login attempt',
+            ], false);
+
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
             ]);
@@ -54,6 +62,13 @@ class CustomerLoginRequest extends FormRequest
         Auth::guard('customer')->login($customer, $this->boolean('remember'));
 
         RateLimiter::clear($this->throttleKey());
+
+        app(ActivityLog::class)->logAuth('portal.login.success', [
+            'description' => 'Customer logged into portal',
+            'email' => $customer->customer_email,
+            'customer_id' => $customer->id,
+            'company_id' => $company->id,
+        ]);
     }
 
     /**
