@@ -184,5 +184,10 @@ Route::middleware(['auth', CompanyScope::class])->prefix('{company}')->name('v2.
     Route::patch('profile', [\App\Http\Controllers\V2\ProfileController::class, 'update'])->name('profile.update');
     Route::delete('profile', [\App\Http\Controllers\V2\ProfileController::class, 'destroy'])->name('profile.destroy');
 
+    // Activity Logs
+    Route::middleware(['permission:logs,view'])->group(function () {
+        Route::get('activity-logs', [\App\Http\Controllers\V2\ActivityLogController::class, 'index'])->name('activity-logs.index');
+    });
+
 });
 

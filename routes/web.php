@@ -47,7 +47,7 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\IsSuperAdmin::class]
     Route::get('/companies/generate-shortcode', [App\Http\Controllers\CompanyController::class, 'generateShortcode'])->name('companies.generate-shortcode');
     Route::resource('companies', App\Http\Controllers\CompanyController::class);
     Route::resource('users', App\Http\Controllers\Admin\UserController::class);
-    Route::get('/logs', [App\Http\Controllers\HomeController::class, 'activity_logs'])->name('logs');
+    Route::get('/logs', [App\Http\Controllers\Admin\ActivityLogController::class, 'index'])->name('logs');
     Route::get('/settings', [App\Http\Controllers\Admin\SystemSettingsController::class, 'index'])->name('settings.index');
     Route::get('/settings/branding', [App\Http\Controllers\Admin\SystemSettingsController::class, 'branding'])->name('settings.branding');
     Route::put('/settings/branding', [App\Http\Controllers\Admin\SystemSettingsController::class, 'updateBranding'])->name('settings.branding.update');

@@ -116,8 +116,13 @@
 
     <!-- Activity Log -->
     <x-table-container>
-        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Recent Activity</h3>
+            @if(auth()->user()->hasPermission('logs', 'view') && app()->bound('current.company'))
+            <a href="{{ route('v2.activity-logs.index', ['company' => app('current.company')->slug]) }}" class="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium">
+                View all
+            </a>
+            @endif
         </div>
         <div class="p-4">
             <div class="space-y-4">
