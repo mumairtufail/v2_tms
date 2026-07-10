@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Services\ActivityLog;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -44,12 +45,23 @@ class LoginRequest extends FormRequest
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
+            app(ActivityLog::class)->logAuth('auth.login.failed', [
+                'allow_guest' => true,
+                'email' => $this->input('email'),
+                'description' => 'Failed staff login attempt',
+            ], false);
+
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
             ]);
         }
 
         RateLimiter::clear($this->throttleKey());
+
+        app(ActivityLog::class)->logAuth('auth.login.success', [
+            'description' => 'Staff user logged in',
+            'email' => $this->input('email'),
+        ]);
     }
 
     /**

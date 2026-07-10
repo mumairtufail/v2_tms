@@ -37,6 +37,7 @@ class Kernel extends HttpKernel
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \App\Http\Middleware\LogUserActivity::class,
             \App\Http\Middleware\CheckRememberTokenExpiry::class,
         ],
 
@@ -70,5 +71,8 @@ class Kernel extends HttpKernel
         'is_company' => \App\Http\Middleware\CheckCompany::class,
         'permission' => \App\Http\Middleware\CheckPermission::class,
         'company.scope' => \App\Http\Middleware\CompanyScope::class,
+        'portal.company' => \App\Http\Middleware\PortalCompanyContext::class,
+        'portal.scope' => \App\Http\Middleware\CustomerPortalScope::class,
+        'portal.guest' => \App\Http\Middleware\RedirectIfCustomerAuthenticated::class,
     ];
 }

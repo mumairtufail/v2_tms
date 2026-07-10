@@ -66,9 +66,6 @@ class UserService
                 $user->roles()->sync($data['roles']);
             }
 
-            // Log activity
-            $user->logActivity('created', "User account created: {$user->name}");
-
             DB::commit();
             return $user->fresh(['roles']);
         } catch (\Exception $e) {
@@ -106,9 +103,6 @@ class UserService
                 $user->roles()->sync($data['roles']);
             }
 
-            // Log activity
-            $user->logActivity('updated', "User account updated: {$user->name}");
-
             DB::commit();
             return $user->fresh(['roles']);
         } catch (\Exception $e) {
@@ -124,10 +118,6 @@ class UserService
     {
         DB::beginTransaction();
         try {
-            // Log activity before deletion
-            $userName = $user->name;
-            $user->logActivity('deleted', "User account deleted: {$userName}");
-
             // Delete user
             $user->delete();
 
@@ -156,7 +146,6 @@ class UserService
     {
         $newStatus = $user->status === 'active' ? 'inactive' : 'active';
         $user->update(['status' => $newStatus]);
-        $user->logActivity('status_changed', "Status changed to: {$newStatus}");
         
         return $user;
     }
@@ -167,7 +156,6 @@ class UserService
     public function resetPassword(User $user, string $password): bool
     {
         $user->update(['password' => Hash::make($password)]);
-        $user->logActivity('password_reset', 'Password was reset');
         
         return true;
     }

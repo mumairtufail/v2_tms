@@ -3,6 +3,7 @@
 namespace App\Http\Requests\V2;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Password;
 
 class CustomerRequest extends FormRequest
 {
@@ -13,10 +14,19 @@ class CustomerRequest extends FormRequest
 
     public function rules(): array
     {
+        $isUpdate = $this->isMethod('PUT') || $this->isMethod('PATCH');
+
         return [
             'name' => ['required', 'string', 'max:255'],
             'short_code' => ['nullable', 'string', 'max:3'],
             'customer_email' => ['nullable', 'email', 'max:255'],
+            'password' => [
+                $isUpdate ? 'nullable' : 'nullable',
+                'required_if:portal,1,true',
+                'string',
+                Password::min(8),
+                'confirmed',
+            ],
             'address' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:100'],
             'state' => ['nullable', 'string', 'max:100'],
@@ -29,8 +39,8 @@ class CustomerRequest extends FormRequest
             'currency' => ['nullable', 'string', 'max:3'],
         ];
     }
-    
-    protected function prepareForValidation()
+
+    protected function prepareForValidation(): void
     {
         $this->merge([
             'is_active' => $this->boolean('is_active'),

@@ -81,15 +81,10 @@ class User extends Authenticatable
 
     public function logActivity(string $action, string $description = null, array $data = [])
     {
-        $this->activityLogs()->create([
-            'action' => $action,
-            'data' => $description ? json_encode(['description' => $description] + $data) : json_encode($data),
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent(),
-            'url' => request()->fullUrl(),
-            'method' => request()->method(),
-            'is_successful' => true,
-        ]);
+        app(\App\Services\ActivityLog::class)->log($action, array_merge($data, [
+            'description' => $description ?? $action,
+            'subject_user_id' => $this->id,
+        ]));
     }
 
     // Helper methods

@@ -34,6 +34,8 @@ class CustomerService
     public function createCustomer(array $data): Customer
     {
         return DB::transaction(function () use ($data) {
+            $data = $this->preparePasswordData($data);
+
             return Customer::create($data);
         });
     }
@@ -41,9 +43,26 @@ class CustomerService
     public function updateCustomer(Customer $customer, array $data): Customer
     {
         return DB::transaction(function () use ($customer, $data) {
+            $data = $this->preparePasswordData($data, isUpdate: true);
+
             $customer->update($data);
+
             return $customer->fresh();
         });
+    }
+
+    /**
+     * Remove empty passwords on update; model casts hash on set.
+     */
+    private function preparePasswordData(array $data, bool $isUpdate = false): array
+    {
+        if ($isUpdate && empty($data['password'])) {
+            unset($data['password']);
+        }
+
+        unset($data['password_confirmation']);
+
+        return $data;
     }
 
     public function deleteCustomer(Customer $customer): bool
