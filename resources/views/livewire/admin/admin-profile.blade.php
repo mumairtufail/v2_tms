@@ -223,21 +223,23 @@
                                     <div class="p-2 bg-gray-50 dark:bg-gray-800 rounded text-xs font-mono break-all text-gray-500">{{ $pending_secret }}</div>
                                 </div>
                             </div>
-                            <form method="POST" action="{{ route('admin.2fa.confirm') }}" class="space-y-3">
-                                @csrf
+                            <form wire:submit="confirmTwoFactor" class="space-y-3">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Verification Code</label>
-                                    <input name="two_factor_code" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" class="w-40 px-3 py-2 text-center text-lg tracking-widest font-mono border rounded-lg bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+                                    <input wire:model="two_factor_code" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" class="w-40 px-3 py-2 text-center text-lg tracking-widest font-mono border rounded-lg bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
                                     @error('two_factor_code')<p class="mt-1 text-xs text-red-500">{{ $message }}</p>@enderror
                                 </div>
                                 <div class="flex gap-3">
-                                    <button type="submit" class="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors">
-                                        Confirm &amp; Enable
+                                    <button type="submit" wire:loading.attr="disabled" wire:target="confirmTwoFactor" class="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-60 text-white text-sm font-medium rounded-lg transition-colors">
+                                        <span wire:loading.remove wire:target="confirmTwoFactor">Confirm &amp; Enable</span>
+                                        <span wire:loading wire:target="confirmTwoFactor" class="flex items-center gap-2">
+                                            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                                            Verifying…
+                                        </span>
                                     </button>
-                                    <a href="{{ route('admin.2fa.cancel') }}" onclick="event.preventDefault(); document.getElementById('cancel-2fa-form').submit();" class="px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg transition-colors cursor-pointer">Cancel</a>
+                                    <button type="button" wire:click="cancelTwoFactor" class="px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg transition-colors">Cancel</button>
                                 </div>
                             </form>
-                            <form id="cancel-2fa-form" method="POST" action="{{ route('admin.2fa.cancel') }}" class="hidden">@csrf</form>
                         </div>
 
                     @else

@@ -193,7 +193,9 @@ class AdminProfile extends Component
 
         Log::channel('2fa')->info('[AdminProfile] Validation passed');
 
-        if (empty($this->pending_secret)) {
+        $secret = $this->pending_secret ?: Session::get('2fa_pending_secret');
+
+        if (empty($secret)) {
             Log::channel('2fa')->warning('[AdminProfile] pending_secret is empty — session lost');
             $this->addError('two_factor_code', 'Setup session expired. Please click "Enable 2FA" again.');
             $this->show_2fa_setup = false;
@@ -202,13 +204,13 @@ class AdminProfile extends Component
 
         try {
             Log::channel('2fa')->info('[AdminProfile] Calling verifyKey', [
-                'secret' => substr($this->pending_secret, 0, 4) . '...',
+                'secret' => substr($secret, 0, 4) . '...',
                 'code'   => $this->two_factor_code,
                 'window' => 2,
             ]);
 
             $google2fa = new Google2FA();
-            $valid     = $google2fa->verifyKey($this->pending_secret, $this->two_factor_code, 2);
+            $valid     = $google2fa->verifyKey($secret, $this->two_factor_code, 2);
 
             Log::channel('2fa')->info('[AdminProfile] verifyKey result', ['valid' => $valid]);
         } catch (\Throwable $e) {
@@ -235,11 +237,13 @@ class AdminProfile extends Component
             ->toArray();
 
         Auth::user()->update([
-            'two_factor_secret'         => encrypt($this->pending_secret),
+            'two_factor_secret'         => encrypt($secret),
             'two_factor_recovery_codes' => encrypt(json_encode($codes)),
             'two_factor_confirmed_at'   => now(),
             'two_factor_enabled'        => true,
         ]);
+
+        Session::forget('2fa_pending_secret');
 
         $this->two_factor_enabled  = true;
         $this->show_2fa_setup      = false;
@@ -303,14 +307,15 @@ class AdminProfile extends Component
     public function render()
     {
         $qrCodeSvg = '';
+        $secret    = $this->pending_secret ?: Session::get('2fa_pending_secret');
 
-        if (!empty($this->pending_secret)) {
+        if (!empty($secret)) {
             try {
                 $google2fa = new Google2FA();
                 $qrUrl = $google2fa->getQRCodeUrl(
                     config('app.name'),
                     Auth::user()->email,
-                    $this->pending_secret
+                    $secret
                 );
 
                 $writer = new \BaconQrCode\Writer(

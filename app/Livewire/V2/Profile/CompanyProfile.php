@@ -5,6 +5,7 @@ namespace App\Livewire\V2\Profile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Livewire\Component;
@@ -59,6 +60,12 @@ class CompanyProfile extends Component
         $this->email_notifications = (bool) $user->email_notifications;
         $this->two_factor_enabled  = (bool) $user->two_factor_enabled;
         $this->company_slug        = $user->company?->slug ?? '';
+
+        // Recover a pending 2FA setup if the component remounted mid-flow
+        if (Session::has('2fa_pending_secret')) {
+            $this->pending_secret = Session::get('2fa_pending_secret');
+            $this->show_2fa_setup = true;
+        }
 
         Log::channel('2fa')->info('[CompanyProfile] mount', [
             'user_id'            => $user->id,
@@ -157,6 +164,9 @@ class CompanyProfile extends Component
         $this->show_2fa_setup = true;
         $this->two_factor_code = '';
 
+        // Persist the secret server-side so it survives any Livewire remount
+        Session::put('2fa_pending_secret', $this->pending_secret);
+
         Log::channel('2fa')->info('[CompanyProfile] Secret generated', [
             'user_id'       => Auth::id(),
             'secret_length' => strlen($this->pending_secret),
@@ -176,7 +186,9 @@ class CompanyProfile extends Component
 
         Log::channel('2fa')->info('[CompanyProfile] Validation passed');
 
-        if (empty($this->pending_secret)) {
+        $secret = $this->pending_secret ?: Session::get('2fa_pending_secret');
+
+        if (empty($secret)) {
             Log::channel('2fa')->warning('[CompanyProfile] pending_secret is empty — session lost');
             $this->addError('two_factor_code', 'Setup session expired. Please click "Enable 2FA" again.');
             $this->show_2fa_setup = false;
@@ -185,13 +197,13 @@ class CompanyProfile extends Component
 
         try {
             Log::channel('2fa')->info('[CompanyProfile] Calling verifyKey', [
-                'secret' => substr($this->pending_secret, 0, 4) . '...',
+                'secret' => substr($secret, 0, 4) . '...',
                 'code'   => $this->two_factor_code,
                 'window' => 2,
             ]);
 
             $google2fa = new Google2FA();
-            $valid     = $google2fa->verifyKey($this->pending_secret, $this->two_factor_code, 2);
+            $valid     = $google2fa->verifyKey($secret, $this->two_factor_code, 2);
 
             Log::channel('2fa')->info('[CompanyProfile] verifyKey result', ['valid' => $valid]);
         } catch (\Throwable $e) {
@@ -218,11 +230,13 @@ class CompanyProfile extends Component
             ->toArray();
 
         Auth::user()->update([
-            'two_factor_secret'         => encrypt($this->pending_secret),
+            'two_factor_secret'         => encrypt($secret),
             'two_factor_recovery_codes' => encrypt(json_encode($codes)),
             'two_factor_confirmed_at'   => now(),
             'two_factor_enabled'        => true,
         ]);
+
+        Session::forget('2fa_pending_secret');
 
         $this->two_factor_enabled   = true;
         $this->show_2fa_setup       = false;
@@ -240,6 +254,7 @@ class CompanyProfile extends Component
     {
         Log::channel('2fa')->info('[CompanyProfile] cancelTwoFactor called', ['user_id' => Auth::id()]);
 
+        Session::forget('2fa_pending_secret');
         $this->show_2fa_setup  = false;
         $this->pending_secret  = '';
         $this->two_factor_code = '';
@@ -285,14 +300,15 @@ class CompanyProfile extends Component
     public function render()
     {
         $qrCodeSvg = '';
+        $secret    = $this->pending_secret ?: Session::get('2fa_pending_secret');
 
-        if (!empty($this->pending_secret)) {
+        if (!empty($secret)) {
             try {
                 $google2fa = new Google2FA();
                 $qrUrl = $google2fa->getQRCodeUrl(
                     config('app.name'),
                     Auth::user()->email,
-                    $this->pending_secret
+                    $secret
                 );
 
                 $writer = new \BaconQrCode\Writer(
