@@ -268,10 +268,12 @@ class ManifestController extends Controller
     /**
      * Download the Rate Confirmation PDF for the manifest.
      */
-    public function downloadRateConfirmation(Company $company, Manifest $manifest)
+    public function downloadRateConfirmation(Request $request, Company $company, Manifest $manifest)
     {
         $manifest->load([
             'carriers',
+            'stops',
+            'costEstimates',
             'orderStops.order.customer',
             'orderStops.commodities',
         ]);
@@ -286,7 +288,14 @@ class ManifestController extends Controller
         $pdf->setPaper('a4', 'portrait');
         $pdf->setOption(['isRemoteEnabled' => true, 'isHtml5ParserEnabled' => true]);
 
-        return $pdf->download("Rate-Confirmation-{$manifest->code}.pdf");
+        $filename = "Rate-Confirmation-{$manifest->code}.pdf";
+
+        // ?preview=1 opens the PDF in the browser (for printing) instead of downloading
+        if ($request->boolean('preview')) {
+            return $pdf->stream($filename);
+        }
+
+        return $pdf->download($filename);
     }
 
     public function syncEquipment(Request $request, Company $company, Manifest $manifest)

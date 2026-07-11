@@ -34,6 +34,23 @@
             </svg>
         </button>
 
+        @if($currentCompany)
+        <!-- Customer Portal Login -->
+        <a
+            href="{{ route('portal.login', ['company' => $currentCompany->slug]) }}"
+            target="_blank"
+            rel="noopener"
+            title="Customer Portal Login"
+            class="relative flex items-center justify-center w-10 h-10 rounded-xl text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 transition-colors"
+        >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14a7 7 0 00-7 7h9"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 18h6m0 0l-2.5-2.5M21 18l-2.5 2.5"/>
+            </svg>
+        </a>
+        @endif
+
         <!-- Dark Mode Toggle -->
         <button 
             @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)"

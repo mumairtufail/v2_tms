@@ -1,24 +1,32 @@
 import { PlacesAPI } from './places';
+import { getContactBook, filterContactBook } from './contact-book';
 
 export default function companyAutocomplete(config = {}) {
     return {
         query: config.initialQuery || '',
         prefix: config.prefix || '',
         stopIndex: config.stopIndex !== undefined ? config.stopIndex : null,
-        results: [],
+        contactBookUrl: config.contactBookUrl || '',
+        results: [], // contact book matches
         googleResults: [],
         isLoading: false,
         isGoogleLoading: false,
         showDropdown: false,
         lastSearched: '', // last query actually sent to Google (cost dedupe)
-        mode: 'google', // 'local' | 'google'
+        mode: 'local', // 'local' | 'google'
         debug: ['localhost', '127.0.0.1'].includes(window.location.hostname) || window.localStorage.getItem('googlePlacesDebug') === '1',
 
         init() {
             PlacesAPI.init({ debug: this.debug });
 
+            // Warm the shared contact book cache (one fetch per page).
+            getContactBook(this.contactBookUrl);
+
             this.$watch('query', (value) => {
-                if (value.length < 3) {
+                // Editing the text drops back to instant local results.
+                this.mode = 'local';
+                if (value.length < 2) {
+                    this.results = [];
                     this.googleResults = [];
                     this.showDropdown = false;
                 }
@@ -26,10 +34,31 @@ export default function companyAutocomplete(config = {}) {
         },
 
         async search() {
-            // Re-route normal search to directly perform Google search.
-            if (this.query.length < 3) return;
-            this.mode = 'google';
-            this.searchGoogle();
+            // Default search path: instant contact-book lookup.
+            this.searchLocal();
+        },
+
+        async searchLocal() {
+            this.mode = 'local';
+            const entries = await getContactBook(this.contactBookUrl);
+            this.results = filterContactBook(entries, this.query);
+            this.showDropdown = this.query.trim().length >= 2;
+        },
+
+        selectLocal(entry) {
+            this.showDropdown = false;
+            this.results = [];
+            this.query = entry.company_name || '';
+
+            // Reuse the Google selection pipeline: location-fields listens for
+            // this event and fills both the DOM inputs and Alpine state.
+            window.dispatchEvent(new CustomEvent('google-place-selected', {
+                detail: {
+                    ...entry,
+                    targetPrefix: this.prefix,
+                    targetIndex: this.stopIndex,
+                },
+            }));
         },
 
         async searchGoogle() {
@@ -39,6 +68,7 @@ export default function companyAutocomplete(config = {}) {
             // Cost dedupe: skip re-billing Google if the query hasn't changed
             // since the last request (re-focus, add-then-delete a char, etc.).
             if (q === this.lastSearched) {
+                this.mode = 'google';
                 this.showDropdown = true;
                 return;
             }

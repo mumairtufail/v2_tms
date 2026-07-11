@@ -165,6 +165,7 @@
         <input type="hidden" name="submission_mode" x-bind:value="submissionMode">
         <input type="hidden" name="stops" x-bind:value="JSON.stringify(stops)">
         <input type="hidden" name="quote_data" x-bind:value="JSON.stringify(quote)">
+        <input type="hidden" name="contact_book_entries" value="[]">
         
         {{-- Validation error banner --}}
         <div id="form-error-banner"
@@ -654,11 +655,16 @@
     {{-- Processing Modal --}}
             @include('v2.company.orders.partials.quote-modal')
 
+    {{-- Save to Contact Book Modal --}}
+            @include('v2.company.orders.partials.contact-book-modal')
+
 
 </div>
 
 @push('scripts')
 <script>
+window.__contactBookUrl = '{{ route('v2.contact-book.index', ['company' => $company->slug]) }}';
+
 function orderForm() {
     return {
         stops: @json($stopsData),
@@ -672,6 +678,10 @@ function orderForm() {
         saving: false,
         submitting: false,
         showProcessModal: false,
+        showContactBookModal: false,
+        contactBookCandidates: [],
+        contactBookPayload: '[]',
+        _pendingSubmit: null,
         massManifestId: '',
         submissionMode: 'new',
         formErrors: [],
@@ -1176,6 +1186,70 @@ freightSubtotal(rows) {
     }, 0);
 },
 
+        // ── Contact book: offer to save new addresses right before submit ──────
+        async requestSubmit(submitFn) {
+            let book = [];
+            try { book = await window.__getContactBook(); } catch (e) {}
+
+            const seen = new Set(book.map(e => e._key));
+            const candidates = [];
+
+            this.stops.forEach((stop, i) => {
+                ['shipper', 'consignee'].forEach(role => {
+                    const a = stop[role] || {};
+                    if (!(a.company_name || '').trim() || !(a.address_1 || '').trim() || !(a.city || '').trim()) return;
+
+                    const key = window.__contactBookKey(a.company_name, a.address_1, a.city, a.state);
+                    if (seen.has(key)) return;
+                    seen.add(key); // also dedupes repeats within the form itself
+
+                    candidates.push({
+                        checked: true,
+                        role,
+                        stopIndex: i,
+                        name: a.company_name,
+                        address_1: a.address_1,
+                        address_2: a.address_2 || '',
+                        city: a.city,
+                        state: a.state,
+                        zip: a.zip,
+                        country: a.country,
+                        lat: a.lat,
+                        lng: a.lng,
+                        contact_name: a.contact_name,
+                        phone: a.phone,
+                        email: a.email,
+                    });
+                });
+            });
+
+            if (candidates.length === 0) {
+                this.contactBookPayload = '[]';
+                submitFn();
+                return;
+            }
+
+            this.contactBookCandidates = candidates;
+            this._pendingSubmit = submitFn;
+            this.showContactBookModal = true;
+        },
+
+        confirmContactBookSave() {
+            this.contactBookPayload = JSON.stringify(
+                this.contactBookCandidates
+                    .filter(c => c.checked)
+                    .map(({ checked, role, stopIndex, ...rest }) => rest)
+            );
+            this.showContactBookModal = false;
+            if (this._pendingSubmit) this._pendingSubmit();
+        },
+
+        skipContactBookSave() {
+            this.contactBookPayload = '[]';
+            this.showContactBookModal = false;
+            if (this._pendingSubmit) this._pendingSubmit();
+        },
+
         saveDraft() {
             // Validate date logic even for drafts
             this.stops.forEach(stop => {
@@ -1196,8 +1270,10 @@ freightSubtotal(rows) {
             }
             this.saving = true;
             this.submissionMode = 'draft';
-            this.flushFormInputs();
-            document.getElementById('orderForm').submit();
+            this.requestSubmit(() => {
+                this.flushFormInputs();
+                document.getElementById('orderForm').submit();
+            });
         },
 
         isDraftOrder() {
@@ -1215,8 +1291,10 @@ freightSubtotal(rows) {
 
         submitAsNew() {
             this.submissionMode = 'new';
-            this.flushFormInputs();
-            document.getElementById('orderForm').submit();
+            this.requestSubmit(() => {
+                this.flushFormInputs();
+                document.getElementById('orderForm').submit();
+            });
         },
 
         // ── Manually write Alpine state into hidden form inputs ─────────────────
@@ -1235,6 +1313,7 @@ freightSubtotal(rows) {
             set('quote_data',      JSON.stringify(this.quote));
             set('submission_mode', this.submissionMode);
             set('save_as_draft',   this.saving ? '1' : '0');
+            set('contact_book_entries', this.contactBookPayload);
         },
 
         openConfirmModal() {
@@ -1256,8 +1335,10 @@ freightSubtotal(rows) {
                 await this.syncCarrierCostsToManifests(targetManifestIds);
             }
 
-            this.flushFormInputs();
-            document.getElementById('orderForm').submit();
+            this.requestSubmit(() => {
+                this.flushFormInputs();
+                document.getElementById('orderForm').submit();
+            });
         },
 
         prepareQuoteSubmission() {

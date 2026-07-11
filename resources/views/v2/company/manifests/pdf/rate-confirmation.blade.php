@@ -296,119 +296,120 @@
         <div class="stops-section">
             <div class="stops-header-title">Routing & Stop Details</div>
             
-            @php
-                $allStops = collect();
-                
-                // Add Manual Stops
-                foreach($manifest->stops as $stop) {
-                    $allStops->push((object)[
-                        'type' => 'Manual',
-                        'order_val' => $stop->id, // Use ID as fallback order
-                        'stop_type' => 'STOP',
-                        'location_name' => $stop->location ?? $stop->company,
-                        'address' => $stop->address1 . ($stop->address2 ? ' ' . $stop->address2 : ''),
-                        'city' => $stop->city,
-                        'state' => $stop->state,
-                        'zip' => $stop->postal,
-                        'scheduled_date' => null,
-                        'scheduled_time' => null,
-                        'instructions' => null,
-                        'order_ref' => null,
-                        'commodities' => collect(),
-                        'container' => null,
-                        'p_o_number' => null,
-                        'ref_number' => null,
-                    ]);
-                }
-                
-                // Add Order Stops
-                foreach($manifest->orderStops as $oStop) {
-                    $order = $oStop->order;
-                    $allStops->push((object)[
-                        'type' => 'Order',
-                        'order_val' => $oStop->stop_order ?? 0,
-                        'stop_type' => $oStop->stop_type,
-                        'location_name' => $oStop->location_name,
-                        'address' => $oStop->address,
-                        'city' => $oStop->city,
-                        'state' => $oStop->state,
-                        'zip' => $oStop->zip,
-                        'scheduled_date' => $oStop->scheduled_date,
-                        'scheduled_time' => $oStop->scheduled_time_range,
-                        'instructions' => $oStop->instructions,
-                        'order_ref' => $order ? $order->order_number : null,
-                        'commodities' => $oStop->commodities,
-                        'container' => $order ? $order->container_number : null,
-                        'p_o_number' => $order ? $order->customer_po_number : null,
-                        'ref_number' => $order ? $order->ref_number : null,
-                    ]);
-                }
-                
-                // Sort by order_val
-                $sortedStops = $allStops->sortBy('order_val');
-                $stopIndex = 1;
-            @endphp
+            @php $stopIndex = 1; @endphp
 
-            @foreach($sortedStops as $stop)
+            {{-- Manual Stops --}}
+            @foreach($manifest->stops as $stop)
                 <div class="stop">
                     <div class="stop-header">
-                        <span class="stop-type">{{ $stop->stop_type }}</span>
+                        <span class="stop-type">Manual Stop</span>
+                        <span class="stop-number">STOP #{{ $stopIndex++ }}</span>
+                    </div>
+                    <div class="stop-body">
+                        <div class="stop-label">Location</div>
+                        <div class="stop-value">{{ $stop->location }}</div>
+                        <div class="info-details">
+                            {{ $stop->address1 }}{{ $stop->address2 ? ' ' . $stop->address2 : '' }}<br>
+                            {{ $stop->city }}, {{ $stop->state }} {{ $stop->postal }}
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+
+            {{-- Order Stops --}}
+            @foreach($manifest->orderStops as $oStop)
+                @php
+                    $consignee = $oStop->consignee_data ?? [];
+                    $billing = $oStop->billing_data ?? [];
+
+                    $readyStart = $consignee['shipper_ready_start_at'] ?? ($oStop->start_time ? $oStop->start_time->format('m/d/y H:i') : null);
+                    $readyEnd = $consignee['shipper_ready_end_at'] ?? null;
+                    $reqStart = $consignee['requested_start_at'] ?? ($oStop->end_time ? $oStop->end_time->format('m/d/y H:i') : null);
+                    $reqEnd = $consignee['requested_end_at'] ?? null;
+                @endphp
+                <div class="stop">
+                    <div class="stop-header">
+                        <span class="stop-type">{{ $oStop->stop_type ?? 'Stop' }}</span>
                         <span class="stop-number">STOP #{{ $stopIndex++ }}</span>
                     </div>
                     <div class="stop-body">
                         <table class="stop-table">
                             <tr>
                                 <td class="stop-address-cell">
-                                    <div class="stop-label">Location</div>
-                                    <div class="stop-value">{{ $stop->location_name }}</div>
+                                    <div class="stop-label">Pickup (Shipper)</div>
+                                    <div class="stop-value">{{ $oStop->company_name }}</div>
                                     <div class="info-details">
-                                        {{ $stop->address }}<br>
-                                        {{ $stop->city }}, {{ $stop->state }} {{ $stop->zip }}
+                                        {{ $oStop->address_1 }}{{ $oStop->address_2 ? ' ' . $oStop->address_2 : '' }}<br>
+                                        {{ $oStop->city }}, {{ $oStop->state }} {{ $oStop->postal_code }}
+                                        @if($oStop->contact_name || $oStop->contact_phone)
+                                            <br>{{ trim(($oStop->contact_name ?? '') . ($oStop->contact_phone ? ' | ' . $oStop->contact_phone : '')) }}
+                                        @endif
                                     </div>
-
-                                    @if($stop->order_ref || $stop->container || $stop->p_o_number || $stop->ref_number)
-                                        <div class="ref-tags">
-                                            @if($stop->order_ref)<span class="ref-tag">Order: {{ $stop->order_ref }}</span>@endif
-                                            @if($stop->container)<span class="ref-tag">Cont: {{ $stop->container }}</span>@endif
-                                            @if($stop->p_o_number)<span class="ref-tag">PO: {{ $stop->p_o_number }}</span>@endif
-                                            @if($stop->ref_number)<span class="ref-tag">REF: {{ $stop->ref_number }}</span>@endif
+                                </td>
+                                <td class="stop-details-cell">
+                                    @if(!empty(array_filter($consignee ?: [])))
+                                        <div class="stop-label">Delivery (Consignee)</div>
+                                        <div class="stop-value">{{ $consignee['company_name'] ?? 'N/A' }}</div>
+                                        <div class="info-details">
+                                            {{ $consignee['address_1'] ?? '' }}<br>
+                                            {{ $consignee['city'] ?? '' }}{{ !empty($consignee['state']) ? ', ' . $consignee['state'] : '' }} {{ $consignee['zip'] ?? '' }}
+                                            @if(!empty($consignee['contact_name']) || !empty($consignee['phone']))
+                                                <br>{{ trim(($consignee['contact_name'] ?? '') . (!empty($consignee['phone']) ? ' | ' . $consignee['phone'] : '')) }}
+                                            @endif
                                         </div>
                                     @endif
                                 </td>
+                            </tr>
+                            <tr>
+                                <td class="stop-address-cell">
+                                    @if($readyStart || $readyEnd)
+                                        <div class="stop-label">Ready Window</div>
+                                        <div class="stop-value">{{ $readyStart }}{{ $readyEnd ? ' - ' . $readyEnd : '' }}</div>
+                                    @endif
+                                </td>
                                 <td class="stop-details-cell">
-                                    <div class="stop-label">Schedule</div>
-                                    <div class="stop-value">
-                                        {{ $stop->scheduled_date ? date('M d, Y', strtotime($stop->scheduled_date)) : 'N/A' }}
-                                        @if($stop->scheduled_time)
-                                            <br>{{ $stop->scheduled_time }}
-                                        @endif
-                                    </div>
-                                    
-                                    @if($stop->instructions)
-                                        <div class="stop-label">Instructions</div>
-                                        <div style="font-size: 10px;">{{ $stop->instructions }}</div>
+                                    @if($reqStart || $reqEnd)
+                                        <div class="stop-label">Requested Window</div>
+                                        <div class="stop-value">{{ $reqStart }}{{ $reqEnd ? ' - ' . $reqEnd : '' }}</div>
                                     @endif
                                 </td>
                             </tr>
                         </table>
 
-                        @if($stop->commodities && $stop->commodities->count() > 0)
+                        @php
+                            $orderRef = $oStop->order->order_number ?? null;
+                            $container = $billing['container_number'] ?? null;
+                            $poNumber = $billing['customer_po_number'] ?? null;
+                            $refNumber = $billing['ref_number'] ?? null;
+                        @endphp
+                        @if($orderRef || $container || $poNumber || $refNumber)
+                            <div class="ref-tags">
+                                @if($orderRef)<span class="ref-tag">Order: {{ $orderRef }}</span>@endif
+                                @if($container)<span class="ref-tag">Cont: {{ $container }}</span>@endif
+                                @if($poNumber)<span class="ref-tag">PO: {{ $poNumber }}</span>@endif
+                                @if($refNumber)<span class="ref-tag">REF: {{ $refNumber }}</span>@endif
+                            </div>
+                        @endif
+
+                        @if($oStop->commodities->count() > 0)
                             <table class="commodity-table">
                                 <thead>
                                     <tr>
                                         <th>Commodity</th>
                                         <th>Qty</th>
+                                        <th>Type</th>
                                         <th>Weight</th>
                                         <th>Dimensions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach($stop->commodities as $commodity)
+                                    @foreach($oStop->commodities as $commodity)
                                         <tr>
                                             <td>{{ $commodity->description }}</td>
-                                            <td>{{ $commodity->quantity }} {{ $commodity->quantity_unit }}</td>
-                                            <td>{{ $commodity->weight }} {{ $commodity->weight_unit }}</td>
-                                            <td>{{ $commodity->length }}x{{ $commodity->width }}x{{ $commodity->height }} {{ $commodity->dimension_unit }}</td>
+                                            <td>{{ $commodity->quantity }}</td>
+                                            <td>{{ $commodity->type }}</td>
+                                            <td>{{ $commodity->weight }}</td>
+                                            <td>{{ $commodity->length && $commodity->width && $commodity->height ? $commodity->length . 'x' . $commodity->width . 'x' . $commodity->height : '-' }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -426,6 +427,8 @@
                 <thead>
                     <tr>
                         <th>Description</th>
+                        <th style="text-align: right">Qty</th>
+                        <th style="text-align: right">Rate</th>
                         <th style="text-align: right">Amount</th>
                     </tr>
                 </thead>
@@ -434,20 +437,17 @@
                     @if($manifest->costEstimates->count() > 0)
                         @foreach($manifest->costEstimates as $estimate)
                             <tr>
-                                <td>{{ $estimate->description ?: 'Carrier Charge' }}</td>
-                                <td style="text-align: right">${{ number_format($estimate->amount, 2) }}</td>
+                                <td>{{ $estimate->description ?: ucfirst($estimate->type ?? 'Carrier Charge') }}</td>
+                                <td style="text-align: right">{{ $estimate->qty }}</td>
+                                <td style="text-align: right">${{ number_format((float) $estimate->rate, 2) }}</td>
+                                <td style="text-align: right">${{ number_format((float) $estimate->est_cost, 2) }}</td>
                             </tr>
-                            @php $total += $estimate->amount; @endphp
+                            @php $total += (float) $estimate->est_cost; @endphp
                         @endforeach
                     @else
-                        {{-- Fallback --}}
-                        @foreach($manifest->carriers as $carrier)
-                            <tr>
-                                <td>Linehaul - {{ $carrier->carrier_name }}</td>
-                                <td style="text-align: right">${{ number_format($carrier->linehaul_cost, 2) }}</td>
-                            </tr>
-                            @php $total += $carrier->linehaul_cost; @endphp
-                        @endforeach
+                        <tr>
+                            <td colspan="4" style="color: #999; font-style: italic; text-align: center;">No charges recorded</td>
+                        </tr>
                     @endif
                 </tbody>
             </table>

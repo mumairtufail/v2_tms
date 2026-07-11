@@ -36,6 +36,10 @@ class CustomerService
         return DB::transaction(function () use ($data) {
             $data = $this->preparePasswordData($data);
 
+            if (empty($data['short_code'])) {
+                $data['short_code'] = $this->generateUniqueShortCode($data['company_id'], $data['name']);
+            }
+
             return Customer::create($data);
         });
     }
@@ -45,10 +49,72 @@ class CustomerService
         return DB::transaction(function () use ($customer, $data) {
             $data = $this->preparePasswordData($data, isUpdate: true);
 
+            if (array_key_exists('short_code', $data) && empty($data['short_code'])) {
+                $data['short_code'] = $this->generateUniqueShortCode(
+                    $customer->company_id,
+                    $data['name'] ?? $customer->name,
+                    $customer->id
+                );
+            }
+
             $customer->update($data);
 
             return $customer->fresh();
         });
+    }
+
+    /**
+     * Generate a unique 3-char short code for a customer, scoped to the company.
+     */
+    public function generateUniqueShortCode(int $companyId, string $name, ?int $excludeId = null): string
+    {
+        $clean = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $name));
+        $candidates = [];
+
+        if ($clean !== '') {
+            $len = strlen($clean);
+
+            // Primary: first 3 chars (padded with digits if short)
+            $base = str_pad(substr($clean, 0, 3), 3, '0');
+            $candidates[] = $base;
+
+            // Variations: replace last char, then middle char, with 1-9
+            for ($i = 1; $i <= 9; $i++) {
+                $candidates[] = substr($base, 0, 2) . $i;
+            }
+            for ($i = 1; $i <= 9; $i++) {
+                $candidates[] = substr($base, 0, 1) . $i . substr($base, 2, 1);
+            }
+
+            // Variations: pick chars spread across the name
+            for ($offset = 1; $offset < $len - 1; $offset++) {
+                $spread = $clean[0] . $clean[min($offset, $len - 1)] . $clean[min($offset * 2, $len - 1)];
+                $candidates[] = str_pad(substr($spread, 0, 3), 3, '0');
+            }
+        }
+
+        foreach ($candidates as $candidate) {
+            $candidate = strtoupper(substr($candidate, 0, 3));
+            if (!$this->shortCodeExists($candidate, $companyId, $excludeId)) {
+                return $candidate;
+            }
+        }
+
+        // Last resort: random alphanumeric
+        do {
+            $random = strtoupper(substr(str_shuffle('ABCDEFGHJKLMNPQRSTUVWXYZ23456789'), 0, 3));
+        } while ($this->shortCodeExists($random, $companyId, $excludeId));
+
+        return $random;
+    }
+
+    private function shortCodeExists(string $code, int $companyId, ?int $excludeId = null): bool
+    {
+        return Customer::where('company_id', $companyId)
+            ->where('short_code', $code)
+            ->where('is_deleted', false)
+            ->when($excludeId, fn($q) => $q->where('id', '!=', $excludeId))
+            ->exists();
     }
 
     /**

@@ -3,10 +3,11 @@
 
 <div class="grid grid-cols-1 gap-4 p-4 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-800 shadow-sm"
      x-data="{
-        ...companyAutocomplete({ 
+        ...companyAutocomplete({
             initialQuery: stop.{{ $prefix }}.company_name,
             prefix: '{{ $prefix }}',
-            stopIndex: stopIndex
+            stopIndex: stopIndex,
+            contactBookUrl: '{{ route('v2.contact-book.index', ['company' => $company->slug]) }}'
         }),
         _stopIndex: stopIndex
      }"
@@ -23,7 +24,7 @@
             // 2. DIRECT DOM INJECTION (Bypasses all reactivity/cache issues)
             const fieldMap = {
                 'address_1': data.address_1 || '',
-                'address_2': '',
+                'address_2': data.address_2 || '',
                 'city':      data.city || '',
                 'state':     data.state || '',
                 'zip':       data.zip || '',
@@ -44,13 +45,18 @@
             // 3. Update background coordinates and state
             stop.{{ $prefix }}.company_name = data.company_name || '';
             stop.{{ $prefix }}.address_1    = data.address_1 || '';
-            stop.{{ $prefix }}.address_2    = '';
+            stop.{{ $prefix }}.address_2    = data.address_2 || '';
             stop.{{ $prefix }}.city         = data.city || '';
             stop.{{ $prefix }}.state        = data.state || '';
             stop.{{ $prefix }}.zip          = data.zip || '';
             stop.{{ $prefix }}.country      = data.country || '';
             stop.{{ $prefix }}.lat          = data.lat || null;
             stop.{{ $prefix }}.lng          = data.lng || null;
+
+            // Contact book entries may carry contact details; Google results never do.
+            if (data.contact_name) stop.{{ $prefix }}.contact_name = data.contact_name;
+            if (data.phone)        stop.{{ $prefix }}.phone        = data.phone;
+            if (data.email)        stop.{{ $prefix }}.email        = data.email;
 
             console.log('--- Failsafe Sync Complete ---');
         }

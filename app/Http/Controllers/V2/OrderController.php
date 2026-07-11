@@ -326,6 +326,8 @@ class OrderController extends Controller
                 $this->processQuote($order, $quoteData, $ordersLog);
             }
 
+            $this->saveContactBookEntries($request, $company, $ordersLog);
+
             $ordersLog->info("=== Order Update Completed Successfully ===", [
                 'order_id' => $order->id,
             ]);
@@ -349,6 +351,28 @@ class OrderController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
             return back()->with('error', 'Failed to update order: ' . $e->getMessage())->withInput();
+        }
+    }
+
+    /**
+     * Save user-approved addresses into the tenant contact book.
+     * Deliberately non-fatal: a contact book failure must never fail the order save.
+     */
+    protected function saveContactBookEntries(Request $request, Company $company, $log): void
+    {
+        $entries = json_decode($request->input('contact_book_entries', '[]'), true);
+
+        if (!is_array($entries) || count($entries) === 0) {
+            return;
+        }
+
+        try {
+            $saved = app(\App\Services\ContactBookService::class)->saveEntries($company->id, $entries);
+            $log->info("Contact book entries saved", ['count' => $saved]);
+        } catch (\Throwable $e) {
+            $log->warning("Contact book save failed (order save unaffected)", [
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 

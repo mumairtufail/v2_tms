@@ -42,8 +42,14 @@ class AuthenticatedSessionController extends Controller
 
         Auth::guard('customer')->logout();
 
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        // Both guards share one session; only destroy it when no other guard
+        // is still authenticated, otherwise the tenant user gets logged out too.
+        if (Auth::guard('web')->check()) {
+            $request->session()->regenerate();
+        } else {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
 
         return redirect()->route('portal.login', ['company' => $company->slug]);
     }

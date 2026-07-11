@@ -24,6 +24,26 @@ class CustomerController extends Controller
         $this->pluginService = $pluginService;
     }
 
+    /**
+     * Suggest a unique 3-char short code from a customer name (scoped to company).
+     */
+    public function generateShortCode(Request $request, Company $company)
+    {
+        $name = trim((string) $request->input('name', ''));
+
+        if ($name === '') {
+            return response()->json(['short_code' => '']);
+        }
+
+        $shortCode = $this->customerService->generateUniqueShortCode(
+            $company->id,
+            $name,
+            $request->integer('exclude_id') ?: null
+        );
+
+        return response()->json(['short_code' => $shortCode]);
+    }
+
     public function index(Request $request, Company $company)
     {
         $customers = $this->customerService->getCustomers([

@@ -65,6 +65,7 @@ Route::middleware(['auth', CompanyScope::class])->prefix('{company}')->name('v2.
         Route::get('orders', [\App\Http\Controllers\V2\OrderController::class, 'index'])->name('orders.index');
         Route::get('orders/{order}/edit', [\App\Http\Controllers\V2\OrderController::class, 'edit'])->name('orders.edit');
         Route::get('orders/search-customers', [\App\Http\Controllers\V2\OrderController::class, 'searchCustomers'])->name('orders.search-customers');
+        Route::get('contact-book', [\App\Http\Controllers\V2\ContactBookController::class, 'index'])->name('contact-book.index');
     });
     Route::middleware(['permission:orders,create'])->group(function () {
         Route::post('orders', [\App\Http\Controllers\V2\OrderController::class, 'store'])->name('orders.store');
@@ -85,6 +86,7 @@ Route::middleware(['auth', CompanyScope::class])->prefix('{company}')->name('v2.
     });
     Route::middleware(['permission:customers,view'])->group(function () {
         Route::get('customers', [\App\Http\Controllers\V2\CustomerController::class, 'index'])->name('customers.index');
+        Route::get('customers/generate-short-code', [\App\Http\Controllers\V2\CustomerController::class, 'generateShortCode'])->name('customers.generate-short-code');
         Route::get('customers/{customer}', [\App\Http\Controllers\V2\CustomerController::class, 'show'])->name('customers.show');
     });
     Route::middleware(['permission:customers,update'])->group(function () {
