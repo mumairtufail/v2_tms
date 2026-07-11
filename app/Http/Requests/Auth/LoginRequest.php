@@ -56,6 +56,21 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        // Block deactivated accounts even with valid credentials
+        if (Auth::user()->isInactive()) {
+            Auth::logout();
+
+            app(ActivityLog::class)->logAuth('auth.login.inactive', [
+                'allow_guest' => true,
+                'email' => $this->input('email'),
+                'description' => 'Login blocked: account is inactive',
+            ], false);
+
+            throw ValidationException::withMessages([
+                'email' => 'Your account has been deactivated. Please contact your administrator.',
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
 
         app(ActivityLog::class)->logAuth('auth.login.success', [

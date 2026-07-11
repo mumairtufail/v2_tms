@@ -88,6 +88,17 @@ class User extends Authenticatable
     }
 
     // Helper methods
+
+    /**
+     * Single source of truth for the active check. Covers both the legacy
+     * is_active boolean and the v2 status string so drifted rows are
+     * treated as inactive either way.
+     */
+    public function isInactive(): bool
+    {
+        return $this->is_deleted || $this->status === 'inactive' || !$this->is_active;
+    }
+
     public function canAccessCompany(Company $company): bool
     {
         // Super admin can access any company

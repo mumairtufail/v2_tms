@@ -32,8 +32,9 @@ class TwoFactorChallenge extends Component
 
         $user = User::find($userId);
 
-        if (!$user) {
-            Session::forget('2fa.user_id');
+        if (!$user || $user->isInactive()) {
+            Session::forget(['2fa.user_id', '2fa.remember']);
+            Session::flash('error', 'Your account has been deactivated. Please contact your administrator.');
             $this->redirect(route('login'));
             return;
         }

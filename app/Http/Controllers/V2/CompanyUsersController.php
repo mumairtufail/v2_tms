@@ -179,6 +179,11 @@ class CompanyUsersController extends Controller
             abort(403);
         }
 
+        // Prevent self-deactivation
+        if ($user->id === auth()->id()) {
+            return back()->with('error', 'You cannot change your own account status.');
+        }
+
         try {
             $this->userService->toggleStatus($user);
             return back()->with('success', 'User status updated successfully.');

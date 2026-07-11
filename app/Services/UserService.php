@@ -58,6 +58,11 @@ class UserService
             // Hash password
             $data['password'] = Hash::make($data['password']);
 
+            // Keep legacy boolean in sync with the v2 status string
+            if (isset($data['status'])) {
+                $data['is_active'] = $data['status'] === 'active';
+            }
+
             // Create user
             $user = User::create($data);
 
@@ -93,6 +98,11 @@ class UserService
                 $data['password'] = Hash::make($data['password']);
             } else {
                 unset($data['password']);
+            }
+
+            // Keep legacy boolean in sync with the v2 status string
+            if (isset($data['status'])) {
+                $data['is_active'] = $data['status'] === 'active';
             }
 
             // Update user
@@ -145,8 +155,11 @@ class UserService
     public function toggleStatus(User $user): User
     {
         $newStatus = $user->status === 'active' ? 'inactive' : 'active';
-        $user->update(['status' => $newStatus]);
-        
+        $user->update([
+            'status' => $newStatus,
+            'is_active' => $newStatus === 'active',
+        ]);
+
         return $user;
     }
 
