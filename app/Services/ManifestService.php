@@ -44,13 +44,13 @@ class ManifestService
             
             $manifest = Manifest::create($data);
 
-            // Update with shortcode-based manifest code: {SC}M{zero-padded-id}
-            // e.g. INVOM0013 — always unique because id is unique
+            // Update with shortcode-based manifest code: {SC}-M-{zero-padded-id}
+            // e.g. INVO-M-0013 — always unique because id is unique
             if ($isAutoCode) {
                 $company = Company::find($companyId);
                 $sc = strtoupper($company?->shortcode ?: Str::upper(Str::substr($company?->name ?? 'MAN', 0, 4)));
                 $manifest->update([
-                    'code' => $sc . 'M' . str_pad($manifest->id, 4, '0', STR_PAD_LEFT),
+                    'code' => $sc . '-M-' . str_pad($manifest->id, 4, '0', STR_PAD_LEFT),
                 ]);
             }
             
