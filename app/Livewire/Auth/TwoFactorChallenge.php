@@ -53,7 +53,7 @@ class TwoFactorChallenge extends Component
         try {
             $google2fa = new Google2FA();
             $secret    = decrypt($user->two_factor_secret);
-            $valid     = $google2fa->verifyKey($secret, $this->code, 2);
+            $valid     = $google2fa->verifyKey($secret, $this->code, 4);
         } catch (\Throwable $e) {
             $this->addError('code', 'Verification failed. Please try again.');
             return;

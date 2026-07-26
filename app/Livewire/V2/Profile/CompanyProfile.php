@@ -199,11 +199,11 @@ class CompanyProfile extends Component
             Log::channel('2fa')->info('[CompanyProfile] Calling verifyKey', [
                 'secret' => substr($secret, 0, 4) . '...',
                 'code'   => $this->two_factor_code,
-                'window' => 2,
+                'window' => 4,
             ]);
 
             $google2fa = new Google2FA();
-            $valid     = $google2fa->verifyKey($secret, $this->two_factor_code, 2);
+            $valid     = $google2fa->verifyKey($secret, $this->two_factor_code, 4);
 
             Log::channel('2fa')->info('[CompanyProfile] verifyKey result', ['valid' => $valid]);
         } catch (\Throwable $e) {

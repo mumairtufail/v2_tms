@@ -14,7 +14,9 @@
     <style>[x-cloak] { display: none !important; }</style>
 
     <!-- Scripts -->
+    @livewireScriptConfig
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @livewireStyles
 </head>
 <body class="font-sans antialiased bg-gray-100 dark:bg-gray-950 transition-colors duration-300">
     <!-- Dark mode toggle -->

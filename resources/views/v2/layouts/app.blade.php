@@ -24,6 +24,7 @@
     <!-- Critical CSS for Alpine.js x-cloak (must load before JS) -->
     <style>[x-cloak] { display: none !important; }</style>
 
+    @livewireScriptConfig
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
     @stack('styles')
