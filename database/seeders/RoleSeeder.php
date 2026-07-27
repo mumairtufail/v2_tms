@@ -80,6 +80,16 @@ class RoleSeeder extends Seeder
         ]);
 
         $this->assignReadOnlyPermissions($readOnlyRole, $permissions);
+
+        // Driver Role - mobile app only, no web dashboard permissions.
+        // Mirrors what CompanyController::store already does for newly-created
+        // companies; this just backfills it for companies seeded directly.
+        Role::firstOrCreate([
+            'name' => 'driver',
+            'company_id' => $company->id,
+        ], [
+            'is_active' => true,
+        ]);
     }
 
     private function assignAllPermissions(Role $role, $permissions): void

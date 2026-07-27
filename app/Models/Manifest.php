@@ -33,6 +33,14 @@ class Manifest extends Model
         return $this->belongsToMany(Order::class, 'order_stops', 'manifest_id', 'order_id')->distinct();
     }
 
+    // Orders assigned directly via orders.manifest_id — the reliable link regardless
+    // of order type, unlike orders() above which only sees orders whose stops carry
+    // a manifest_id (sequence/multi-stop orders).
+    public function directOrders()
+    {
+        return $this->hasMany(Order::class, 'manifest_id');
+    }
+
     // Many-to-many relationship with drivers through manifest_drivers
     public function drivers()
     {
