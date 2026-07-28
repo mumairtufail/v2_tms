@@ -7,13 +7,14 @@ use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Driver\DriverManifestResource;
 use App\Models\Manifest;
+use App\Models\Order;
 use Illuminate\Http\Request;
 
 class ManifestController extends Controller
 {
     public function index(Request $request)
     {
-        $query = $this->driverManifests($request)->withCount('directOrders');
+        $query = $this->driverManifests($request)->withCount(['directOrders', 'orders']);
 
         if ($status = $request->query('status')) {
             $query->where('status', $status);
@@ -28,7 +29,13 @@ class ManifestController extends Controller
     {
         $this->authorizeManifest($request, $manifest);
 
-        $manifest->load(['directOrders.customer']);
+        // Orders can be attached to a manifest either directly (orders.manifest_id)
+        // or via their stops (order_stops.manifest_id) — merge both so none are missed.
+        $manifest->load(['directOrders.customer', 'directOrders.stops', 'orders.customer', 'orders.stops']);
+        $manifest->setRelation(
+            'orders',
+            $manifest->directOrders->merge($manifest->orders)->unique('id')->values()
+        );
 
         return new DriverManifestResource($manifest);
     }
@@ -58,7 +65,11 @@ class ManifestController extends Controller
             ], 422);
         }
 
-        $unresolvedOrders = $manifest->directOrders()
+        $orderIds = $manifest->directOrders()->pluck('id')
+            ->merge($manifest->orders()->pluck('orders.id'))
+            ->unique();
+
+        $unresolvedOrders = Order::whereIn('id', $orderIds)
             ->whereNotIn('status', [OrderStatus::Delivered->value, OrderStatus::Cancelled->value])
             ->exists();
 

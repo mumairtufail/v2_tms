@@ -46,6 +46,13 @@ class Order extends Model
         return $this->belongsTo(Manifest::class);
     }
 
+    // Manifests this order is attached to via its stops (order_stops.manifest_id) —
+    // the reliable link, since orders.manifest_id is not kept in sync by the order save flow.
+    public function manifests()
+    {
+        return $this->belongsToMany(Manifest::class, 'order_stops', 'order_id', 'manifest_id')->distinct();
+    }
+
     public function quote()
     {
         return $this->hasOne(OrderQuote::class);

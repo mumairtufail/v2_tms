@@ -80,8 +80,15 @@ class OrderController extends Controller
 
     private function authorizeOrder(Request $request, Order $order): void
     {
+        // The order can be attached to its manifest either directly (orders.manifest_id)
+        // or via its stops (order_stops.manifest_id) — check both.
+        $manifestIds = $order->manifests()->pluck('manifests.id');
+        if ($order->manifest_id) {
+            $manifestIds->push($order->manifest_id);
+        }
+
         abort_unless(
-            $order->manifest_id && Manifest::whereKey($order->manifest_id)
+            $manifestIds->isNotEmpty() && Manifest::whereIn('id', $manifestIds->unique())
                 ->whereHas('drivers', fn ($q) => $q->where('users.id', $request->user()->id))
                 ->exists(),
             404

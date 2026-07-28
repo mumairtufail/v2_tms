@@ -19,8 +19,10 @@ class DriverManifestResource extends JsonResource
             'previous_stop' => $this->previous_stop,
             'next_stop' => $this->next_stop,
             'freight' => $this->freight,
-            'orders_count' => $this->direct_orders_count ?? $this->whenLoaded('directOrders', fn () => $this->directOrders->count()),
-            'orders' => DriverOrderResource::collection($this->whenLoaded('directOrders')),
+            'orders_count' => ($this->direct_orders_count !== null || $this->orders_count !== null)
+                ? ($this->direct_orders_count ?? 0) + ($this->orders_count ?? 0)
+                : $this->whenLoaded('orders', fn () => $this->orders->count()),
+            'orders' => DriverOrderResource::collection($this->whenLoaded('orders')),
         ];
     }
 }
