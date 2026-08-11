@@ -469,7 +469,7 @@
                                                     <div class="flex flex-wrap items-center gap-4 mt-3">
                                                         <div class="flex items-center gap-2">
                                                             <label class="text-[10px] font-medium text-gray-500 uppercase">Service type *</label>
-                                                            <select x-model="stop.service_type" class="text-xs border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md px-2 py-1 focus:ring-primary-500 focus:border-primary-500">
+                                                            <select x-model="stop.service_type" class="text-xs border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md pl-2.5 pr-8 py-1.5 focus:ring-primary-500 focus:border-primary-500">
                                                                 <option value="truckload">Truckload</option>
                                                                 <option value="ltl">LTL</option>
                                                                 <option value="cube">Cube</option>
@@ -477,7 +477,7 @@
                                                         </div>
                                                         <div class="flex items-center gap-2">
                                                             <label class="text-[10px] font-medium text-gray-500 uppercase">Measurements *</label>
-                                                            <select x-model="stop.measurements" class="text-xs border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md px-2 py-1 focus:ring-primary-500 focus:border-primary-500">
+                                                            <select x-model="stop.measurements" class="text-xs border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md pl-2.5 pr-8 py-1.5 focus:ring-primary-500 focus:border-primary-500">
                                                                 <option value="in_lbs">in/lbs</option>
                                                                 <option value="cm_kg">cm/kg</option>
                                                             </select>
