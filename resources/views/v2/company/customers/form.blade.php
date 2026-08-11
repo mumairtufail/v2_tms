@@ -116,27 +116,19 @@
                                 <x-input-label for="short_code" value="Short Code" />
                                 <span x-show="shortcodeStatus === 'auto'" style="display:none" class="text-xs text-primary-500 font-medium">Auto-generated</span>
                             </div>
-                            @if(isset($customer))
-                                <input type="text"
-                                       value="{{ $customer->short_code }}"
-                                       disabled
-                                       class="mt-1 w-full px-4 py-2.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 cursor-not-allowed uppercase">
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Short code cannot be changed after creation.</p>
-                            @else
-                                <x-text-input
-                                    name="short_code"
-                                    id="short_code"
-                                    :value="old('short_code', '')"
-                                    placeholder="Auto-generated from name"
-                                    maxlength="3"
-                                    pattern="[A-Za-z0-9]{1,3}"
-                                    title="Up to 3 alphanumeric characters"
-                                    style="text-transform:uppercase"
-                                    class="mt-1"
-                                    @input="shortcodeStatus = $event.target.value ? 'manual' : ''; $event.target.value = $event.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
-                                />
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Up to 3 alphanumeric characters. Auto-filled from customer name — must be unique.</p>
-                            @endif
+                            <x-text-input
+                                name="short_code"
+                                id="short_code"
+                                :value="old('short_code', $customer->short_code ?? '')"
+                                placeholder="Auto-generated from name"
+                                maxlength="3"
+                                pattern="[A-Za-z0-9]{1,3}"
+                                title="Up to 3 alphanumeric characters"
+                                style="text-transform:uppercase"
+                                class="mt-1"
+                                @input="shortcodeStatus = $event.target.value ? 'manual' : ''; $event.target.value = $event.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
+                            />
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Up to 3 alphanumeric characters. Auto-filled from customer name — must be unique.</p>
                         </div>
                         <x-text-input
                             label="Email Address"

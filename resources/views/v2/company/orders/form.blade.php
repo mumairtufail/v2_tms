@@ -45,7 +45,7 @@
                 Save as Draft
             </x-secondary-button>
             <x-primary-button @click="primaryAction()">
-                <span x-text="isDraftOrder() ? 'Save & Submit' : 'Submit to Quote'"></span>
+                <span x-text="isDraftOrder() ? 'Save & Submit' : (orderStatus === 'quoted' || orderStatus === 'no_quote' ? 'Update Quote / Manifest' : 'Submit to Quote')"></span>
             </x-primary-button>
         </div>
     </div>
@@ -699,8 +699,10 @@ function orderForm() {
                 id: String(manifest.id),
             }));
 
-            this.stops = this.stops.map(stop => ({
+            this.stops = this.stops.map((stop, index) => ({
                 ...stop,
+                uid: stop.uid || stop.id || (Date.now() + Math.random().toString(36).substr(2, 9)),
+                expanded: index === 0,
                 manifest_id: stop.manifest_id ? String(stop.manifest_id) : '',
                 special_instructions: stop.special_instructions ?? '',
             }));
@@ -1038,13 +1040,13 @@ function orderForm() {
                 description: '',
                 qty: 1,
                 type: 'skid',
-                length: 0,
-                width: 0,
-                height: 0,
-                pcs: 0,
-                lf: 0,
-                cube: 0,
-                weight: 0,
+                length: '',
+                width: '',
+                height: '',
+                pcs: '',
+                lf: '',
+                cube: '',
+                weight: '',
                 freight_class: ''
             };
         },

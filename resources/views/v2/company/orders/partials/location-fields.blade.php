@@ -1,4 +1,4 @@
-﻿{{-- Location Fields Partial for Order Form --}}
+{{-- Location Fields Partial for Order Form --}}
 {{-- $prefix: 'shipper' or 'consignee' --}}
 
 <div class="grid grid-cols-1 gap-4 p-4 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-800 shadow-sm"
@@ -232,7 +232,7 @@
             </div>
         </div>
         <p class="text-[10px] text-gray-400 mt-1">24-hour format. End must be on or after Start.</p>
-        <label class="flex items-center gap-2 mt-2 cursor-pointer">
+        <label class="inline-flex items-center gap-2 mt-2 cursor-pointer">
             <input type="checkbox" x-model="stop.{{ $prefix }}.appointment" class="rounded border-gray-300 text-primary-600 shadow-sm focus:ring-primary-500 w-4 h-4">
             <span class="text-xs text-gray-600 dark:text-gray-400">Make this an appointment</span>
         </label>

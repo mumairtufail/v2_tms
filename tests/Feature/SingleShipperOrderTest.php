@@ -28,7 +28,6 @@ class SingleShipperOrderTest extends TestCase
         // Create test company
         $this->company = Company::factory()->create([
             'name' => 'Test Company',
-            'email' => 'test@company.com'
         ]);
 
         // Create test user
@@ -40,7 +39,7 @@ class SingleShipperOrderTest extends TestCase
         // Create test customer
         $this->customer = Customer::factory()->create([
             'company_id' => $this->company->id,
-            'company_name' => 'Test Customer Inc.'
+            'name' => 'Test Customer Inc.'
         ]);
 
         // Create accessorials for testing

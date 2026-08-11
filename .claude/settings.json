@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -oP 'Manifest detail.{50,6000}?Analytics — overview' \"/c/Users/Umair/.claude/projects/d--work-work-tms-dec-2026/28e1b59c-6d3b-46e2-a008-e3e034648a50/tool-results/toolu_01NBEGawx9zgngpjWBAi9yh1.txt\")",
+      "Bash(export LC_ALL=en_US.UTF-8)",
+      "Bash(grep -oP 'Manifest detail.{50,6000}?Analytics' \"/c/Users/Umair/.claude/projects/d--work-work-tms-dec-2026/28e1b59c-6d3b-46e2-a008-e3e034648a50/tool-results/toolu_01NBEGawx9zgngpjWBAi9yh1.txt\")",
+      "Bash(export LC_ALL=C.utf8)",
+      "Bash(awk '{ i = index\\($0, \"Manifest detail\"\\); if \\(i>0\\) print substr\\($0, i, 6000\\) }' \"/c/Users/Umair/.claude/projects/d--work-work-tms-dec-2026/28e1b59c-6d3b-46e2-a008-e3e034648a50/tool-results/toolu_01NBEGawx9zgngpjWBAi9yh1.txt\")",
+      "Bash(awk '{ i = index\\($0, \"D. Alvarez\"\\); if \\(i>0\\) print substr\\($0, i, 4500\\) }' /c/Users/Umair/.claude/projects/d--work-work-tms-dec-2026/28e1b59c-6d3b-46e2-a008-e3e034648a50/tool-results/toolu_01NBEGawx9zgngpjWBAi9yh1.txt)",
+      "Bash(awk '{ i = index\\($0, \"Harbor Foods Distribution\"\\); if \\(i>0\\) print substr\\($0, i, 2500\\) }' /c/Users/Umair/.claude/projects/d--work-work-tms-dec-2026/28e1b59c-6d3b-46e2-a008-e3e034648a50/tool-results/toolu_01NBEGawx9zgngpjWBAi9yh1.txt)",
+      "Bash(awk '{ i = index\\($0, \"Orders on this manifest\"\\); if \\(i>0\\) print substr\\($0, i, 3200\\) }' /c/Users/Umair/.claude/projects/d--work-work-tms-dec-2026/28e1b59c-6d3b-46e2-a008-e3e034648a50/tool-results/toolu_01NBEGawx9zgngpjWBAi9yh1.txt)",
+      "Bash(awk '{ i = index\\($0, \"margin-top:auto;display:flex;flex-direction:column;gap:8px\"\\); if \\(i>0\\) print substr\\($0, i, 2000\\) }' /c/Users/Umair/.claude/projects/d--work-work-tms-dec-2026/28e1b59c-6d3b-46e2-a008-e3e034648a50/tool-results/toolu_01NBEGawx9zgngpjWBAi9yh1.txt)",
+      "Bash(awk '{ i = index\\($0, \"font-size:17px;font-weight:700;color:var\\(--t1\\)\\\\\">Analytics<\"\\); if \\(i>0\\) print substr\\($0, i, 4500\\) }' /c/Users/Umair/.claude/projects/d--work-work-tms-dec-2026/28e1b59c-6d3b-46e2-a008-e3e034648a50/tool-results/toolu_01NBEGawx9zgngpjWBAi9yh1.txt)",
+      "Bash(awk '{ i = index\\($0, \"flex-direction:column;gap:12px\\\\\">\\\\\\\\n    <span style=\\\\\\\\\\\\\"font-size:17px;font-weight:700;color:var\\(--t1\\)\\\\\\\\\\\\\">Analytics\"\\); if \\(i>0\\) print substr\\($0, i, 4500\\) }' /c/Users/Umair/.claude/projects/d--work-work-tms-dec-2026/28e1b59c-6d3b-46e2-a008-e3e034648a50/tool-results/toolu_01NBEGawx9zgngpjWBAi9yh1.txt)",
+      "Bash(node -e ' *)",
+      "Bash(grep -n \"Middleware\\\\\\\\DriverCompanyScope\" -r \"d:\\\\work\\\\work\\\\tms_dec_2026\\\\app\")"
+    ]
+  }
+}

@@ -23,7 +23,6 @@ class SequenceOrderBasicTest extends TestCase
             'zip' => '12345',
             'country' => 'US',
             'phone' => '555-0123',
-            'email' => 'test@company.com',
         ]);
 
         $user = User::create([
@@ -63,7 +62,6 @@ class SequenceOrderBasicTest extends TestCase
             'zip' => '12345',
             'country' => 'US',
             'phone' => '555-0123',
-            'email' => 'test@company.com',
         ]);
 
         $user = User::create([
