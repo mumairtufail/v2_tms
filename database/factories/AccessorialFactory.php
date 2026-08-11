@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Accessorial;
+use App\Models\Company;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class AccessorialFactory extends Factory
@@ -26,8 +27,7 @@ class AccessorialFactory extends Factory
 
         return [
             'name' => $this->faker->unique()->randomElement($accessorialTypes),
-            'description' => $this->faker->sentence(),
-            'price' => $this->faker->randomFloat(2, 10, 500),
+            'company_id' => Company::factory(),
         ];
     }
 }

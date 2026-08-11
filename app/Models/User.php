@@ -10,9 +10,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Storage;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
 class User extends Authenticatable
 {
-    use HasApiTokens, Notifiable;
+    use HasApiTokens, Notifiable, HasFactory;
 
     protected $fillable = [
         'name',
@@ -113,6 +115,25 @@ class User extends Authenticatable
     public function hasRole(string $roleName): bool
     {
         return $this->roles()->where('name', $roleName)->exists();
+    }
+
+    public function primaryRoleLabel(): string
+    {
+        if ($this->is_super_admin) {
+            return 'Super Admin';
+        }
+
+        $role = $this->roles()
+            ->when($this->company_id, fn ($query) => $query->where('company_id', $this->company_id))
+            ->whereNotIn('name', ['super_admin'])
+            ->orderByRaw("CASE name WHEN 'admin' THEN 1 WHEN 'company_admin' THEN 2 ELSE 3 END")
+            ->first() ?? $this->roles()->first();
+
+        return match ($role?->name) {
+            'admin', 'company_admin' => 'Admin',
+            'super_admin' => 'Super Admin',
+            default => $role?->name ? \Illuminate\Support\Str::headline($role->name) : 'User',
+        };
     }
 
     public function hasPermission(string $permissionName, string $action = 'view'): bool

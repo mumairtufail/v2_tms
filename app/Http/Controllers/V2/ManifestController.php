@@ -300,9 +300,24 @@ class ManifestController extends Controller
 
     public function syncEquipment(Request $request, Company $company, Manifest $manifest)
     {
-        $equipmentIds = $request->input('equipment_ids', []);
+        $equipmentIds = collect($request->input('equipment_ids', []))->map(fn ($id) => (int) $id);
+        $previouslyAssigned = $manifest->equipments()->pluck('equipment.id');
+
         $manifest->equipments()->sync($equipmentIds);
-        Toast::success(count($equipmentIds) . ' equipment assigned successfully.');
+
+        if ($equipmentIds->isNotEmpty()) {
+            \App\Models\Equipment::whereIn('id', $equipmentIds)->update(['status' => 'In Use']);
+        }
+
+        $previouslyAssigned->diff($equipmentIds)->each(function (int $equipmentId) {
+            $stillAssigned = \App\Models\ManifestEquipment::where('equipment_id', $equipmentId)->exists();
+
+            if (! $stillAssigned) {
+                \App\Models\Equipment::where('id', $equipmentId)->update(['status' => 'Available']);
+            }
+        });
+
+        Toast::success($equipmentIds->count().' equipment assigned successfully.');
 
         return response()->json([
             'success' => true,

@@ -118,6 +118,7 @@
                             </div>
                             <x-text-input
                                 name="short_code"
+                                id="short_code"
                                 :value="old('short_code', $customer->short_code ?? '')"
                                 placeholder="Auto-generated from name"
                                 maxlength="3"
@@ -253,6 +254,20 @@
                         </div>
 
                         <div x-show="portal" x-transition class="md:col-span-2 space-y-4 pt-2 border-t border-gray-200 dark:border-gray-700" @if(!old('portal', $customer->portal ?? false)) style="display:none" @endif>
+                            @if(isset($customer) && $customer->portalLoginUrl())
+                            <div class="rounded-lg border border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-900/20 p-4 space-y-2">
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">Customer Portal Links</p>
+                                <p class="text-xs text-gray-600 dark:text-gray-400 break-all">{{ $customer->portalLoginUrl() }}</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <a href="{{ $customer->portalLoginUrl() }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                                        Open in new tab
+                                    </a>
+                                    <a href="{{ $customer->portalLoginUrl() }}" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-primary-600 hover:bg-primary-700 text-white">
+                                        Open portal
+                                    </a>
+                                </div>
+                            </div>
+                            @endif
                             <p class="text-sm text-gray-500 dark:text-gray-400">
                                 Portal login credentials — the customer signs in with the email address above.
                                 @if(isset($customer) && $customer->password) Leave the password blank to keep the current one. @endif

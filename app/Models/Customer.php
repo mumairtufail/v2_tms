@@ -78,4 +78,13 @@ class Customer extends Authenticatable
     {
         return $query->where('portal', true);
     }
+
+    public function portalLoginUrl(): ?string
+    {
+        if (! $this->portal || ! $this->company) {
+            return null;
+        }
+
+        return route('portal.login', ['company' => $this->company->slug]);
+    }
 }

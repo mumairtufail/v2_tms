@@ -23,8 +23,11 @@ class CustomerPortalScope
 
         if (!$customer->portal || !$customer->is_active || $customer->is_deleted) {
             Auth::guard('customer')->logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
+
+            if (! Auth::guard('web')->check()) {
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+            }
 
             return redirect()->route('portal.login', ['company' => $company->slug])
                 ->withErrors(['email' => 'Your portal access has been revoked.']);

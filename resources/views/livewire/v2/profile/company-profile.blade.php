@@ -38,14 +38,13 @@
 
             {{-- Account info --}}
             <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800">
-                @php $role = $user->roles->first(); @endphp
                 <div class="px-4 py-3 flex justify-between items-center">
                     <span class="text-xs text-gray-500">Company</span>
                     <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $company->name ?? '—' }}</span>
                 </div>
                 <div class="px-4 py-3 flex justify-between items-center">
                     <span class="text-xs text-gray-500">Role</span>
-                    <span class="px-2 py-0.5 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">{{ $role->name ?? '—' }}</span>
+                    <span class="px-2 py-0.5 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">{{ $user->primaryRoleLabel() }}</span>
                 </div>
                 <div class="px-4 py-3 flex justify-between items-center">
                     <span class="text-xs text-gray-500">Member since</span>
@@ -89,7 +88,7 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
-                        <input wire:model.live.debounce.300ms="phone" type="tel" placeholder="+1 (555) 000-0000" class="w-full px-3 py-2 text-sm border rounded-lg bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors">
+                        <input wire:model.blur="phone" type="tel" name="phone" autocomplete="tel" placeholder="+1 (555) 000-0000" class="w-full px-3 py-2 text-sm border rounded-lg bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors">
                         @error('phone')<p class="mt-1 text-xs text-red-500">{{ $message }}</p>@enderror
                     </div>
                     <label class="flex items-center gap-3 cursor-pointer select-none">

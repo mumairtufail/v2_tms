@@ -15,6 +15,7 @@
 <form method="POST" 
       action="{{ isset($user) ? route('v2.users.update', ['company' => app('current.company'), 'user' => $user->id]) : route('v2.users.store', ['company' => app('current.company')]) }}"
       class="w-full"
+      autocomplete="off"
       x-data="{ submitting: false }"
       @submit="submitting = true">
     @csrf
@@ -32,7 +33,7 @@
             <x-text-input
                 label="First Name"
                 name="f_name"
-                :value="$user->f_name ?? ''"
+                :value="old('f_name', $user->f_name ?? '')"
                 placeholder="John"
                 required
             />
@@ -40,7 +41,7 @@
             <x-text-input
                 label="Last Name"
                 name="l_name"
-                :value="$user->l_name ?? ''"
+                :value="old('l_name', $user->l_name ?? '')"
                 placeholder="Doe"
                 required
             />
@@ -49,10 +50,11 @@
                 label="Email Address"
                 name="email"
                 type="email"
-                :value="$user->email ?? ''"
+                :value="old('email', $user->email ?? '')"
                 placeholder="john@example.com"
                 :required="!isset($user)"
                 :disabled="isset($user)"
+                autocomplete="email"
             />
             @if(isset($user))
                 <p class="-mt-4 text-xs text-gray-500">Email address cannot be changed.</p>
@@ -62,8 +64,9 @@
                 label="Phone Number"
                 name="phone"
                 type="tel"
-                :value="$user->phone ?? ''"
+                :value="old('phone', $user->phone ?? '')"
                 placeholder="+1 (555) 000-0000"
+                autocomplete="tel"
             />
         </div>
     </x-form-section>
@@ -74,8 +77,8 @@
         :description="isset($user) ? 'Leave blank to keep current password' : 'Set the initial password for this user'"
         class="mt-6"
         x-data="{
-            password: '{{ old('password', '') }}',
-            passwordConfirmation: '',
+            password: @js(old('password', '')),
+            passwordConfirmation: @js(old('password_confirmation', '')),
             showPassword: false,
             showConfirmation: false,
             get strength() {
@@ -131,6 +134,7 @@
                     <input :type="showPassword ? 'text' : 'password'"
                            name="password" id="password"
                            x-model="password"
+                           autocomplete="new-password"
                            {{ !isset($user) ? 'required' : '' }}
                            placeholder="••••••••"
                            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors pr-10">
@@ -171,6 +175,7 @@
                     <input :type="showConfirmation ? 'text' : 'password'"
                            name="password_confirmation" id="password_confirmation"
                            x-model="passwordConfirmation"
+                           autocomplete="new-password"
                            placeholder="••••••••"
                            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors pr-10 border"
                            :class="passwordConfirmation.length > 0 ? (password === passwordConfirmation ? 'border-primary-500' : 'border-red-400') : 'border-gray-200 dark:border-gray-700'">
@@ -191,10 +196,24 @@
         class="mt-6"
     >
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            @if(isset($user) && $user->id === auth()->id())
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role</label>
+                    <input type="hidden" name="role" value="{{ old('role', $user->roles->first()?->id) }}">
+                    <input type="text" value="{{ auth()->user()->primaryRoleLabel() }}" disabled class="w-full px-4 py-2.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 cursor-not-allowed">
+                    <p class="mt-1 text-xs text-gray-500">You cannot change your own role.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                    <input type="hidden" name="status" value="{{ $user->status }}">
+                    <input type="text" value="{{ ucfirst($user->status) }}" disabled class="w-full px-4 py-2.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 cursor-not-allowed">
+                    <p class="mt-1 text-xs text-gray-500">You cannot change your own status.</p>
+                </div>
+            @else
             <x-select-input
                 label="Role"
                 name="role"
-                :value="isset($user) && $user->roles->first() ? $user->roles->first()->id : ''"
+                :value="old('role', isset($user) && $user->roles->first() ? $user->roles->first()->id : '')"
                 :options="collect($roles ?? [])->pluck('name', 'id')->toArray()"
                 placeholder="Select a role"
                 required
@@ -208,11 +227,12 @@
                         label="Active"
                         name="status"
                         value="active"
-                        :checked="($user->status ?? 'active') === 'active'"
+                        :checked="old('status', $user->status ?? 'active') === 'active'"
                         description="User can log in"
                     />
                 </div>
             </div>
+            @endif
         </div>
     </x-form-section>
 
@@ -254,7 +274,7 @@
             </template>
             {{ isset($user) ? 'Update User' : 'Create User' }}
         </button>
-        <a href="{{ route('v2.users.index', ['company' => app('current.company')]) }}" 
+        <a href="{{ route('v2.dashboard', ['company' => app('current.company')->slug]) }}" 
            class="px-6 py-2.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white text-sm font-medium rounded-lg transition-colors">
             Cancel
         </a>

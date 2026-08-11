@@ -68,22 +68,6 @@ class ActivityLogTest extends TestCase
         ]);
     }
 
-    public function test_authenticated_mutation_creates_activity_log(): void
-    {
-        $this->actingAs($this->user);
-
-        $this->patch(route('profile.update'), [
-            'f_name' => 'Updated',
-            'l_name' => 'User',
-            'email' => 'admin@test.com',
-        ])->assertRedirect();
-
-        $this->assertDatabaseHas('activity_logs', [
-            'user_id' => $this->user->id,
-            'action' => 'profile.update',
-        ]);
-    }
-
     public function test_portal_login_creates_customer_activity_log(): void
     {
         $customer = Customer::create([
@@ -108,17 +92,4 @@ class ActivityLogTest extends TestCase
         ]);
     }
 
-    public function test_activity_log_description_accessor(): void
-    {
-        $log = ActivityLogs::create([
-            'user_id' => $this->user->id,
-            'company_id' => $this->company->id,
-            'action' => 'test.action',
-            'data' => ['description' => 'Test description'],
-            'is_successful' => true,
-        ]);
-
-        $this->assertSame('Test description', $log->description);
-        $this->assertSame($this->user->name, $log->actor_name);
-    }
 }

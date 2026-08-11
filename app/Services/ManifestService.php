@@ -221,8 +221,10 @@ class ManifestService
     {
         ManifestEquipment::firstOrCreate([
             'manifest_id' => $manifest->id,
-            'equipment_id' => $equipmentId
+            'equipment_id' => $equipmentId,
         ]);
+
+        \App\Models\Equipment::where('id', $equipmentId)->update(['status' => 'In Use']);
     }
 
     public function removeEquipment(Manifest $manifest, int $equipmentId): void
@@ -230,6 +232,12 @@ class ManifestService
         ManifestEquipment::where('manifest_id', $manifest->id)
             ->where('equipment_id', $equipmentId)
             ->delete();
+
+        $stillAssigned = ManifestEquipment::where('equipment_id', $equipmentId)->exists();
+
+        if (! $stillAssigned) {
+            \App\Models\Equipment::where('id', $equipmentId)->update(['status' => 'Available']);
+        }
     }
 
     public function addStop(Manifest $manifest, array $data): Stop

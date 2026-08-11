@@ -25,6 +25,9 @@ class CustomerRequest extends FormRequest
         // customer already has one (blank on update keeps the current password).
         $passwordRequired = $portalEnabled && (!$isUpdate || !$customer?->password);
 
+        $companyId = app('current.company')?->id;
+        $customerId = $customer instanceof \App\Models\Customer ? $customer->id : ($customer?->id ?? null);
+
         return [
             'name' => ['required', 'string', 'max:255'],
             'short_code' => [
@@ -33,8 +36,8 @@ class CustomerRequest extends FormRequest
                 'max:3',
                 'regex:/^[A-Z0-9]{1,3}$/',
                 Rule::unique('customers', 'short_code')
-                    ->where(fn ($q) => $q->where('company_id', $company?->id)->where('is_deleted', false))
-                    ->ignore($customer?->id),
+                    ->where(fn ($q) => $q->where('company_id', $companyId)->where('is_deleted', false))
+                    ->ignore($customerId),
             ],
             'customer_email' => [
                 Rule::requiredIf($portalEnabled),
@@ -42,8 +45,8 @@ class CustomerRequest extends FormRequest
                 'email',
                 'max:255',
                 Rule::unique('customers', 'customer_email')
-                    ->where(fn ($q) => $q->where('company_id', $company?->id)->where('is_deleted', false))
-                    ->ignore($customer?->id),
+                    ->where(fn ($q) => $q->where('company_id', $companyId)->where('is_deleted', false))
+                    ->ignore($customerId),
             ],
             'password' => [
                 Rule::requiredIf($passwordRequired),

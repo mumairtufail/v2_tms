@@ -48,7 +48,6 @@ class CustomerService
     {
         return DB::transaction(function () use ($customer, $data) {
             $data = $this->preparePasswordData($data, isUpdate: true);
-
             if (array_key_exists('short_code', $data) && empty($data['short_code'])) {
                 $data['short_code'] = $this->generateUniqueShortCode(
                     $customer->company_id,

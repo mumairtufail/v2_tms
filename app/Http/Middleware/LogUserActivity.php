@@ -19,9 +19,11 @@ class LogUserActivity
 
         if ($this->shouldLog($request, $response)) {
             $routeName = $request->route()?->getName() ?? $request->path();
+            $isSuccessful = $this->isSuccessful($request, $response);
 
             $this->activityLog->logFromRoute($routeName, [
                 'status_code' => $response->getStatusCode(),
+                'is_successful' => $isSuccessful,
                 'route_parameters' => $request->route()?->parameters() ?? [],
                 'input' => $this->sanitizeInput($request->except([
                     'password',
@@ -51,6 +53,23 @@ class LogUserActivity
         }
 
         if ($this->isExcludedRoute($request)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    protected function isSuccessful(Request $request, Response $response): bool
+    {
+        if ($response->isClientError()) {
+            return false;
+        }
+
+        if ($request->session()->has('errors') && $request->session()->get('errors')?->any()) {
+            return false;
+        }
+
+        if ($request->session()->has('error')) {
             return false;
         }
 

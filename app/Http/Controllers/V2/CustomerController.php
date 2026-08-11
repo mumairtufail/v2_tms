@@ -86,6 +86,15 @@ class CustomerController extends Controller
             ->with('success', 'Customer updated successfully.');
     }
 
+    public function destroy(Company $company, Customer $customer)
+    {
+        $this->customerService->deleteCustomer($customer);
+
+        return redirect()
+            ->route('v2.customers.index', ['company' => $company->slug])
+            ->with('success', 'Customer deleted successfully.');
+    }
+
     public function syncToQuickBooks(Company $company, Customer $customer)
     {
         try {

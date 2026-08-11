@@ -112,7 +112,7 @@
                     <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <span class="text-sm text-gray-600 dark:text-gray-400">Role</span>
                         <span class="px-2 py-1 text-xs font-medium rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400">
-                            {{ $user->roles->first()->name ?? 'User' }}
+                            {{ auth()->user()->primaryRoleLabel() }}
                         </span>
                     </div>
                     <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
