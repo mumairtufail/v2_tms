@@ -27,15 +27,16 @@ class CustomerRequest extends FormRequest
 
         return [
             'name' => ['required', 'string', 'max:255'],
-            'short_code' => [
-                'nullable',
-                'string',
-                'max:3',
-                'regex:/^[A-Z0-9]{1,3}$/',
-                Rule::unique('customers', 'short_code')
-                    ->where(fn ($q) => $q->where('company_id', $company?->id)->where('is_deleted', false))
-                    ->ignore($customer?->id),
-            ],
+            'short_code' => $isUpdate
+                ? ['prohibited']
+                : [
+                    'nullable',
+                    'string',
+                    'max:3',
+                    'regex:/^[A-Z0-9]{1,3}$/',
+                    Rule::unique('customers', 'short_code')
+                        ->where(fn ($q) => $q->where('company_id', $company?->id)->where('is_deleted', false)),
+                ],
             'customer_email' => [
                 Rule::requiredIf($portalEnabled),
                 'nullable',

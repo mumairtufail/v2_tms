@@ -16,6 +16,10 @@
     if (session('info')) {
         $initCode .= "addToast('info', " . json_encode(session('info')) . ");";
     }
+    if (session('notify')) {
+        $notify = session('notify');
+        $initCode .= "addToast(" . json_encode($notify['type'] ?? 'info') . ", " . json_encode($notify['content'] ?? '') . ");";
+    }
 @endphp
 
 <div 

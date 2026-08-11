@@ -42,12 +42,17 @@ class RoleController extends Controller
 
     public function store(Request $request, $company)
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => [
-                'required', 
-                'string', 
-                'max:255', 
-                Rule::unique('roles')->where('company_id', app('current.company')->id)
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('roles')->where('company_id', app('current.company')->id),
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    if (in_array(strtolower((string) $value), ['admin', 'super_admin'], true)) {
+                        $fail('This role name is reserved.');
+                    }
+                },
             ],
         ]);
 
@@ -74,10 +79,16 @@ class RoleController extends Controller
 
         $request->validate([
             'name' => [
-                'required', 
-                'string', 
-                'max:255', 
-                Rule::unique('roles')->where('company_id', app('current.company')->id)->ignore($role->id)
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('roles')->where('company_id', app('current.company')->id)->ignore($role->id),
+                function (string $attribute, mixed $value, \Closure $fail) use ($role) {
+                    if (in_array(strtolower((string) $value), ['admin', 'super_admin'], true)
+                        && ! in_array(strtolower($role->name), ['admin', 'super_admin'], true)) {
+                        $fail('This role name is reserved.');
+                    }
+                },
             ],
         ]);
 

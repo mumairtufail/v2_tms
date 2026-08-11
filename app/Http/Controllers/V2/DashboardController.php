@@ -3,20 +3,19 @@
 namespace App\Http\Controllers\V2;
 
 use App\Http\Controllers\Controller;
+use App\Models\Company;
 use App\Models\Order;
 
 class DashboardController extends Controller
 {
-    /**
-     * Display the V2 dashboard.
-     */
-    public function index()
+    public function index(Company $company)
     {
-        $recentOrders = Order::with('customer')
+        $recentOrders = Order::where('company_id', $company->id)
+            ->with('customer')
             ->latest()
             ->take(10)
             ->get();
 
-        return view('v2.dashboard.index', compact('recentOrders'));
+        return view('v2.dashboard.index', compact('recentOrders', 'company'));
     }
 }

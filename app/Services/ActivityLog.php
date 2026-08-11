@@ -88,11 +88,19 @@ class ActivityLog
 
     public function logFromRoute(string $routeName, array $context = []): ?ActivityLogs
     {
+        $isSuccessful = $context['is_successful'] ?? true;
+        $description = $this->humanizeRouteName($routeName);
+
+        if (! $isSuccessful) {
+            $description = 'Failed: '.lcfirst($description);
+        }
+
         return $this->log($routeName, array_merge($context, [
             'category' => 'http',
-            'description' => $this->humanizeRouteName($routeName),
+            'description' => $description,
             'route' => $routeName,
-        ]));
+            'is_successful' => $isSuccessful,
+        ]), $isSuccessful);
     }
 
     protected function resolveActor(): array

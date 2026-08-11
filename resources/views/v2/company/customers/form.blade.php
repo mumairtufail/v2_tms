@@ -116,18 +116,27 @@
                                 <x-input-label for="short_code" value="Short Code" />
                                 <span x-show="shortcodeStatus === 'auto'" style="display:none" class="text-xs text-primary-500 font-medium">Auto-generated</span>
                             </div>
-                            <x-text-input
-                                name="short_code"
-                                :value="old('short_code', $customer->short_code ?? '')"
-                                placeholder="Auto-generated from name"
-                                maxlength="3"
-                                pattern="[A-Za-z0-9]{1,3}"
-                                title="Up to 3 alphanumeric characters"
-                                style="text-transform:uppercase"
-                                class="mt-1"
-                                @input="shortcodeStatus = $event.target.value ? 'manual' : ''; $event.target.value = $event.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
-                            />
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Up to 3 alphanumeric characters. Auto-filled from customer name — must be unique.</p>
+                            @if(isset($customer))
+                                <input type="text"
+                                       value="{{ $customer->short_code }}"
+                                       disabled
+                                       class="mt-1 w-full px-4 py-2.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 cursor-not-allowed uppercase">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Short code cannot be changed after creation.</p>
+                            @else
+                                <x-text-input
+                                    name="short_code"
+                                    id="short_code"
+                                    :value="old('short_code', '')"
+                                    placeholder="Auto-generated from name"
+                                    maxlength="3"
+                                    pattern="[A-Za-z0-9]{1,3}"
+                                    title="Up to 3 alphanumeric characters"
+                                    style="text-transform:uppercase"
+                                    class="mt-1"
+                                    @input="shortcodeStatus = $event.target.value ? 'manual' : ''; $event.target.value = $event.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
+                                />
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Up to 3 alphanumeric characters. Auto-filled from customer name — must be unique.</p>
+                            @endif
                         </div>
                         <x-text-input
                             label="Email Address"
@@ -253,6 +262,20 @@
                         </div>
 
                         <div x-show="portal" x-transition class="md:col-span-2 space-y-4 pt-2 border-t border-gray-200 dark:border-gray-700" @if(!old('portal', $customer->portal ?? false)) style="display:none" @endif>
+                            @if(isset($customer) && $customer->portalLoginUrl())
+                            <div class="rounded-lg border border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-900/20 p-4 space-y-2">
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">Customer Portal Links</p>
+                                <p class="text-xs text-gray-600 dark:text-gray-400 break-all">{{ $customer->portalLoginUrl() }}</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <a href="{{ $customer->portalLoginUrl() }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                                        Open in new tab
+                                    </a>
+                                    <a href="{{ $customer->portalLoginUrl() }}" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-primary-600 hover:bg-primary-700 text-white">
+                                        Open portal
+                                    </a>
+                                </div>
+                            </div>
+                            @endif
                             <p class="text-sm text-gray-500 dark:text-gray-400">
                                 Portal login credentials — the customer signs in with the email address above.
                                 @if(isset($customer) && $customer->password) Leave the password blank to keep the current one. @endif

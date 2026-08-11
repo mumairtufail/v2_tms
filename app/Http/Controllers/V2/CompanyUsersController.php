@@ -128,6 +128,18 @@ class CompanyUsersController extends Controller
         $validated['roles'] = [$validated['role']];
         unset($validated['role']);
 
+        if ($user->id === auth()->id()) {
+            $currentRoleId = $user->roles->first()?->id;
+
+            if ($currentRoleId && (int) $validated['roles'][0] !== (int) $currentRoleId) {
+                return back()->withInput()->with('error', 'You cannot change your own role.');
+            }
+
+            if (($validated['status'] ?? $user->status) !== $user->status) {
+                return back()->withInput()->with('error', 'You cannot change your own account status.');
+            }
+        }
+
         try {
             $user = $this->userService->updateUser($user, $validated);
             return redirect()
