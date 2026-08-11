@@ -157,6 +157,25 @@ class CompanyController extends Controller
 
 
     /**
+     * Display the specified resource.
+     */
+    public function show(Company $company)
+    {
+        if ($company->is_deleted) {
+            abort(404);
+        }
+
+        $company->load([
+            'users' => function ($query) {
+                $query->where('is_deleted', false);
+            },
+            'users.roles'
+        ]);
+
+        return view('v2.admin.companies.show', compact('company'));
+    }
+
+    /**
      * Show the form for editing the specified resource.
      */
     public function edit(Company $company)
