@@ -30,24 +30,19 @@
             </div>
 
             <!-- Company -->
-            <div class="sm:col-span-4 lg:col-span-2">
+            <div class="sm:col-span-6 lg:col-span-3">
                 <x-filter-select name="company" :value="request('company')" :options="$companies->toArray()" placeholder="All Companies" class="w-full" />
             </div>
 
             <!-- Status -->
-            <div class="sm:col-span-4 lg:col-span-2">
+            <div class="sm:col-span-6 lg:col-span-3">
                 <x-filter-select name="status" :value="request('status')" :options="['active' => 'Active', 'inactive' => 'Inactive']" placeholder="All Status" class="w-full" />
-            </div>
-
-            <!-- Role -->
-            <div class="sm:col-span-4 lg:col-span-2">
-                <x-filter-select name="role" :value="request('role')" :options="$roles->toArray()" placeholder="All Roles" class="w-full" />
             </div>
 
             <!-- Buttons -->
             <div class="sm:col-span-12 lg:col-span-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <button type="submit" class="w-full sm:w-auto flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors">Search</button>
-                @if(request()->hasAny(['search', 'company', 'status', 'role']))
+                @if(request()->hasAny(['search', 'company', 'status']))
                 <a href="{{ route('admin.users.index') }}" class="px-3 py-2 text-sm text-center text-gray-500 hover:text-gray-900 dark:hover:text-white whitespace-nowrap">Clear</a>
                 @endif
             </div>
@@ -55,7 +50,7 @@
     </div>
 
     <!-- Active Filters Indicator -->
-    @if(request()->hasAny(['search', 'company', 'status', 'role']))
+    @if(request()->hasAny(['search', 'company', 'status']))
     <div class="flex flex-wrap items-center gap-2 text-sm">
         <span class="text-gray-500">Filtering by:</span>
         @if(request('search'))
@@ -66,9 +61,6 @@
         @endif
         @if(request('status'))
         <span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded">Status: {{ ucfirst(request('status')) }}</span>
-        @endif
-        @if(request('role'))
-        <span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded">Role: {{ $roles[request('role')] ?? request('role') }}</span>
         @endif
     </div>
     @endif

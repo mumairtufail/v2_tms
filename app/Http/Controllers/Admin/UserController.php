@@ -21,7 +21,10 @@ class UserController extends Controller
     {
         $query = User::with(['company', 'roles'])
             ->where('is_deleted', false)
-            ->where('is_super_admin', false);
+            ->where('is_super_admin', false)
+            ->whereHas('roles', function ($q) {
+                $q->whereRaw('LOWER(roles.name) in (?, ?)', ['admin', 'company_admin']);
+            });
 
         // Search by name or email
         if ($request->filled('search')) {
@@ -45,25 +48,16 @@ class UserController extends Controller
             $query->where('status', $request->status);
         }
 
-        // Filter by role
-        if ($request->filled('role')) {
-            $query->whereHas('roles', function ($q) use ($request) {
-                $q->where('roles.id', $request->role);
-            });
-        }
-
         $users = $query->orderBy('created_at', 'desc')
             ->paginate(10)
             ->withQueryString();
 
-        // Get companies and roles for filters
+        // Get companies for the company filter
         $companies = Company::where('is_deleted', false)
             ->orderBy('name')
             ->pluck('name', 'id');
-        
-        $roles = Role::orderBy('name')->pluck('name', 'id');
 
-        return view('v2.admin.users.index', compact('users', 'companies', 'roles'));
+        return view('v2.admin.users.index', compact('users', 'companies'));
     }
 
     /**
