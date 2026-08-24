@@ -1440,6 +1440,7 @@ freightSubtotal(rows) {
         },
 
         createPendingManifest() {
+            if (this.creatingManifest) return;
             this.creatingManifest = true;
             fetch('{{ route("v2.manifests.quick-create", $company->slug) }}', {
                 method: 'POST',

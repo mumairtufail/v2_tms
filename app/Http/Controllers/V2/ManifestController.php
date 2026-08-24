@@ -247,8 +247,13 @@ class ManifestController extends Controller
 
     public function availableEquipment(Company $company, Manifest $manifest)
     {
+        $assignedEquipmentIds = $manifest->equipments->pluck('id');
+
         $allEquipment = \App\Models\Equipment::where('company_id', $company->id)
-            ->where('status', 'Available')
+            ->where(function ($query) use ($assignedEquipmentIds) {
+                $query->where('status', 'Available')
+                    ->orWhereIn('id', $assignedEquipmentIds);
+            })
             ->get(['id', 'name', 'type', 'status']);
         
         $assigned = $manifest->equipments->map(function($eq) {

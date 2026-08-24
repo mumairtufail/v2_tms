@@ -183,25 +183,25 @@ class OrderController extends Controller
                     'description' => $c->description,
                     'qty' => $c->quantity,
                     'type' => $c->type ?? 'skid',
-                    'weight' => (float)$c->weight,
-                    'length' => (float)$c->length,
-                    'width' => (float)$c->width,
-                    'height' => (float)$c->height,
-                    'pcs' => (int)$c->pieces,
-                    'lf' => (float)$c->linear_feet,
-                    'cube' => (float)$c->cube,
+                    'weight' => $c->weight !== null ? (float)$c->weight : '',
+                    'length' => $c->length !== null ? (float)$c->length : '',
+                    'width' => $c->width !== null ? (float)$c->width : '',
+                    'height' => $c->height !== null ? (float)$c->height : '',
+                    'pcs' => $c->pieces !== null ? (int)$c->pieces : '',
+                    'lf' => $c->linear_feet !== null ? (float)$c->linear_feet : '',
+                    'cube' => $c->cube !== null ? (float)$c->cube : '',
                     'freight_class' => $c->freight_class ?? '',
                 ])->toArray() : [[
                     'description' => '',
                     'qty' => 1,
                     'type' => 'skid',
-                    'weight' => 0,
-                    'length' => 0,
-                    'width' => 0,
-                    'height' => 0,
-                    'pcs' => 0,
-                    'lf' => 0,
-                    'cube' => 0,
+                    'weight' => '',
+                    'length' => '',
+                    'width' => '',
+                    'height' => '',
+                    'pcs' => '',
+                    'lf' => '',
+                    'cube' => '',
                     'freight_class' => '',
                 ]],
                 'accessorials'  => $stop->accessorials->pluck('id')->map(fn($id) => (string)$id)->toArray(),
@@ -475,7 +475,7 @@ class OrderController extends Controller
             }
 
             // Process commodities
-            $this->processCommodities($stop, $stopData['commodities'] ?? [], $log);
+            $this->processCommodities($stop, $stopData['commodities'] ?? [], $log, $stopData['measurements'] ?? 'imperial');
             
             // Process accessorials
             $accessorialIds = array_map('intval', $stopData['accessorials'] ?? []);
@@ -494,26 +494,28 @@ class OrderController extends Controller
     /**
      * Process and save commodities for a stop.
      */
-    protected function processCommodities(\App\Models\OrderStop $stop, array $commoditiesData, $log)
+    protected function processCommodities(\App\Models\OrderStop $stop, array $commoditiesData, $log, string $measurementType = 'imperial')
     {
         // Delete existing commodities and recreate
         $stop->commodities()->delete();
         
         foreach ($commoditiesData as $comData) {
+            $blankToNull = fn($value) => ($value === '' || $value === null) ? null : $value;
+
             \App\Models\OrderStopCommodity::create([
                 'order_stop_id' => $stop->id,
                 'description' => $comData['description'] ?? '',
                 'type' => $comData['type'] ?? 'skid',
                 'quantity' => $comData['qty'] ?? 1,
-                'pieces' => $comData['pcs'] ?? 0,
-                'weight' => $comData['weight'] ?? 0,
-                'length' => $comData['length'] ?? null,
-                'width' => $comData['width'] ?? null,
-                'height' => $comData['height'] ?? null,
-                'linear_feet' => $comData['lf'] ?? null,
-                'cube' => $comData['cube'] ?? null,
+                'pieces' => $blankToNull($comData['pcs'] ?? null) ?? 0,
+                'weight' => $blankToNull($comData['weight'] ?? null) ?? 0,
+                'length' => $blankToNull($comData['length'] ?? null),
+                'width' => $blankToNull($comData['width'] ?? null),
+                'height' => $blankToNull($comData['height'] ?? null),
+                'linear_feet' => $blankToNull($comData['lf'] ?? null),
+                'cube' => $blankToNull($comData['cube'] ?? null),
                 'freight_class' => $comData['freight_class'] ?? null,
-                'measurement_type' => $stopData['measurements'] ?? 'imperial',
+                'measurement_type' => $measurementType,
             ]);
         }
         

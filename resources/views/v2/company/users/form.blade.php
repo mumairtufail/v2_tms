@@ -76,11 +76,42 @@
         :title="isset($user) ? 'Password' : 'Password'"
         :description="isset($user) ? 'Leave blank to keep current password' : 'Set the initial password for this user'"
         class="mt-6"
-        x-data="{
+    >
+        {{-- x-data lives on this plain div, not the <x-form-section> tag itself —
+             Blade does not compile @directives (like @js()) inside a component
+             tag's own attributes, only within its slot content. --}}
+        <div x-data="{
             password: @js(old('password', '')),
             passwordConfirmation: @js(old('password_confirmation', '')),
             showPassword: false,
             showConfirmation: false,
+            init() {
+                // Guard against browser extensions (password managers) that
+                // sometimes inject a stringified DOM element instead of a
+                // real value into password fields it mis-targets. Some of
+                // these write straight to the DOM .value without firing an
+                // input/change event, so x-model alone won't see it — poll
+                // the raw DOM value directly for a few seconds after mount.
+                const isGarbage = (value) => typeof value === 'string' && /^\[object [A-Za-z]+Element\]$/.test(value);
+                const sanitize = () => {
+                    if (this.$refs.passwordInput && isGarbage(this.$refs.passwordInput.value)) {
+                        this.$refs.passwordInput.value = '';
+                        this.password = '';
+                    }
+                    if (this.$refs.confirmInput && isGarbage(this.$refs.confirmInput.value)) {
+                        this.$refs.confirmInput.value = '';
+                        this.passwordConfirmation = '';
+                    }
+                };
+                this.$watch('password', (value) => { if (isGarbage(value)) this.password = ''; });
+                this.$watch('passwordConfirmation', (value) => { if (isGarbage(value)) this.passwordConfirmation = ''; });
+                this.$refs.passwordInput?.addEventListener('focus', sanitize);
+                this.$refs.passwordInput?.addEventListener('blur', sanitize);
+                this.$refs.confirmInput?.addEventListener('focus', sanitize);
+                this.$refs.confirmInput?.addEventListener('blur', sanitize);
+                sanitize();
+                setInterval(sanitize, 250);
+            },
             get strength() {
                 let s = 0;
                 if (this.password.length >= 8) s++;
@@ -133,10 +164,12 @@
                 <div class="relative">
                     <input :type="showPassword ? 'text' : 'password'"
                            name="password" id="password"
+                           x-ref="passwordInput"
                            x-model="password"
                            autocomplete="new-password"
+                           data-lpignore="true" data-1p-ignore data-bwignore data-form-type="other"
                            {{ !isset($user) ? 'required' : '' }}
-                           placeholder="••••••••"
+                           placeholder="{{ isset($user) ? 'Leave blank to keep current' : '••••••••' }}"
                            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors pr-10">
                     <button type="button" @click="showPassword = !showPassword" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                         <svg x-show="!showPassword" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
@@ -174,8 +207,10 @@
                 <div class="relative">
                     <input :type="showConfirmation ? 'text' : 'password'"
                            name="password_confirmation" id="password_confirmation"
+                           x-ref="confirmInput"
                            x-model="passwordConfirmation"
                            autocomplete="new-password"
+                           data-lpignore="true" data-1p-ignore data-bwignore data-form-type="other"
                            placeholder="••••••••"
                            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors pr-10 border"
                            :class="passwordConfirmation.length > 0 ? (password === passwordConfirmation ? 'border-primary-500' : 'border-red-400') : 'border-gray-200 dark:border-gray-700'">
@@ -186,6 +221,7 @@
                 </div>
                 <p x-show="passwordConfirmation.length > 0 && password !== passwordConfirmation" class="mt-1 text-xs text-red-500">Passwords do not match</p>
             </div>
+        </div>
         </div>
     </x-form-section>
 
@@ -274,7 +310,7 @@
             </template>
             {{ isset($user) ? 'Update User' : 'Create User' }}
         </button>
-        <a href="{{ route('v2.dashboard', ['company' => app('current.company')->slug]) }}" 
+        <a href="{{ route('v2.users.index', ['company' => app('current.company')]) }}"
            class="px-6 py-2.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white text-sm font-medium rounded-lg transition-colors">
             Cancel
         </a>

@@ -126,9 +126,16 @@
                                 title="Up to 3 alphanumeric characters"
                                 style="text-transform:uppercase"
                                 class="mt-1"
+                                :disabled="isset($customer)"
                                 @input="shortcodeStatus = $event.target.value ? 'manual' : ''; $event.target.value = $event.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
                             />
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Up to 3 alphanumeric characters. Auto-filled from customer name — must be unique.</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                @if(isset($customer))
+                                    Short code cannot be changed after creation.
+                                @else
+                                    Up to 3 alphanumeric characters. Auto-filled from customer name — must be unique.
+                                @endif
+                            </p>
                         </div>
                         <x-text-input
                             label="Email Address"

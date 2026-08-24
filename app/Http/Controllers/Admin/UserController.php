@@ -84,7 +84,7 @@ class UserController extends Controller
             'f_name' => 'required|string|max:255',
             'l_name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'password' => ['required', 'confirmed', Password::min(8)],
+            'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
             'phone' => 'nullable|string|max:20',
             'company_id' => 'required|exists:companies,id',
             'status' => 'required|in:active,inactive',
@@ -95,7 +95,7 @@ class UserController extends Controller
             return redirect()->back()
                 ->with('error', 'Please check the form for errors.')
                 ->withErrors($validator)
-                ->withInput();
+                ->withInput($request->except(['password', 'password_confirmation']));
         }
 
         try {
@@ -159,7 +159,7 @@ class UserController extends Controller
         $validator = Validator::make($request->all(), [
             'f_name' => 'required|string|max:255',
             'l_name' => 'required|string|max:255',
-            'password' => ['nullable', 'confirmed', Password::min(8)],
+            'password' => ['nullable', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
             'phone' => 'nullable|string|max:20',
             'company_id' => 'required|exists:companies,id',
             'status' => 'required|in:active,inactive',
@@ -170,7 +170,7 @@ class UserController extends Controller
             return redirect()->back()
                 ->with('error', 'Please check the form for errors.')
                 ->withErrors($validator)
-                ->withInput();
+                ->withInput($request->except(['password', 'password_confirmation']));
         }
 
         try {

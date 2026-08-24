@@ -7,6 +7,7 @@ use App\Services\UserService;
 use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rules\Password;
 
 class CompanyUsersController extends Controller
 {
@@ -49,7 +50,7 @@ class CompanyUsersController extends Controller
             'f_name' => ['required', 'string', 'max:255'],
             'l_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => ['required', 'string', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
             'phone' => ['nullable', 'string', 'max:20'],
             'status' => ['required', 'in:active,inactive'],
             'role' => ['required', 'exists:roles,id'],
@@ -117,7 +118,7 @@ class CompanyUsersController extends Controller
         $validated = $request->validate([
             'f_name' => ['required', 'string', 'max:255'],
             'l_name' => ['required', 'string', 'max:255'],
-            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+            'password' => ['nullable', 'string', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
             'phone' => ['nullable', 'string', 'max:20'],
             'status' => ['required', 'in:active,inactive'],
             'role' => ['required', 'exists:roles,id'],
