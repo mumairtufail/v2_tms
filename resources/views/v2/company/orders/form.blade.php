@@ -44,7 +44,7 @@
                 </span>
                 Save as Draft
             </x-secondary-button>
-            <x-primary-button @click="primaryAction()">
+            <x-primary-button @click="primaryAction()" type="button">
                 <span x-text="isDraftOrder() ? 'Save & Submit' : (orderStatus === 'quoted' || orderStatus === 'no_quote' ? 'Update Quote / Manifest' : 'Submit to Quote')"></span>
             </x-primary-button>
         </div>
@@ -101,7 +101,7 @@
             @foreach($orderTypes as $typeKey => $typeData)
                 @php 
                     $isSelected = $order->order_type === $typeKey; 
-                    $isLocked = !in_array($typeKey, ['sequence']); // Sequence is Shuttle Loop
+                    $isLocked = !in_array($typeKey, ['sequence', 'point_to_point']);
                 @endphp
                 <label 
                     @if($isLocked)
@@ -157,7 +157,7 @@
     </div>
 
     {{-- 4. Main Form --}}
-    <form id="orderForm" action="{{ route('v2.orders.update', ['company' => $company->slug, 'order' => $order->id]) }}" method="POST">
+    <form id="orderForm" action="{{ route('v2.orders.update', ['company' => $company->slug, 'order' => $order->id]) }}" method="POST" @submit.prevent>
         @csrf
         @method('PATCH')
         <input type="hidden" name="order_type" value="{{ $order->order_type }}">
@@ -706,6 +706,15 @@ function orderForm() {
                 manifest_id: stop.manifest_id ? String(stop.manifest_id) : '',
                 special_instructions: stop.special_instructions ?? '',
             }));
+
+            // point_to_point allows only one leg: collapse origin (first shipper)
+            // and destination (last consignee) into a single stop, dropping any
+            // intermediate legs left over from switching from a multi-stop type.
+            if (this.orderType === 'point_to_point' && this.stops.length > 1) {
+                const first = this.stops[0];
+                const last = this.stops[this.stops.length - 1];
+                this.stops = [{ ...first, consignee: { ...last.consignee } }];
+            }
 
             // ── Initialize Quote Rows ─────────────────────────────────────────
             // Always guarantee (at minimum) a Freight row [0] and a Fuel row [1].

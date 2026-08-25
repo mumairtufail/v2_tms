@@ -7,9 +7,12 @@ let _url = null;
 
 export function getContactBook(url) {
     // One request per page load, shared by every autocomplete instance and
-    // the save-to-book dialog. One tenant per page, so first URL wins.
-    if (!_promise) {
-        _url = url || window.__contactBookUrl;
+    // the save-to-book dialog. Re-fetch whenever the requested URL differs
+    // from what's cached, so a stale tenant's data (e.g. restored from the
+    // browser's bfcache after navigating between companies) never leaks in.
+    const targetUrl = url || window.__contactBookUrl;
+    if (!_promise || _url !== targetUrl) {
+        _url = targetUrl;
         if (!_url) return Promise.resolve([]);
         _promise = fetch(_url, {
             headers: { Accept: 'application/json' },
@@ -20,6 +23,19 @@ export function getContactBook(url) {
             .catch(() => []); // never block the form on a failed fetch
     }
     return _promise;
+}
+
+// Reset the cache when a page is restored from the browser's back/forward
+// cache (bfcache) — scripts don't re-run in that case, so without this a
+// tab that visits Company A then navigates back to a Company B page could
+// keep serving Company A's contact book.
+if (typeof window !== 'undefined') {
+    window.addEventListener('pageshow', (event) => {
+        if (event.persisted) {
+            _promise = null;
+            _url = null;
+        }
+    });
 }
 
 // Mirrors ContactBookEntry::normalizedKey() in PHP — keep in sync.

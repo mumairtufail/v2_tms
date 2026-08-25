@@ -13,9 +13,14 @@ class CustomerController extends Controller
      */
     public function viewcustomers($customer)
     {
+        $companyId = auth()->user()->company_id ?? null;
+        if (!$companyId) {
+            return response()->json(['success' => false, 'message' => 'Customer not found'], 404);
+        }
+
         try {
-            $customerData = Customer::findOrFail($customer);
-            
+            $customerData = Customer::where('company_id', $companyId)->findOrFail($customer);
+
             return response()->json([
                 'success' => true,
                 'data' => $customerData
@@ -34,10 +39,15 @@ class CustomerController extends Controller
     public function search(Request $request)
     {
         try {
+            $companyId = auth()->user()->company_id ?? null;
+            if (!$companyId) {
+                return response()->json([]);
+            }
+
             $query = $request->get('q', '');
-            
-            $customers = Customer::query();
-            
+
+            $customers = Customer::query()->where('company_id', $companyId);
+
             if ($query) {
                   $customers->where(function($q) use ($query) {
                     $q->where('name', 'LIKE', "%{$query}%")
@@ -48,11 +58,6 @@ class CustomerController extends Controller
                 });
             }
 
-            // Ensure company filtering is ALWAYS applied if authenticated
-            if (auth()->check() && auth()->user()->company_id) {
-                $customers->where('company_id', auth()->user()->company_id);
-            }
-            
             $customers = $customers
                 ->where('is_active', 1)
                 ->where('is_deleted', 0)

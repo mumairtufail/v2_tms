@@ -9,6 +9,7 @@ export default function companyAutocomplete(config = {}) {
         contactBookUrl: config.contactBookUrl || '',
         results: [], // contact book matches
         googleResults: [],
+        googleError: '',
         isLoading: false,
         isGoogleLoading: false,
         showDropdown: false,
@@ -77,6 +78,7 @@ export default function companyAutocomplete(config = {}) {
             this.lastSearched = q;
             this.isGoogleLoading = true;
             this.showDropdown = true;
+            this.googleError = '';
 
             try {
                 const suggestions = await PlacesAPI.autocomplete(q);
@@ -88,6 +90,7 @@ export default function companyAutocomplete(config = {}) {
             } catch (error) {
                 console.error('[PlacesAPI] search error:', error);
                 this.googleResults = [];
+                this.googleError = error?.message || 'Places search failed.';
             } finally {
                 this.isGoogleLoading = false;
             }

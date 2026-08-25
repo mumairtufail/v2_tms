@@ -28,9 +28,11 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 
 
-// Customer search API
-Route::get('customers/search', [App\Http\Controllers\Api\CustomerController::class, 'search']);
-Route::get('/customers/{customer}', [App\Http\Controllers\Api\CustomerController::class, 'viewcustomers']);
+// Customer search API (session-authenticated; tenant scoping enforced in the controller)
+Route::middleware(['web', 'auth'])->group(function () {
+    Route::get('customers/search', [App\Http\Controllers\Api\CustomerController::class, 'search']);
+    Route::get('/customers/{customer}', [App\Http\Controllers\Api\CustomerController::class, 'viewcustomers']);
+});
 
 Route::prefix('google/places')->group(function () {
     Route::post('autocomplete', [GooglePlacesController::class, 'autocomplete']);

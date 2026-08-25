@@ -133,7 +133,14 @@
                     </div>
                 </template>
 
-                <template x-if="googleResults.length === 0">
+                <template x-if="googleResults.length === 0 && googleError">
+                    <div class="px-4 py-4 text-center">
+                        <p class="text-[11px] font-medium text-red-500" x-text="googleError"></p>
+                        <p class="text-[10px] text-slate-400 mt-1">Places search is unavailable right now. Try the contact book, or enter the address manually.</p>
+                    </div>
+                </template>
+
+                <template x-if="googleResults.length === 0 && !googleError">
                     <div class="px-4 py-4 text-center">
                         <p class="text-[11px] text-slate-500 dark:text-slate-400">No results found for "<span class="font-medium text-slate-700 dark:text-slate-200" x-text="query"></span>"</p>
                         <p class="text-[10px] text-slate-400 mt-1">Try a different name or address</p>
