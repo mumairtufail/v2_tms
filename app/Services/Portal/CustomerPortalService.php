@@ -2,6 +2,7 @@
 
 namespace App\Services\Portal;
 
+use App\Models\Company;
 use App\Models\Customer;
 use App\Models\Order;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -77,6 +78,26 @@ class CustomerPortalService
     {
         if ($order->customer_id !== $customer->id || $order->company_id !== $customer->company_id) {
             abort(403, 'You do not have access to this order.');
+        }
+    }
+
+    public function assertCustomerBelongsToCompany(Customer $customer, Company $company): void
+    {
+        if ($customer->company_id !== $company->id) {
+            abort(403, 'You do not have access to this company portal.');
+        }
+    }
+
+    public function assertOrderEditableByCustomer(Order $order, Customer $customer): void
+    {
+        $this->assertOrderBelongsToCustomer($order, $customer);
+
+        if ($order->status !== 'draft') {
+            abort(403, 'Only draft orders can be edited.');
+        }
+
+        if ($order->order_type !== 'point_to_point') {
+            abort(403, 'This order type cannot be edited in the customer portal.');
         }
     }
 }

@@ -1,17 +1,28 @@
-@extends('v2.layouts.app')
+@extends(($isPortal ?? false) ? 'portal.layouts.app' : 'v2.layouts.app')
 
 @section('title', isset($order) ? "Edit Order #{$order->order_number}" : "New Order Draft")
 
 @section('content')
+@php
+    $isPortal = $isPortal ?? false;
+    $ordersIndexRoute = $isPortal
+        ? route('portal.orders.index', ['company' => $company->slug])
+        : route('v2.orders.index', $company);
+    $orderUpdateRoute = $isPortal
+        ? route('portal.orders.update', ['company' => $company->slug, 'order' => $order->id])
+        : route('v2.orders.update', ['company' => $company->slug, 'order' => $order->id]);
+@endphp
 <script>
     window.googleMapsApiKey = @json(config('services.google.maps_api_key'));
 </script>
 <div class="space-y-6" x-data="orderForm()">
     {{-- 1. Breadcrumb --}}
+    @if(!$isPortal)
     <x-v2-breadcrumb :items="[
-        ['label' => 'Orders', 'url' => route('v2.orders.index', $company)],
+        ['label' => 'Orders', 'url' => $ordersIndexRoute],
         ['label' => isset($order) ? 'Edit Order' : 'New Order']
     ]" />
+    @endif
 
     {{-- 2. Page Header with Actions --}}
     @php
@@ -30,11 +41,18 @@
     @endphp
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div class="flex items-center gap-4">
-            <a href="{{ route('v2.orders.index', $company) }}" class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+            <a href="{{ $ordersIndexRoute }}" class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
             </a>
+            @if($isPortal)
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ isset($order) ? 'Order #' . $order->order_number : 'New Order' }}</h1>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Origin-to-destination shipment for {{ $customer->name ?? $order->customer->name ?? 'your account' }}</p>
+                </div>
+            @else
             <x-page-header :title="isset($order) ? 'Order #' . $order->order_number : 'New Order Draft'" 
                           :description="'Manage details for ' . ($order->customer->name ?? 'Unknown')" />
+            @endif
         </div>
         
         <div class="flex items-center gap-2">
@@ -45,7 +63,7 @@
                 Save as Draft
             </x-secondary-button>
             <x-primary-button @click="primaryAction()" type="button">
-                <span x-text="isDraftOrder() ? 'Save & Submit' : (orderStatus === 'quoted' || orderStatus === 'no_quote' ? 'Update Quote / Manifest' : 'Submit to Quote')"></span>
+                <span x-text="isPortal ? 'Submit Order' : (isDraftOrder() ? 'Save & Submit' : (orderStatus === 'quoted' || orderStatus === 'no_quote' ? 'Update Quote / Manifest' : 'Submit to Quote'))"></span>
             </x-primary-button>
         </div>
     </div>
@@ -54,17 +72,40 @@
         <span class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-full border {{ $statusClass }}">
             Current Status: {{ ucfirst(str_replace('_', ' ', $order->status)) }}
         </span>
+        @if($isPortal)
+            <span class="text-xs font-semibold text-gray-600 dark:text-gray-300">
+                Order ID: {{ $order->order_number }}
+            </span>
+        @else
         <a href="{{ route('v2.orders.edit', ['company' => $company->slug, 'order' => $order->id]) }}" class="text-xs font-semibold text-primary-600 hover:text-primary-700 hover:underline">
             Order ID: {{ $order->order_number }}
         </a>
-        @if($order->customer)
+        @endif
+        @if($order->customer && !$isPortal)
             <a href="{{ route('v2.customers.edit', ['company' => $company->slug, 'customer' => $order->customer->id]) }}" class="text-xs font-semibold text-primary-600 hover:text-primary-700 hover:underline">
                 Customer: {{ $order->customer->name }}
             </a>
+        @elseif($isPortal && ($customer ?? $order->customer))
+            <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                Customer: {{ ($customer ?? $order->customer)->name }}
+            </span>
         @endif
     </div>
 
     {{-- 3. Order Type Selection (Modern Radio Style) --}}
+    @if($isPortal)
+    <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm p-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-[11px] font-bold text-gray-900 dark:text-white uppercase tracking-widest">Order Type</h3>
+                <p class="text-[10px] text-gray-400">Customer portal supports origin-to-destination orders only</p>
+            </div>
+            <div class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase tracking-tighter dark:bg-emerald-900/20">
+                Origin-to-Destination
+            </div>
+        </div>
+    </div>
+    @else
     <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm p-5">
         <div class="mb-5 flex items-center justify-between">
             <div>
@@ -155,12 +196,13 @@
             @endforeach
         </div>
     </div>
+    @endif
 
     {{-- 4. Main Form --}}
-    <form id="orderForm" action="{{ route('v2.orders.update', ['company' => $company->slug, 'order' => $order->id]) }}" method="POST" @submit.prevent>
+    <form id="orderForm" action="{{ $orderUpdateRoute }}" method="POST" @submit.prevent>
         @csrf
         @method('PATCH')
-        <input type="hidden" name="order_type" value="{{ $order->order_type }}">
+        <input type="hidden" name="order_type" value="{{ $isPortal ? 'point_to_point' : $order->order_type }}">
         <input type="hidden" name="save_as_draft" x-bind:value="saving ? '1' : '0'">
         <input type="hidden" name="submission_mode" x-bind:value="submissionMode">
         <input type="hidden" name="stops" x-bind:value="JSON.stringify(stops)">
@@ -247,7 +289,9 @@
                                     x-text="orderType === 'single_consignee' ? 'Pickup (Shipper)' : 'Shipper'"></th>
                                 <th class="px-3 py-2 text-left text-[10px] font-bold text-gray-500 uppercase"
                                     x-text="orderType === 'single_shipper' ? 'Delivery (Consignee)' : 'Consignee'"></th>
+                                @if(!$isPortal)
                                 <th class="px-3 py-2 text-left text-[10px] font-bold text-gray-500 uppercase">Manifest</th>
+                                @endif
                                 <th class="px-3 py-2 text-left text-[10px] font-bold text-gray-500 uppercase">Items</th>
                             </tr>
                         </thead>
@@ -265,6 +309,7 @@
                                         <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="stop.consignee.company_name || '-'"></div>
                                         <div class="text-[10px] text-gray-400" x-show="stop.consignee.city" x-text="stop.consignee.city + ', ' + stop.consignee.state"></div>
                                     </td>
+                                    @if(!$isPortal)
                                     <td class="px-3 py-2">
                                         <template x-if="stop.manifest_id && manifestsMap[stop.manifest_id]">
                                             <a :href="manifestEditUrl(stop.manifest_id)" @click.stop class="text-primary-600 hover:text-primary-700 hover:underline" x-text="manifestsMap[stop.manifest_id]"></a>
@@ -273,6 +318,7 @@
                                             <span>-</span>
                                         </template>
                                     </td>
+                                    @endif
                                     <td class="px-3 py-2" x-text="stop.commodities.length"></td>
 
                                 </tr>
@@ -653,20 +699,25 @@
     </form>
 
     {{-- Processing Modal --}}
+    @if(!$isPortal)
             @include('v2.company.orders.partials.quote-modal')
 
     {{-- Save to Contact Book Modal --}}
             @include('v2.company.orders.partials.contact-book-modal')
+    @endif
 
 
 </div>
 
 @push('scripts')
 <script>
+@if(!$isPortal)
 window.__contactBookUrl = '{{ route('v2.contact-book.index', ['company' => $company->slug]) }}';
+@endif
 
 function orderForm() {
     return {
+        isPortal: @json($isPortal),
         stops: @json($stopsData),
         quote: @json($quoteData),
         manifests: @json($manifests),
@@ -1199,6 +1250,12 @@ freightSubtotal(rows) {
 
         // ── Contact book: offer to save new addresses right before submit ──────
         async requestSubmit(submitFn) {
+            if (this.isPortal) {
+                this.contactBookPayload = '[]';
+                submitFn();
+                return;
+            }
+
             let book = [];
             try { book = await window.__getContactBook(); } catch (e) {}
 
@@ -1292,7 +1349,7 @@ freightSubtotal(rows) {
         },
 
         primaryAction() {
-            if (this.isDraftOrder()) {
+            if (this.isPortal || this.isDraftOrder()) {
                 this.submitAsNew();
                 return;
             }

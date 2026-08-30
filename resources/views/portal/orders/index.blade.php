@@ -8,6 +8,13 @@
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white">My Orders</h1>
         <p class="text-gray-500 dark:text-gray-400 mt-1">Track and view your shipment orders</p>
     </div>
+    <form method="POST" action="{{ route('portal.orders.store', ['company' => $company->slug]) }}">
+        @csrf
+        <button type="submit" class="inline-flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium rounded-lg transition-colors">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            New Order
+        </button>
+    </form>
 </div>
 
 <form method="GET" class="mb-6 flex flex-col sm:flex-row gap-3">
@@ -59,6 +66,10 @@
                         {{ $order->stops->count() }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                        @if($order->status === 'draft')
+                        <a href="{{ route('portal.orders.edit', ['company' => $company->slug, 'order' => $order]) }}"
+                           class="text-primary-600 hover:text-primary-500 dark:text-primary-400 font-medium mr-3">Edit</a>
+                        @endif
                         <a href="{{ route('portal.orders.show', ['company' => $company->slug, 'order' => $order]) }}"
                            class="text-primary-600 hover:text-primary-500 dark:text-primary-400 font-medium">View</a>
                     </td>
