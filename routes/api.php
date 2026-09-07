@@ -66,3 +66,10 @@ Route::prefix('driver')->name('driver.')->group(function () {
     });
 });
 
+
+Route::get('/debug-auth-header', function (\Illuminate\Http\Request $request) {
+    return response()->json([
+        'authorization_header' => $request->header('Authorization'),
+        'bearer_token' => $request->bearerToken(),
+    ]);
+});
