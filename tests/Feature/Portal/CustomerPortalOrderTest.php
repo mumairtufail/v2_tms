@@ -343,4 +343,51 @@ class CustomerPortalOrderTest extends TestCase
         $draft->refresh();
         $this->assertSame('new', $draft->status);
     }
+
+    public function test_customer_can_view_own_order_activity_logs(): void
+    {
+        \App\Models\ActivityLogs::create([
+            'customer_id' => $this->customer->id,
+            'company_id' => $this->company->id,
+            'order_id' => $this->order->id,
+            'action' => 'portal.orders.update',
+            'method' => 'PATCH',
+            'is_successful' => true,
+            'data' => [
+                'description' => 'Submitted the order',
+                'actor_name' => $this->customer->name,
+            ],
+        ]);
+
+        $response = $this->actingAs($this->customer, 'customer')
+            ->getJson(route('portal.orders.activity-logs', [
+                'company' => $this->company->slug,
+                'order' => $this->order,
+            ]));
+
+        $response->assertOk();
+        $response->assertJsonPath('order_number', $this->order->order_number);
+        $response->assertJsonFragment(['description' => 'Submitted the order']);
+    }
+
+    public function test_customer_cannot_view_another_customers_order_activity_logs(): void
+    {
+        $response = $this->actingAs($this->customer, 'customer')
+            ->getJson(route('portal.orders.activity-logs', [
+                'company' => $this->company->slug,
+                'order' => $this->otherOrder,
+            ]));
+
+        $response->assertStatus(403);
+    }
+
+    public function test_portal_orders_index_includes_activity_log_panel(): void
+    {
+        $response = $this->actingAs($this->customer, 'customer')
+            ->get(route('portal.orders.index', ['company' => $this->company->slug]));
+
+        $response->assertOk();
+        $response->assertSee('openLogs', false);
+        $response->assertSee('View activity logs', false);
+    }
 }

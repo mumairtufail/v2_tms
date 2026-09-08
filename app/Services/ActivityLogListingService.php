@@ -3,6 +3,9 @@
 namespace App\Services;
 
 use App\Models\ActivityLogs;
+use App\Models\Company;
+use App\Models\Order;
+use Illuminate\Support\Collection;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 
@@ -43,5 +46,27 @@ class ActivityLogListingService
         }
 
         return $query->orderByDesc('created_at')->paginate(20)->withQueryString();
+    }
+
+    public function forOrder(Company $company, Order $order, int $limit = 50): Collection
+    {
+        return ActivityLogs::with(['user', 'customer'])
+            ->forCompany($company->id)
+            ->forOrder($order->id)
+            ->latest()
+            ->limit($limit)
+            ->get()
+            ->map(function (ActivityLogs $log) {
+                return [
+                    'id' => $log->id,
+                    'actor' => $log->actor_name,
+                    'description' => $log->description,
+                    'successful' => (bool) $log->is_successful,
+                    'created_at' => $log->created_at?->toIso8601String(),
+                    'created_at_human' => $log->created_at?->diffForHumans(),
+                    'created_at_label' => $log->created_at?->format('M j, Y g:i A'),
+                ];
+            })
+            ->values();
     }
 }

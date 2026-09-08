@@ -2,8 +2,10 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Order;
 use App\Services\ActivityLog;
 use Closure;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -20,19 +22,30 @@ class LogUserActivity
         if ($this->shouldLog($request, $response)) {
             $routeName = $request->route()?->getName() ?? $request->path();
             $isSuccessful = $this->isSuccessful($request, $response);
+            $description = $this->resolveDescription($request, $routeName, $isSuccessful);
 
-            $this->activityLog->logFromRoute($routeName, [
+            $context = [
                 'status_code' => $response->getStatusCode(),
                 'is_successful' => $isSuccessful,
-                'route_parameters' => $request->route()?->parameters() ?? [],
+                'order_id' => $this->resolveOrderId($request),
+                'route_parameters' => $this->serializeRouteParameters($request->route()?->parameters() ?? []),
                 'input' => $this->sanitizeInput($request->except([
                     'password',
                     'password_confirmation',
                     'current_password',
                     '_token',
                     '_method',
+                    'stops',
+                    'quote_data',
+                    'contact_book_entries',
                 ])),
-            ]);
+            ];
+
+            if ($description !== null) {
+                $context['description'] = $description;
+            }
+
+            $this->activityLog->logFromRoute($routeName, $context);
         }
 
         return $response;
@@ -100,6 +113,70 @@ class LogUserActivity
         }
 
         return false;
+    }
+
+    protected function resolveOrderId(Request $request): ?int
+    {
+        if ($request->attributes->has('activity_order_id')) {
+            return (int) $request->attributes->get('activity_order_id');
+        }
+
+        $order = $request->route('order');
+
+        if ($order instanceof Order) {
+            return $order->id;
+        }
+
+        if (is_numeric($order)) {
+            return (int) $order;
+        }
+
+        return null;
+    }
+
+    protected function resolveDescription(Request $request, string $routeName, bool $isSuccessful): ?string
+    {
+        $description = null;
+
+        if ($request->attributes->has('activity_description')) {
+            $description = (string) $request->attributes->get('activity_description');
+        } elseif (in_array($routeName, ['v2.orders.update', 'portal.orders.update'], true)) {
+            if ($request->input('save_as_draft') === '1') {
+                $description = 'Saved the order as a draft';
+            } elseif ($request->input('submission_mode') === 'quote') {
+                $description = 'Quoted the order';
+            } elseif ($request->input('submission_mode') === 'new') {
+                $description = 'Submitted the order';
+            } else {
+                $description = 'Updated the order';
+            }
+        } elseif (in_array($routeName, ['v2.orders.store', 'portal.orders.store'], true)) {
+            $description = 'Added the order';
+        } elseif ($routeName === 'v2.orders.destroy') {
+            $description = 'Deleted the order';
+        }
+
+        if ($description === null) {
+            return null;
+        }
+
+        return $isSuccessful ? $description : 'Failed: '.lcfirst($description);
+    }
+
+    protected function serializeRouteParameters(array $parameters): array
+    {
+        return collect($parameters)
+            ->map(function ($value) {
+                if ($value instanceof Model) {
+                    return [
+                        'id' => $value->getKey(),
+                        'type' => class_basename($value),
+                    ];
+                }
+
+                return $value;
+            })
+            ->all();
     }
 
     protected function sanitizeInput(array $input): array

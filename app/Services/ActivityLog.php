@@ -39,6 +39,7 @@ class ActivityLog
                 'user_id' => $actor['user_id'],
                 'customer_id' => $actor['customer_id'] ?? ($data['customer_id'] ?? null),
                 'company_id' => $this->resolveCompanyId($actor, $data),
+                'order_id' => $this->resolveOrderId($data),
                 'action' => $action,
                 'ip_address' => Request::ip(),
                 'user_agent' => Request::userAgent(),
@@ -89,9 +90,9 @@ class ActivityLog
     public function logFromRoute(string $routeName, array $context = []): ?ActivityLogs
     {
         $isSuccessful = $context['is_successful'] ?? true;
-        $description = $this->humanizeRouteName($routeName);
+        $description = $context['description'] ?? $this->humanizeRouteName($routeName);
 
-        if (! $isSuccessful) {
+        if (! $isSuccessful && !isset($context['description'])) {
             $description = 'Failed: '.lcfirst($description);
         }
 
@@ -153,6 +154,25 @@ class ActivityLog
         return config('app.current_company_id');
     }
 
+    protected function resolveOrderId(array $data): ?int
+    {
+        if (!empty($data['order_id'])) {
+            return (int) $data['order_id'];
+        }
+
+        $order = $data['route_parameters']['order'] ?? null;
+
+        if (is_array($order) && isset($order['id'])) {
+            return (int) $order['id'];
+        }
+
+        if (is_numeric($order)) {
+            return (int) $order;
+        }
+
+        return null;
+    }
+
     protected function humanizeRouteName(string $routeName): string
     {
         $map = [
@@ -162,10 +182,13 @@ class ActivityLog
             'v2.roles.store' => 'Created role',
             'v2.roles.update' => 'Updated role',
             'v2.roles.destroy' => 'Deleted role',
-            'v2.orders.store' => 'Created order',
-            'v2.orders.update' => 'Updated order',
-            'v2.orders.destroy' => 'Deleted order',
+            'v2.orders.store' => 'Added the order',
+            'v2.orders.update' => 'Updated the order',
+            'v2.orders.destroy' => 'Deleted the order',
             'v2.orders.bulk-destroy' => 'Bulk deleted orders',
+            'portal.orders.store' => 'Added the order',
+            'portal.orders.update' => 'Updated the order',
+            'driver.order.status' => 'Updated order status',
             'v2.customers.store' => 'Created customer',
             'v2.customers.update' => 'Updated customer',
             'v2.customers.destroy' => 'Deleted customer',

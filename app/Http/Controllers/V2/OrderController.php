@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Order;
 use App\Models\Customer;
+use App\Services\ActivityLogListingService;
 use App\Services\OrderFormDataBuilder;
 use App\Services\OrderService;
 use App\Services\OrderUpdateService;
@@ -90,6 +91,9 @@ class OrderController extends Controller
         });
 
         Toast::success('New order draft created.');
+        $request->attributes->set('activity_order_id', $order->id);
+        $request->attributes->set('activity_description', 'Added the order');
+
         return redirect()->route('v2.orders.edit', ['company' => $company->slug, 'order' => $order->id]);
     }
 
@@ -101,6 +105,16 @@ class OrderController extends Controller
         $viewData = $formDataBuilder->build($company, $order);
 
         return view('v2.company.orders.form', $viewData);
+    }
+
+    public function activityLogs(Company $company, Order $order, ActivityLogListingService $listingService)
+    {
+        abort_unless($order->company_id === $company->id, 404);
+
+        return response()->json([
+            'order_number' => $order->order_number,
+            'logs' => $listingService->forOrder($company, $order),
+        ]);
     }
 
     /**

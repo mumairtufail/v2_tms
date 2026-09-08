@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Portal;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Order;
+use App\Services\ActivityLogListingService;
 use App\Services\OrderFormDataBuilder;
 use App\Services\OrderUpdateService;
 use App\Services\Portal\CustomerPortalService;
 use App\Support\Toast;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -36,7 +38,7 @@ class OrderController extends Controller
         return view('portal.orders.index', compact('company', 'customer', 'orders'));
     }
 
-    public function store(Company $company): RedirectResponse
+    public function store(Request $request, Company $company): RedirectResponse
     {
         $customer = Auth::guard('customer')->user();
         $this->portalService->assertCustomerBelongsToCompany($customer, $company);
@@ -59,6 +61,8 @@ class OrderController extends Controller
         });
 
         Toast::success('New order draft created.');
+        $request->attributes->set('activity_order_id', $order->id);
+        $request->attributes->set('activity_description', 'Added the order');
 
         return redirect()->route('portal.orders.edit', ['company' => $company->slug, 'order' => $order->id]);
     }
@@ -98,5 +102,16 @@ class OrderController extends Controller
         $order = $this->portalService->getOrderDetail($customer, $order->id);
 
         return view('portal.orders.show', compact('company', 'customer', 'order'));
+    }
+
+    public function activityLogs(Company $company, Order $order, ActivityLogListingService $listingService): JsonResponse
+    {
+        $customer = Auth::guard('customer')->user();
+        $this->portalService->assertOrderBelongsToCustomer($order, $customer);
+
+        return response()->json([
+            'order_number' => $order->order_number,
+            'logs' => $listingService->forOrder($company, $order),
+        ]);
     }
 }

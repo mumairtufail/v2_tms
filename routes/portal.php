@@ -29,6 +29,7 @@ Route::prefix('{company}/portal')->name('portal.')->middleware(['portal.company'
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
         Route::post('orders', [OrderController::class, 'store'])->name('orders.store');
         Route::get('orders/{order}/edit', [OrderController::class, 'edit'])->name('orders.edit');
+        Route::get('orders/{order}/activity-logs', [OrderController::class, 'activityLogs'])->name('orders.activity-logs');
         Route::patch('orders/{order}', [OrderController::class, 'update'])->name('orders.update');
         Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
         Route::get('notifications', [\App\Http\Controllers\Portal\NotificationController::class, 'index'])->name('notifications.index');

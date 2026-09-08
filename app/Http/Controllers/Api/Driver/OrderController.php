@@ -86,6 +86,14 @@ class OrderController extends Controller
                 $to->value,
                 $note
             );
+
+            $fromLabel = str_replace('_', ' ', $from->value);
+            $toLabel = str_replace('_', ' ', $to->value);
+            app(\App\Services\ActivityLog::class)->log('driver.order.status', [
+                'order_id' => $order->id,
+                'company_id' => $order->company_id,
+                'description' => "Updated order status from {$fromLabel} to {$toLabel}",
+            ]);
         }
     }
 
