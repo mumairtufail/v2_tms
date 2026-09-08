@@ -22,6 +22,10 @@ Route::middleware(['auth', CompanyScope::class])->prefix('{company}')->name('v2.
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
 
+    Route::get('notifications', [\App\Http\Controllers\V2\NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('notifications/read-all', [\App\Http\Controllers\V2\NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+    Route::post('notifications/{notification}/read', [\App\Http\Controllers\V2\NotificationController::class, 'markRead'])->name('notifications.read');
+
     // Users Management - Order matters! Specific routes before parameterized ones
     Route::middleware(['permission:users,create'])->group(function () {
         Route::get('users/create', [\App\Http\Controllers\V2\CompanyUsersController::class, 'create'])->name('users.create');

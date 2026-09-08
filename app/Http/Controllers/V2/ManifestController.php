@@ -40,6 +40,12 @@ class ManifestController extends Controller
         
         $manifest = $this->manifestService->createManifest($company->id, $data);
 
+        app(\App\Services\NotificationService::class)->manifestCreated(
+            $manifest,
+            $company,
+            $request->user()
+        );
+
         // Redirect to edit page to add resources
         Toast::success('Manifest created successfully. Add drivers, equipment, and carriers below.');
         return redirect()
@@ -56,6 +62,12 @@ class ManifestController extends Controller
         
         try {
             $manifest = $this->manifestService->createManifest($company->id, $data);
+
+            app(\App\Services\NotificationService::class)->manifestCreated(
+                $manifest,
+                $company,
+                $request->user()
+            );
             
             return response()->json([
                 'success' => true,
@@ -142,7 +154,18 @@ class ManifestController extends Controller
     public function assignDriver(Request $request, Company $company, Manifest $manifest)
     {
         $request->validate(['driver_id' => 'required|exists:users,id']);
-        $this->manifestService->assignDriver($manifest, $request->driver_id);
+        $this->manifestService->assignDriver($manifest, (int) $request->driver_id);
+
+        $driver = \App\Models\User::find($request->driver_id);
+        if ($driver) {
+            app(\App\Services\NotificationService::class)->driverAssignedToManifest(
+                $manifest,
+                $driver,
+                $company,
+                $request->user()
+            );
+        }
+
         Toast::success('Driver assigned successfully.');
         return back();
     }
@@ -235,8 +258,19 @@ class ManifestController extends Controller
 
     public function syncDrivers(Request $request, Company $company, Manifest $manifest)
     {
-        $driverIds = $request->input('driver_ids', []);
+        $driverIds = array_map('intval', $request->input('driver_ids', []));
+        $previousDriverIds = $manifest->drivers()->pluck('users.id')->map(fn ($id) => (int) $id)->all();
         $manifest->drivers()->sync($driverIds);
+
+        $notifications = app(\App\Services\NotificationService::class);
+        $newDriverIds = array_diff($driverIds, $previousDriverIds);
+        foreach ($newDriverIds as $driverId) {
+            $driver = \App\Models\User::find($driverId);
+            if ($driver) {
+                $notifications->driverAssignedToManifest($manifest, $driver, $company, $request->user());
+            }
+        }
+
         Toast::success(count($driverIds) . ' driver(s) assigned successfully.');
 
         return response()->json([

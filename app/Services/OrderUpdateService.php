@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Company;
+use App\Models\Manifest;
 use App\Models\Order;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -75,6 +76,9 @@ class OrderUpdateService
                 }
             }
 
+            $previousStatus = $order->status;
+            $previousManifestIds = $order->stops()->pluck('manifest_id')->filter()->unique()->values()->all();
+
             $order->update([
                 'order_type' => $validated['order_type'] ?? $order->order_type,
                 'ref_number' => $validated['ref_number'] ?? $order->ref_number,
@@ -104,6 +108,15 @@ class OrderUpdateService
             $ordersLog->info('=== Order Update Completed Successfully ===', [
                 'order_id' => $order->id,
             ]);
+
+            $this->dispatchOrderNotifications(
+                $order->fresh(['customer', 'stops']),
+                $company,
+                $portal,
+                $previousStatus,
+                $saveAsDraft,
+                $previousManifestIds,
+            );
 
             $message = $saveAsDraft ? 'Order saved as draft.' : 'Order submitted successfully.';
 
@@ -470,5 +483,42 @@ class OrderUpdateService
         }
 
         return !empty($quoteData['service_id']) || !empty($quoteData['delivery_start']) || !empty($quoteData['delivery_end']);
+    }
+
+    protected function dispatchOrderNotifications(
+        Order $order,
+        Company $company,
+        bool $portal,
+        string $previousStatus,
+        bool $saveAsDraft,
+        array $previousManifestIds,
+    ): void {
+        $notifications = app(NotificationService::class);
+
+        if ($portal && !$saveAsDraft && $previousStatus === 'draft') {
+            $notifications->customerSubmittedOrder($order, $company);
+        }
+
+        if (!$portal && !$saveAsDraft && $order->status === 'quoted' && $previousStatus !== 'quoted') {
+            $notifications->orderQuotedForCustomer($order, $company);
+        }
+
+        if ($portal) {
+            return;
+        }
+
+        $previous = collect($previousManifestIds);
+        $newManifestIds = $order->stops->pluck('manifest_id')->filter()->unique();
+
+        foreach ($newManifestIds as $manifestId) {
+            if ($previous->contains($manifestId)) {
+                continue;
+            }
+
+            $manifest = Manifest::find($manifestId);
+            if ($manifest) {
+                $notifications->orderAssignedToManifest($order, $manifest, $company);
+            }
+        }
     }
 }

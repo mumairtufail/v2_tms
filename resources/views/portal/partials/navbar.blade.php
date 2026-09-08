@@ -30,6 +30,12 @@
             </svg>
         </button>
 
+        <x-notification-bell
+            :index-url="route('portal.notifications.index', ['company' => $company->slug])"
+            :read-all-url="route('portal.notifications.read-all', ['company' => $company->slug])"
+            :read-url-template="route('portal.notifications.read', ['company' => $company->slug, 'notification' => '__ID__'])"
+        />
+
         @if($customer)
         <div class="hidden sm:block w-px h-8 bg-gray-200 dark:bg-gray-700"></div>
 

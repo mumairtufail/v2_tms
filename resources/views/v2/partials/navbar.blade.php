@@ -87,54 +87,13 @@
 
 
         <!-- Notifications -->
-        <div x-data="{ open: false }" class="relative">
-            <button 
-                @click="open = !open"
-                class="relative flex items-center justify-center w-10 h-10 rounded-xl text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 transition-colors"
-            >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                </svg>
-                <!-- Notification Badge -->
-                <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
-            
-            <!-- Notifications Dropdown -->
-            <div 
-                x-show="open" 
-                @click.outside="open = false"
-                x-transition:enter="transition ease-out duration-200"
-                x-transition:enter-start="opacity-0 scale-95"
-                x-transition:enter-end="opacity-100 scale-100"
-                x-transition:leave="transition ease-in duration-150"
-                x-transition:leave-start="opacity-100 scale-100"
-                x-transition:leave-end="opacity-0 scale-95"
-                class="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 py-2 z-50"
-                style="display: none;"
-            >
-                <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-                    <p class="text-sm font-semibold text-gray-900 dark:text-white">Notifications</p>
-                </div>
-                <div class="max-h-64 overflow-y-auto">
-                    <a href="#" class="block px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                        <div class="flex items-start gap-3">
-                            <div class="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center flex-shrink-0">
-                                <svg class="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                </svg>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-medium text-gray-900 dark:text-white">New order created</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Order #1234 - 5 minutes ago</p>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="px-4 py-2 border-t border-gray-100 dark:border-gray-700">
-                    <a href="#" class="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400">View all notifications</a>
-                </div>
-            </div>
-        </div>
+        @if($currentCompany)
+        <x-notification-bell
+            :index-url="route('v2.notifications.index', ['company' => $currentCompany->slug])"
+            :read-all-url="route('v2.notifications.read-all', ['company' => $currentCompany->slug])"
+            :read-url-template="route('v2.notifications.read', ['company' => $currentCompany->slug, 'notification' => '__ID__'])"
+        />
+        @endif
 
         <!-- Divider -->
         <div class="hidden sm:block w-px h-8 bg-gray-200 dark:bg-gray-700"></div>

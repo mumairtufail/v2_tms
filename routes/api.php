@@ -63,6 +63,10 @@ Route::prefix('driver')->name('driver.')->group(function () {
         Route::get('profile', [DriverProfileController::class, 'show']);
         Route::put('profile', [DriverProfileController::class, 'update']);
         Route::put('profile/password', [DriverProfileController::class, 'updatePassword']);
+
+        Route::get('notifications', [\App\Http\Controllers\Api\Driver\NotificationController::class, 'index']);
+        Route::post('notifications/read-all', [\App\Http\Controllers\Api\Driver\NotificationController::class, 'markAllRead']);
+        Route::post('notifications/{notification}/read', [\App\Http\Controllers\Api\Driver\NotificationController::class, 'markRead']);
     });
 });
 

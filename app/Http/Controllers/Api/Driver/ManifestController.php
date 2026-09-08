@@ -52,6 +52,16 @@ class ManifestController extends Controller
 
         $manifest->update(['status' => ManifestStatus::InTransit->value]);
 
+        $manifest->loadMissing('company');
+        if ($manifest->company) {
+            app(\App\Services\NotificationService::class)->driverUpdatedManifestStatus(
+                $manifest,
+                $request->user(),
+                ManifestStatus::InTransit->value,
+                $manifest->company
+            );
+        }
+
         return new DriverManifestResource($manifest);
     }
 
@@ -80,6 +90,16 @@ class ManifestController extends Controller
         }
 
         $manifest->update(['status' => ManifestStatus::Completed->value]);
+
+        $manifest->loadMissing('company');
+        if ($manifest->company) {
+            app(\App\Services\NotificationService::class)->driverUpdatedManifestStatus(
+                $manifest,
+                $request->user(),
+                ManifestStatus::Completed->value,
+                $manifest->company
+            );
+        }
 
         return new DriverManifestResource($manifest);
     }

@@ -76,6 +76,17 @@ class OrderController extends Controller
             'changed_by_user_id' => $userId,
             'note' => $note,
         ]);
+
+        $driver = \App\Models\User::find($userId);
+        if ($driver) {
+            app(\App\Services\NotificationService::class)->driverUpdatedOrderStatus(
+                $order->fresh(['customer', 'company']),
+                $driver,
+                $from->value,
+                $to->value,
+                $note
+            );
+        }
     }
 
     private function authorizeOrder(Request $request, Order $order): void
