@@ -9,6 +9,7 @@ use App\Http\Resources\Driver\DriverManifestResource;
 use App\Models\Manifest;
 use App\Models\Order;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ManifestController extends Controller
 {
@@ -65,15 +66,7 @@ class ManifestController extends Controller
             ], 422);
         }
 
-        $orderIds = $manifest->directOrders()->pluck('id')
-            ->merge($manifest->orders()->pluck('orders.id'))
-            ->unique();
-
-        $unresolvedOrders = Order::whereIn('id', $orderIds)
-            ->whereNotIn('status', [OrderStatus::Delivered->value, OrderStatus::Cancelled->value])
-            ->exists();
-
-        if ($unresolvedOrders) {
+        if ($this->hasUnresolvedOrders($manifest)) {
             return response()->json([
                 'message' => 'Complete all orders before completing the manifest.',
             ], 422);
@@ -82,6 +75,51 @@ class ManifestController extends Controller
         $manifest->update(['status' => ManifestStatus::Completed->value]);
 
         return new DriverManifestResource($manifest);
+    }
+
+    /**
+     * Generic status update: any source -> any target status is allowed, unlike
+     * start()/complete() which each only accept one fixed transition. `note` is
+     * accepted for forward-compatibility but isn't persisted anywhere yet — there's
+     * no manifest-level status history table (unlike orders' OrderStatusHistory).
+     */
+    public function updateStatus(Request $request, Manifest $manifest)
+    {
+        $this->authorizeManifest($request, $manifest);
+
+        $data = $request->validate([
+            'status' => ['required', 'string', Rule::in(array_column(ManifestStatus::cases(), 'value'))],
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $target = ManifestStatus::from($data['status']);
+
+        if ($target === ManifestStatus::Completed && $this->hasUnresolvedOrders($manifest)) {
+            return response()->json([
+                'message' => 'Complete all orders before completing the manifest.',
+            ], 422);
+        }
+
+        $manifest->update(['status' => $target->value]);
+
+        $manifest->load(['directOrders.customer', 'directOrders.stops', 'orders.customer', 'orders.stops']);
+        $manifest->setRelation(
+            'orders',
+            $manifest->directOrders->merge($manifest->orders)->unique('id')->values()
+        );
+
+        return new DriverManifestResource($manifest);
+    }
+
+    private function hasUnresolvedOrders(Manifest $manifest): bool
+    {
+        $orderIds = $manifest->directOrders()->pluck('id')
+            ->merge($manifest->orders()->pluck('orders.id'))
+            ->unique();
+
+        return Order::whereIn('id', $orderIds)
+            ->whereNotIn('status', [OrderStatus::Delivered->value, OrderStatus::Cancelled->value])
+            ->exists();
     }
 
     private function driverManifests(Request $request)

@@ -9,6 +9,7 @@ use App\Models\Manifest;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
 {
@@ -21,23 +22,28 @@ class OrderController extends Controller
         return new DriverOrderResource($order);
     }
 
+    /**
+     * Any source -> any of the driver-workflow statuses is allowed (no forced
+     * sequence). The pre-dispatch, web-only statuses (draft/new/quoted/no_quote)
+     * are rejected via the allow-list — drivers never set those. Cancellation
+     * still goes through cancel(), which requires a reason.
+     */
     public function updateStatus(Request $request, Order $order)
     {
         $this->authorizeOrder($request, $order);
 
+        $allowedStatuses = collect(OrderStatus::driverWorkflow())
+            ->push(OrderStatus::Cancelled)
+            ->map(fn (OrderStatus $status) => $status->value)
+            ->all();
+
         $data = $request->validate([
-            'status' => ['required', 'string'],
+            'status' => ['required', 'string', Rule::in($allowedStatuses)],
             'note' => ['nullable', 'string', 'max:500'],
         ]);
 
         $current = OrderStatus::tryFrom((string) $order->status);
-        $target = OrderStatus::tryFrom($data['status']);
-
-        if (!$current || !$target || !$current->canTransitionTo($target)) {
-            return response()->json([
-                'message' => "That status change isn't allowed from the order's current status.",
-            ], 422);
-        }
+        $target = OrderStatus::from($data['status']);
 
         $this->recordTransition($order, $current, $target, $request->user()->id, $data['note'] ?? null);
 
@@ -65,13 +71,13 @@ class OrderController extends Controller
         return new DriverOrderResource($order->refresh());
     }
 
-    private function recordTransition(Order $order, OrderStatus $from, OrderStatus $to, int $userId, ?string $note): void
+    private function recordTransition(Order $order, ?OrderStatus $from, OrderStatus $to, int $userId, ?string $note): void
     {
         $order->update(['status' => $to->value]);
 
         OrderStatusHistory::create([
             'order_id' => $order->id,
-            'from_status' => $from->value,
+            'from_status' => $from?->value,
             'to_status' => $to->value,
             'changed_by_user_id' => $userId,
             'note' => $note,

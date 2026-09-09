@@ -124,7 +124,7 @@ class DriverManifestOrderTest extends TestCase
             ->assertJsonPath('data.status', 'completed');
     }
 
-    public function test_order_status_only_advances_one_legal_step_at_a_time()
+    public function test_order_status_can_jump_directly_to_any_driver_workflow_status()
     {
         [$company, $driver, $token] = $this->makeDriver();
 
@@ -146,26 +146,57 @@ class DriverManifestOrderTest extends TestCase
             'order_number' => 'ORD-'.uniqid(),
         ]);
 
-        // Illegal jump: warehousing -> delivered directly.
+        // Skipping straight to delivered is now allowed (no forced sequence).
         $this->withHeader('Authorization', "Bearer {$token}")
             ->postJson("/api/driver/orders/{$order->id}/status", ['status' => 'delivered'])
-            ->assertStatus(422);
-
-        // Legal step: warehousing -> picked_up.
-        $this->withHeader('Authorization', "Bearer {$token}")
-            ->postJson("/api/driver/orders/{$order->id}/status", ['status' => 'picked_up'])
             ->assertOk()
-            ->assertJsonPath('data.status', 'picked_up');
+            ->assertJsonPath('data.status', 'delivered');
 
         $this->assertDatabaseHas('order_status_histories', [
             'order_id' => $order->id,
             'from_status' => 'warehousing',
-            'to_status' => 'picked_up',
+            'to_status' => 'delivered',
             'changed_by_user_id' => $driver->id,
         ]);
+
+        // Moving backward is also allowed.
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson("/api/driver/orders/{$order->id}/status", ['status' => 'picked_up'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'picked_up');
     }
 
-    public function test_cancelled_order_can_no_longer_change_status()
+    public function test_order_status_rejects_pre_dispatch_web_only_values()
+    {
+        [$company, $driver, $token] = $this->makeDriver();
+
+        $manifest = Manifest::create([
+            'company_id' => $company->id,
+            'code' => 'M-PREDISPATCH-'.uniqid(),
+            'status' => 'dispatched',
+            'start_date' => '2026-07-27',
+            'previous_stop' => 'Chicago, IL',
+            'next_stop' => 'Detroit, MI',
+        ]);
+        ManifestDriver::create(['manifest_id' => $manifest->id, 'driver_id' => $driver->id]);
+
+        $order = Order::create([
+            'company_id' => $company->id,
+            'manifest_id' => $manifest->id,
+            'order_type' => 'point_to_point',
+            'status' => 'warehousing',
+            'order_number' => 'ORD-'.uniqid(),
+        ]);
+
+        foreach (['draft', 'new', 'quoted', 'no_quote'] as $status) {
+            $this->withHeader('Authorization', "Bearer {$token}")
+                ->postJson("/api/driver/orders/{$order->id}/status", ['status' => $status])
+                ->assertStatus(422)
+                ->assertJsonValidationErrors('status');
+        }
+    }
+
+    public function test_cancelled_order_can_be_moved_back_into_the_driver_workflow()
     {
         [$company, $driver, $token] = $this->makeDriver();
 
@@ -192,8 +223,74 @@ class DriverManifestOrderTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.status', 'cancelled');
 
+        // Under the relaxed rules, cancelled is no longer a hard dead end via /status.
         $this->withHeader('Authorization', "Bearer {$token}")
             ->postJson("/api/driver/orders/{$order->id}/status", ['status' => 'picked_up'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'picked_up');
+    }
+
+    public function test_manifest_status_endpoint_allows_any_source_to_any_target()
+    {
+        [$company, $driver, $token] = $this->makeDriver();
+
+        $manifest = Manifest::create([
+            'company_id' => $company->id,
+            'code' => 'M-STATUS-'.uniqid(),
+            'status' => 'pending',
+            'start_date' => '2026-07-27',
+            'previous_stop' => 'Chicago, IL',
+            'next_stop' => 'Detroit, MI',
+        ]);
+        ManifestDriver::create(['manifest_id' => $manifest->id, 'driver_id' => $driver->id]);
+
+        $order = Order::create([
+            'company_id' => $company->id,
+            'manifest_id' => $manifest->id,
+            'order_type' => 'point_to_point',
+            'status' => 'delivered',
+            'order_number' => 'ORD-'.uniqid(),
+        ]);
+
+        // Jumping straight from pending to in_transit (skipping dispatched) is allowed.
+        $response = $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson("/api/driver/manifests/{$manifest->id}/status", ['status' => 'in_transit', 'note' => 'Rolling now'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'in_transit');
+
+        // Orders are eager-loaded on this endpoint, unlike start()/complete().
+        $this->assertNotEmpty($response->json('data.orders'));
+
+        // The "all orders resolved" guard is still enforced for completed.
+        $order->update(['status' => 'in_transit']);
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson("/api/driver/manifests/{$manifest->id}/status", ['status' => 'completed'])
             ->assertStatus(422);
+
+        $order->update(['status' => 'delivered']);
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson("/api/driver/manifests/{$manifest->id}/status", ['status' => 'completed'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'completed');
+    }
+
+    public function test_manifest_status_rejects_unrecognized_value()
+    {
+        [$company, $driver, $token] = $this->makeDriver();
+
+        $manifest = Manifest::create([
+            'company_id' => $company->id,
+            'code' => 'M-BADSTATUS-'.uniqid(),
+            'status' => 'pending',
+            'start_date' => '2026-07-27',
+            'previous_stop' => 'Chicago, IL',
+            'next_stop' => 'Detroit, MI',
+        ]);
+        ManifestDriver::create(['manifest_id' => $manifest->id, 'driver_id' => $driver->id]);
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson("/api/driver/manifests/{$manifest->id}/status", ['status' => 'not_a_real_status'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('status');
     }
 }

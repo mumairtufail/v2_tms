@@ -51,6 +51,7 @@ Route::prefix('driver')->name('driver.')->group(function () {
         Route::get('manifests/{manifest}', [DriverManifestController::class, 'show']);
         Route::post('manifests/{manifest}/start', [DriverManifestController::class, 'start']);
         Route::post('manifests/{manifest}/complete', [DriverManifestController::class, 'complete']);
+        Route::post('manifests/{manifest}/status', [DriverManifestController::class, 'updateStatus']);
 
         Route::get('orders/{order}', [DriverOrderController::class, 'show']);
         Route::post('orders/{order}/status', [DriverOrderController::class, 'updateStatus']);
