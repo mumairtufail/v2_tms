@@ -88,12 +88,12 @@ class OrderController extends Controller
             app(\App\Services\NotificationService::class)->driverUpdatedOrderStatus(
                 $order->fresh(['customer', 'company']),
                 $driver,
-                $from->value,
+                $from?->value ?? 'unknown',
                 $to->value,
                 $note
             );
 
-            $fromLabel = str_replace('_', ' ', $from->value);
+            $fromLabel = str_replace('_', ' ', $from?->value ?? 'unknown');
             $toLabel = str_replace('_', ' ', $to->value);
             app(\App\Services\ActivityLog::class)->log('driver.order.status', [
                 'order_id' => $order->id,

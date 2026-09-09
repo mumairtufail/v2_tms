@@ -122,6 +122,16 @@ class ManifestController extends Controller
 
         $manifest->update(['status' => $target->value]);
 
+        $manifest->loadMissing('company');
+        if ($manifest->company) {
+            app(\App\Services\NotificationService::class)->driverUpdatedManifestStatus(
+                $manifest,
+                $request->user(),
+                $target->value,
+                $manifest->company
+            );
+        }
+
         $manifest->load(['directOrders.customer', 'directOrders.stops', 'orders.customer', 'orders.stops']);
         $manifest->setRelation(
             'orders',
