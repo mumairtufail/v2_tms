@@ -2,24 +2,14 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 use App\Models\Accessorial;
+use App\Models\Company;
+use Illuminate\Database\Seeder;
 
 class AccessorialSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     *
-     * @return void
-     */
     public function run(): void
     {
-        // Truncate the table to start fresh and reset the auto-incrementing ID.
-        // This is generally better than delete() for seeders.
-      DB::table('accessorials')->delete();
-
-
         $accessorialNames = [
             'After hours delivery',
             'After hours pickup',
@@ -78,20 +68,23 @@ class AccessorialSeeder extends Seeder
             'Yard storage',
         ];
 
-        $accessorialsToInsert = [];
-        $companyId = 1; // The company ID to associate these accessorials with.
+        $companies = Company::query()->get();
 
-        // Prepare the array for a bulk insert
-        foreach ($accessorialNames as $name) {
-            $accessorialsToInsert[] = [
-                'name' => $name,
-                'company_id' => $companyId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
+        if ($companies->isEmpty()) {
+            $this->command?->warn('AccessorialSeeder skipped: no companies found. Run company seeders first.');
+
+            return;
         }
 
-        // Insert the data into the database in a single query
-        DB::table('accessorials')->insert($accessorialsToInsert);
+        foreach ($companies as $company) {
+            foreach ($accessorialNames as $name) {
+                Accessorial::firstOrCreate(
+                    [
+                        'company_id' => $company->id,
+                        'name' => $name,
+                    ]
+                );
+            }
+        }
     }
 }

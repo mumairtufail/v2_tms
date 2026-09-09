@@ -8,6 +8,11 @@ class Accessorial extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'company_id',
+        'name',
+    ];
+
     public function orderStops()
     {
         return $this->belongsToMany(OrderStop::class, 'order_stop_accessorials');

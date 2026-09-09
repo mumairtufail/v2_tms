@@ -17,7 +17,7 @@ class EnsureUserIsActive
     public function handle(Request $request, Closure $next): Response
     {
         if (Auth::check() && !$request->session()->has('impersonating_original_id')) {
-            if (Auth::user()->isInactive()) {
+            if (Auth::user()->is_active === 0) {
                 Auth::logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();

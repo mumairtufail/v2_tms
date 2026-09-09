@@ -3,7 +3,7 @@
 @section('title', 'Orders')
 
 @section('content')
-<div class="space-y-4" x-data="{ selected: [], allSelected: false }">
+<div class="space-y-4" x-data="orderLogsPanel()">
     <!-- 1. Breadcrumb -->
     <x-v2-breadcrumb :items="[['label' => 'Orders']]" />
 
@@ -246,6 +246,12 @@
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                             </a>
                             @endif
+                            <button type="button"
+                                    @click.stop="openLogs({{ $order->id }}, {{ json_encode($order->order_number) }})"
+                                    class="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-all"
+                                    title="View activity logs">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            </button>
                             @if(auth()->user()->hasPermission('orders', 'delete'))
                             <button type="button" @click.stop="$dispatch('open-modal', 'delete-order-{{ $order->id }}')" class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all" title="Delete">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
@@ -427,5 +433,106 @@
         </x-slot>
     </x-confirm-modal>
     @endforeach
+
+    <div x-show="logPanelOpen" class="fixed inset-0 z-50" x-cloak>
+        <div class="absolute inset-0 bg-gray-900/40 backdrop-blur-[1px] transition-opacity"
+             x-show="logPanelOpen"
+             x-transition:enter="ease-out duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             @click="closeLogs()"></div>
+
+        <aside class="absolute right-0 top-0 h-full w-full max-w-full sm:w-1/2 bg-white dark:bg-gray-900 shadow-2xl border-l border-gray-200 dark:border-gray-800 flex flex-col"
+               x-show="logPanelOpen"
+               x-transition:enter="transform transition ease-out duration-300"
+               x-transition:enter-start="translate-x-full"
+               x-transition:enter-end="translate-x-0"
+               x-transition:leave="transform transition ease-in duration-200"
+               x-transition:leave-start="translate-x-0"
+               x-transition:leave-end="translate-x-full"
+               @click.stop>
+            <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-800 flex items-start justify-between gap-4">
+                <div>
+                    <p class="text-[11px] font-bold uppercase tracking-widest text-gray-400">Order activity</p>
+                    <h2 class="text-lg font-bold text-gray-900 dark:text-white mt-0.5" x-text="logOrderNumber ? ('Order #' + logOrderNumber) : 'Order logs'"></h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Who added, updated, or changed this order</p>
+                </div>
+                <button type="button" @click="closeLogs()" class="p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto px-5 py-5">
+                <template x-if="logsLoading">
+                    <p class="text-sm text-gray-500 dark:text-gray-400 text-center py-10">Loading activity...</p>
+                </template>
+
+                <template x-if="!logsLoading && logs.length === 0">
+                    <p class="text-sm text-gray-500 dark:text-gray-400 text-center py-10">No activity recorded for this order yet.</p>
+                </template>
+
+                <ol class="relative border-l border-gray-200 dark:border-gray-700 ml-3" x-show="!logsLoading && logs.length > 0">
+                    <template x-for="log in logs" :key="log.id">
+                        <li class="mb-8 ml-6">
+                            <span class="absolute -left-3 flex items-center justify-center w-6 h-6 rounded-full ring-4 ring-white dark:ring-gray-900"
+                                  :class="log.successful ? 'bg-primary-100 text-primary-600 dark:bg-primary-900/40 dark:text-primary-300' : 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300'">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            </span>
+                            <p class="text-sm text-gray-900 dark:text-white">
+                                <span class="font-semibold" x-text="log.actor"></span>
+                                <span class="text-gray-600 dark:text-gray-300" x-text="' ' + log.description"></span>
+                            </p>
+                            <p class="text-xs text-gray-400 mt-1" x-text="log.created_at_label + ' · ' + log.created_at_human"></p>
+                        </li>
+                    </template>
+                </ol>
+            </div>
+        </aside>
+    </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+function orderLogsPanel() {
+    return {
+        selected: [],
+        allSelected: false,
+        logPanelOpen: false,
+        logsLoading: false,
+        logs: [],
+        logOrderNumber: '',
+        logsUrlTemplate: @json(route('v2.orders.activity-logs', ['company' => $company->slug, 'order' => '__ORDER__'])),
+        async openLogs(orderId, orderNumber) {
+            this.logPanelOpen = true;
+            this.logOrderNumber = orderNumber;
+            this.logs = [];
+            this.logsLoading = true;
+            document.body.classList.add('overflow-hidden');
+            try {
+                const url = this.logsUrlTemplate.replace('__ORDER__', orderId);
+                const response = await fetch(url, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin',
+                });
+                if (!response.ok) throw new Error('Failed to load logs');
+                const data = await response.json();
+                this.logs = data.logs || [];
+                this.logOrderNumber = data.order_number || orderNumber;
+            } catch (e) {
+                this.logs = [];
+            } finally {
+                this.logsLoading = false;
+            }
+        },
+        closeLogs() {
+            this.logPanelOpen = false;
+            document.body.classList.remove('overflow-hidden');
+        },
+    };
+}
+</script>
+@endpush

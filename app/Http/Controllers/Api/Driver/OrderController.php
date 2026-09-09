@@ -82,6 +82,25 @@ class OrderController extends Controller
             'changed_by_user_id' => $userId,
             'note' => $note,
         ]);
+
+        $driver = \App\Models\User::find($userId);
+        if ($driver) {
+            app(\App\Services\NotificationService::class)->driverUpdatedOrderStatus(
+                $order->fresh(['customer', 'company']),
+                $driver,
+                $from->value,
+                $to->value,
+                $note
+            );
+
+            $fromLabel = str_replace('_', ' ', $from->value);
+            $toLabel = str_replace('_', ' ', $to->value);
+            app(\App\Services\ActivityLog::class)->log('driver.order.status', [
+                'order_id' => $order->id,
+                'company_id' => $order->company_id,
+                'description' => "Updated order status from {$fromLabel} to {$toLabel}",
+            ]);
+        }
     }
 
     private function authorizeOrder(Request $request, Order $order): void

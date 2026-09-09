@@ -22,6 +22,10 @@ Route::middleware(['auth', CompanyScope::class])->prefix('{company}')->name('v2.
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
 
+    Route::get('notifications', [\App\Http\Controllers\V2\NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('notifications/read-all', [\App\Http\Controllers\V2\NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+    Route::post('notifications/{notification}/read', [\App\Http\Controllers\V2\NotificationController::class, 'markRead'])->name('notifications.read');
+
     // Users Management - Order matters! Specific routes before parameterized ones
     Route::middleware(['permission:users,create'])->group(function () {
         Route::get('users/create', [\App\Http\Controllers\V2\CompanyUsersController::class, 'create'])->name('users.create');
@@ -64,6 +68,7 @@ Route::middleware(['auth', CompanyScope::class])->prefix('{company}')->name('v2.
     Route::middleware(['permission:orders,view'])->group(function () {
         Route::get('orders', [\App\Http\Controllers\V2\OrderController::class, 'index'])->name('orders.index');
         Route::get('orders/{order}/edit', [\App\Http\Controllers\V2\OrderController::class, 'edit'])->name('orders.edit');
+        Route::get('orders/{order}/activity-logs', [\App\Http\Controllers\V2\OrderController::class, 'activityLogs'])->name('orders.activity-logs');
         Route::get('orders/search-customers', [\App\Http\Controllers\V2\OrderController::class, 'searchCustomers'])->name('orders.search-customers');
         Route::get('contact-book', [\App\Http\Controllers\V2\ContactBookController::class, 'index'])->name('contact-book.index');
     });

@@ -42,7 +42,13 @@
     </div>
 </div>
 
-<div class="flex justify-end">
+<div class="flex flex-col sm:flex-row justify-end gap-3">
+    <form method="POST" action="{{ route('portal.orders.store', ['company' => $company->slug]) }}">
+        @csrf
+        <button type="submit" class="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-800 border border-primary-200 dark:border-primary-800 text-primary-700 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 text-sm font-medium rounded-lg transition-colors">
+            New Order
+        </button>
+    </form>
     <a href="{{ route('portal.orders.index', ['company' => $company->slug]) }}"
        class="inline-flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium rounded-lg transition-colors">
         View All Orders

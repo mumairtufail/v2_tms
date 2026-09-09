@@ -15,6 +15,7 @@ class ActivityLogs extends Model
         'user_id',
         'customer_id',
         'company_id',
+        'order_id',
         'action',
         'ip_address',
         'user_agent',
@@ -44,6 +45,11 @@ class ActivityLogs extends Model
         return $this->belongsTo(Company::class);
     }
 
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
+    }
+
     protected function description(): Attribute
     {
         return Attribute::get(fn () => $this->data['description'] ?? $this->action);
@@ -71,5 +77,19 @@ class ActivityLogs extends Model
         }
 
         return $query;
+    }
+
+    public function scopeForOrder($query, int $orderId)
+    {
+        $orderSegment = '/orders/'.$orderId;
+
+        return $query->where(function ($q) use ($orderId, $orderSegment) {
+            $q->where('order_id', $orderId)
+                ->orWhere('data->order_id', (string) $orderId)
+                ->orWhere('data->order_id', $orderId)
+                ->orWhere('url', 'like', '%'.$orderSegment)
+                ->orWhere('url', 'like', '%'.$orderSegment.'/%')
+                ->orWhere('url', 'like', '%'.$orderSegment.'?%');
+        });
     }
 }
