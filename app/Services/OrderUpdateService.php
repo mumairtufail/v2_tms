@@ -76,6 +76,12 @@ class OrderUpdateService
                 }
             }
 
+            // Once booked, status is owned by the booking action and the driver app —
+            // editing the order (details, quote, manifests) must not reset it.
+            if (\App\Enums\OrderStatus::isPastBooking($order->status)) {
+                $nextStatus = $order->status;
+            }
+
             $previousStatus = $order->status;
             $previousManifestIds = $order->stops()->pluck('manifest_id')->filter()->unique()->values()->all();
 

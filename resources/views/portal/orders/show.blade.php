@@ -11,7 +11,7 @@
     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ $order->order_number }}</h1>
-            <p class="text-gray-500 dark:text-gray-400 mt-1">{{ ucfirst(str_replace('_', ' ', $order->order_type)) }} shipment</p>
+            <p class="text-gray-500 dark:text-gray-400 mt-1">{{ $order->order_type_label }} shipment</p>
         </div>
         <span class="inline-flex self-start px-3 py-1 text-sm font-medium rounded-full bg-primary-50 dark:bg-primary-600/10 text-primary-700 dark:text-primary-300">
             {{ ucfirst(str_replace('_', ' ', $order->status)) }}

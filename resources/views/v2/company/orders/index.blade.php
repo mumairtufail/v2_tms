@@ -52,21 +52,7 @@
             <!-- Filter Dropdowns -->
             <div class="sm:col-span-3 lg:col-span-2">
                 <x-filter-select name="status" :value="request('status')" 
-                    :options="[
-                        'new' => 'New', 
-                        'draft' => 'Draft', 
-                        'no_quote' => 'No Quote', 
-                        'quoted' => 'Quoted', 
-                        'booked' => 'Booked', 
-                        'in_transit' => 'In Transit', 
-                        'delivered' => 'Delivered', 
-                        'invoiced' => 'Invoiced',
-                        'paid' => 'Paid',
-                        'active' => 'Active', 
-                        'dispatched' => 'Dispatched', 
-                        'completed' => 'Completed', 
-                        'cancelled' => 'Cancelled'
-                    ]" 
+                    :options="collect(\App\Enums\OrderStatus::cases())->mapWithKeys(fn ($s) => [$s->value => $s->label()])->all()"
                     placeholder="All Status" class="w-full" />
             </div>
             
@@ -139,12 +125,15 @@
                     <td class="px-4 py-2 align-top whitespace-nowrap">
                         @php
                             $typeConfig = [
-                                'point_to_point' => ['label' => 'Origin-to-Destination', 'class' => 'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800'],
-                                'single_shipper' => ['label' => 'Multi-Destination', 'class' => 'bg-purple-50 text-purple-700 border-purple-100 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800'],
-                                'single_consignee' => ['label' => 'Milk Run', 'class' => 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800'],
-                                'sequence' => ['label' => 'Shuttle Loop', 'class' => 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800'],
+                                'point_to_point' => 'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800',
+                                'single_shipper' => 'bg-purple-50 text-purple-700 border-purple-100 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800',
+                                'single_consignee' => 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800',
+                                'sequence' => 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800',
                             ];
-                            $config = $typeConfig[$order->order_type] ?? ['label' => ucfirst(str_replace('_', ' ', $order->order_type)), 'class' => 'bg-gray-50 text-gray-700 border-gray-100'];
+                            $config = [
+                                'label' => $order->order_type_label,
+                                'class' => $typeConfig[$order->order_type] ?? 'bg-gray-50 text-gray-700 border-gray-100',
+                            ];
                         @endphp
                         <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border {{ $config['class'] }}">
                             {{ $config['label'] }}
@@ -174,17 +163,14 @@
                         @endphp
                         <div class="flex flex-col gap-1">
                             @if($shipper)
-                                <div class="flex items-center gap-1.5 text-xs">
-                                    <span class="w-2 h-2 rounded-full bg-green-500 shrink-0"></span>
+                                <div class="flex items-center text-xs">
                                     <div class="flex flex-col">
                                         <span class="font-medium text-gray-800 dark:text-gray-200">{{ $shipper->company_name }}</span>
                                         <span class="text-gray-400">{{ $shipper->city }}, {{ $shipper->state }}</span>
                                     </div>
                                 </div>
                                 @if($consignee)
-                                <div class="w-px h-2 ml-1 bg-gray-300 dark:bg-gray-700"></div>
-                                <div class="flex items-center gap-1.5 text-xs">
-                                    <span class="w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>
+                                <div class="flex items-center text-xs">
                                     <div class="flex flex-col">
                                         <span class="font-medium text-gray-800 dark:text-gray-200">{{ $consignee->company_name }}</span>
                                         <span class="text-gray-400">{{ $consignee->city }}, {{ $consignee->state }}</span>
@@ -207,16 +193,16 @@
                                 'booked' => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800',
                                 'in_transit' => 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800',
                                 'delivered' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
-                                'invoiced' => 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border-purple-200 dark:border-purple-800',
-                                'paid' => 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300 border-teal-200 dark:border-teal-800',
-                                'active' => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800',
-                                'completed' => 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border-purple-200 dark:border-purple-800',
+                                'warehousing' => 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border-purple-200 dark:border-purple-800',
+                                'picked_up' => 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300 border-teal-200 dark:border-teal-800',
                                 'cancelled' => 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800',
                             ];
                             $class = $statusClasses[$order->status] ?? 'bg-gray-100 text-gray-700 border-gray-200';
+                            $statusEnum = \App\Enums\OrderStatus::tryFrom((string) $order->status);
                         @endphp
-                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full border {{ $class }}">
-                            {{ ucfirst(str_replace('_', ' ', $order->status)) }}
+                        <span title="{{ $statusEnum?->label() ?? ucfirst(str_replace('_', ' ', $order->status)) }}"
+                              class="inline-flex items-center justify-center w-11 py-0.5 text-[11px] font-bold tracking-wide rounded border {{ $class }}">
+                            {{ $statusEnum?->shortCode() ?? strtoupper(substr((string) $order->status, 0, 3)) }}
                         </span>
                     </td>
                     
@@ -241,6 +227,14 @@
                                 </button>
                             </form>
                             @endif -->
+                            @if($order->status === 'quoted' && auth()->user()->hasPermission('orders', 'update'))
+                            <form action="{{ route('v2.orders.book', ['company' => $company->slug, 'order' => $order->id]) }}" method="POST" class="inline" @click.stop>
+                                @csrf
+                                <button type="submit" class="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-all" title="Mark as booked">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                </button>
+                            </form>
+                            @endif
                             @if(auth()->user()->hasPermission('orders', 'update'))
                             <a href="{{ route('v2.orders.edit', ['company' => $company->slug, 'order' => $order->id]) }}" class="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-all" title="Edit Order" @click.stop>
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>

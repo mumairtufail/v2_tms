@@ -32,10 +32,6 @@
         <div class="flex items-center justify-between px-5 py-3 shrink-0
                     bg-white dark:bg-[#0f172a] border-b border-slate-200 dark:border-slate-700/60">
             <div class="flex items-center gap-3">
-                <span class="relative flex h-2.5 w-2.5">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-50"></span>
-                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-500"></span>
-                </span>
                 <h3 class="text-[13px] font-extrabold uppercase tracking-widest text-slate-800 dark:text-slate-100">
                     Order Processing &amp; Quoting
                 </h3>
@@ -69,12 +65,12 @@
         </div>
 
         {{-- ════════════════════ SUB-HEADER ════════════════════ --}}
-        <div class="px-5 py-2.5 shrink-0 flex items-center gap-4 flex-wrap
+        <div class="px-5 py-3 shrink-0 flex items-center gap-4 flex-wrap
                     bg-slate-50 dark:bg-slate-800/30 border-b border-slate-200 dark:border-slate-700/60">
             <div class="flex items-center gap-2">
                 <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 whitespace-nowrap">Service</label>
                 <select x-model="quote.service_id"
-                        class="text-[11px] py-1 px-2 rounded-lg border border-slate-300 dark:border-slate-600/60
+                        class="h-8 text-[11px] py-1 pl-2.5 pr-8 rounded-lg border border-slate-300 dark:border-slate-600/60
                                bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200
                                focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 min-w-[140px] shadow-sm">
                     <option value="">Select Service...</option>
@@ -86,39 +82,42 @@
             <div class="flex items-center gap-2">
                 <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 whitespace-nowrap">Est. Start</label>
                 <input type="datetime-local" x-model="quote.delivery_start"
-                       class="text-[11px] py-1 px-2 rounded-lg border border-slate-300 dark:border-slate-600/60
+                       class="h-8 text-[11px] py-1 px-2.5 rounded-lg border border-slate-300 dark:border-slate-600/60
                               bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200
                               focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 shadow-sm">
             </div>
             <div class="flex items-center gap-2">
                 <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 whitespace-nowrap">Est. End</label>
                 <input type="datetime-local" x-model="quote.delivery_end"
-                       class="text-[11px] py-1 px-2 rounded-lg border border-slate-300 dark:border-slate-600/60
+                       class="h-8 text-[11px] py-1 px-2.5 rounded-lg border border-slate-300 dark:border-slate-600/60
                               bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200
                               focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 shadow-sm">
             </div>
-            <div class="flex items-center gap-2 ml-auto flex-wrap">
+            <div class="flex items-center gap-2 ml-auto">
                 <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 whitespace-nowrap">Mass Manifest</label>
                 <select x-model="massManifestId"
-                        class="text-[11px] py-1 px-2 rounded-lg border border-slate-300 dark:border-slate-600/60
+                        class="h-8 text-[11px] py-1 pl-2.5 pr-8 rounded-lg border border-slate-300 dark:border-slate-600/60
                                bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200
-                               focus:ring-2 focus:ring-indigo-400 shadow-sm">
+                               focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 min-w-[140px] shadow-sm">
                     <option value="">Apply to all...</option>
                     <template x-for="manifest in manifests" :key="manifest.id">
                         <option :value="String(manifest.id)" x-text="manifest.code"></option>
                     </template>
                 </select>
                 <button type="button" @click="applyMassManifest()"
-                        class="px-2.5 py-1 text-[10px] font-bold rounded-lg shadow-sm transition-colors bg-indigo-600 text-white hover:bg-indigo-700">Apply</button>
-                <button type="button" @click="createPendingManifest()" :disabled="creatingManifest"
-                        class="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold rounded-lg shadow-sm transition-colors bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed">
+                        class="h-8 px-3 text-[11px] font-semibold rounded-lg shadow-sm transition-colors bg-indigo-600 text-white hover:bg-indigo-700">Apply</button>
+                <button type="button" @click="showNewManifestConfirm = true" :disabled="creatingManifest"
+                        class="inline-flex items-center gap-1.5 h-8 px-3 text-[11px] font-semibold rounded-lg shadow-sm transition-colors bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed">
                     <span x-show="creatingManifest" class="animate-spin" style="display:none;">
                         <svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
                     </span>
-                    <span x-text="creatingManifest ? 'Creating...' : '+ New'"></span>
+                    <svg x-show="!creatingManifest" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    <span x-text="creatingManifest ? 'Creating...' : 'New'"></span>
                 </button>
             </div>
         </div>
@@ -135,7 +134,6 @@
                                 bg-orange-50/80 dark:bg-orange-950/30
                                 border-b border-orange-200/60 dark:border-orange-900/30">
                         <div class="flex items-center gap-2">
-                            <div class="w-2 h-2 rounded-full bg-orange-500 shadow-sm shadow-orange-400/50"></div>
                             <h4 class="text-[11px] font-black uppercase tracking-widest text-orange-600 dark:text-orange-400">Carrier Cost</h4>
                             <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-500 dark:bg-orange-900/40 dark:text-orange-400">Expenses</span>
                         </div>
@@ -200,7 +198,6 @@
                                             {{-- Row 2+: Miscellaneous (label only) --}}
                                             <template x-if="idx >= 2">
                                                 <div class="flex items-center gap-1.5 px-1">
-                                                    <span class="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0"></span>
                                                     <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Miscellaneous</span>
                                                 </div>
                                             </template>
@@ -321,7 +318,6 @@
                                 bg-indigo-50/80 dark:bg-indigo-950/30
                                 border-b border-indigo-200/60 dark:border-indigo-900/30">
                         <div class="flex items-center gap-2">
-                            <div class="w-2 h-2 rounded-full bg-indigo-500 shadow-sm shadow-indigo-400/50"></div>
                             <h4 class="text-[11px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Customer Quote</h4>
                             <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-500 dark:bg-indigo-900/40 dark:text-indigo-400">Revenue</span>
                         </div>
@@ -383,7 +379,6 @@
                                             </template>
                                             <template x-if="idx >= 2">
                                                 <div class="flex items-center gap-1.5 px-1">
-                                                    <span class="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0"></span>
                                                     <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Miscellaneous</span>
                                                 </div>
                                             </template>
@@ -561,6 +556,35 @@
                     </svg>
                     Publish Quote
                 </button>
+            </div>
+        </div>
+
+        {{-- New-manifest confirmation: "New" creates a real manifest and assigns it to every stop, so ask first.
+             Inline background/z-index: those values aren't in the prebuilt CSS. --}}
+        <div x-show="showNewManifestConfirm" x-cloak
+             @keydown.escape.window="showNewManifestConfirm = false"
+             @click.self="showNewManifestConfirm = false"
+             class="absolute inset-0 flex items-center justify-center p-4"
+             style="background-color: rgba(15, 23, 42, 0.45); z-index: 20;">
+            <div class="w-full max-w-sm overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl">
+                <div class="px-5 py-4">
+                    <h4 class="text-sm font-bold text-slate-800 dark:text-slate-100">Create a new manifest?</h4>
+                    <p class="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                        A new pending manifest will be created and assigned to every stop on this order.
+                    </p>
+                </div>
+                <div class="flex items-center justify-end gap-2 px-5 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/80">
+                    <button type="button" @click="showNewManifestConfirm = false"
+                            class="px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all shadow-sm
+                                   text-slate-500 bg-white border border-slate-300 hover:bg-slate-50 hover:text-slate-700
+                                   dark:text-slate-400 dark:bg-transparent dark:border-slate-600/60 dark:hover:bg-slate-700/40 dark:hover:text-slate-200">
+                        Cancel
+                    </button>
+                    <button type="button" @click="showNewManifestConfirm = false; createPendingManifest()"
+                            class="px-4 py-1.5 text-[11px] font-bold rounded-lg shadow-sm transition-colors bg-emerald-600 text-white hover:bg-emerald-700">
+                        Create manifest
+                    </button>
+                </div>
             </div>
         </div>
 

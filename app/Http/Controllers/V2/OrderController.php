@@ -128,6 +128,65 @@ class OrderController extends Controller
     }
 
     /**
+     * Mark a quoted order as booked. Booking hands the order over to the driver side:
+     * from here on its status is moved by the driver app, not by web edits.
+     */
+    public function book(Request $request, Company $company, Order $order)
+    {
+        abort_unless($order->company_id === $company->id, 404);
+
+        if ($order->status !== \App\Enums\OrderStatus::Quoted->value) {
+            Toast::error('Only quoted orders can be marked as booked.');
+            return back();
+        }
+
+        $this->changeStatus($order, \App\Enums\OrderStatus::Booked);
+        app(\App\Services\NotificationService::class)->orderBookedForCustomer($order->loadMissing('customer'), $company);
+
+        Toast::success("Order {$order->order_number} marked as booked.");
+        $request->attributes->set('activity_order_id', $order->id);
+        $request->attributes->set('activity_description', 'Marked the order as booked');
+
+        return back();
+    }
+
+    /**
+     * Revert a booking back to Quoted. Only allowed while the order is still Booked —
+     * once the driver has moved it along, the booking can no longer be undone.
+     */
+    public function unbook(Request $request, Company $company, Order $order)
+    {
+        abort_unless($order->company_id === $company->id, 404);
+
+        if ($order->status !== \App\Enums\OrderStatus::Booked->value) {
+            Toast::error('Only booked orders the driver has not started can be reverted.');
+            return back();
+        }
+
+        $this->changeStatus($order, \App\Enums\OrderStatus::Quoted);
+
+        Toast::success("Order {$order->order_number} moved back to quoted.");
+        $request->attributes->set('activity_order_id', $order->id);
+        $request->attributes->set('activity_description', 'Moved the order back to quoted');
+
+        return back();
+    }
+
+    private function changeStatus(Order $order, \App\Enums\OrderStatus $to): void
+    {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($order, $to) {
+            \App\Models\OrderStatusHistory::create([
+                'order_id' => $order->id,
+                'from_status' => $order->status,
+                'to_status' => $to->value,
+                'changed_by_user_id' => Auth::id(),
+            ]);
+
+            $order->update(['status' => $to->value]);
+        });
+    }
+
+    /**
      * Remove the order.
      */
     public function destroy(Company $company, Order $order)

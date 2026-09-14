@@ -23,10 +23,11 @@ class OrderController extends Controller
     }
 
     /**
-     * Any source -> any of the driver-workflow statuses is allowed (no forced
-     * sequence). The pre-dispatch, web-only statuses (draft/new/quoted/no_quote)
-     * are rejected via the allow-list — drivers never set those. Cancellation
-     * still goes through cancel(), which requires a reason.
+     * Once the order is booked, any source -> any of the driver-workflow statuses
+     * is allowed (no forced sequence). The pre-dispatch, web-only statuses
+     * (draft/new/quoted/no_quote) are rejected as targets via the allow-list, and
+     * orders still sitting in one of them are rejected until the office books them.
+     * Cancellation still goes through cancel(), which requires a reason.
      */
     public function updateStatus(Request $request, Order $order)
     {
@@ -43,6 +44,11 @@ class OrderController extends Controller
         ]);
 
         $current = OrderStatus::tryFrom((string) $order->status);
+
+        if ($current?->isPreBooking()) {
+            return $this->notBookedResponse();
+        }
+
         $target = OrderStatus::from($data['status']);
 
         $this->recordTransition($order, $current, $target, $request->user()->id, $data['note'] ?? null);
@@ -60,6 +66,10 @@ class OrderController extends Controller
 
         $current = OrderStatus::tryFrom((string) $order->status);
 
+        if ($current?->isPreBooking()) {
+            return $this->notBookedResponse();
+        }
+
         if (!$current || !$current->canTransitionTo(OrderStatus::Cancelled)) {
             return response()->json([
                 'message' => 'This order can no longer be cancelled.',
@@ -69,6 +79,13 @@ class OrderController extends Controller
         $this->recordTransition($order, $current, OrderStatus::Cancelled, $request->user()->id, $data['reason']);
 
         return new DriverOrderResource($order->refresh());
+    }
+
+    private function notBookedResponse()
+    {
+        return response()->json([
+            'message' => "This order hasn't been booked yet.",
+        ], 422);
     }
 
     private function recordTransition(Order $order, ?OrderStatus $from, OrderStatus $to, int $userId, ?string $note): void

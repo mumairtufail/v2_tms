@@ -196,6 +196,83 @@ class DriverManifestOrderTest extends TestCase
         }
     }
 
+    public function test_driver_cannot_change_an_order_that_has_not_been_booked()
+    {
+        [$company, $driver, $token] = $this->makeDriver();
+
+        $manifest = Manifest::create([
+            'company_id' => $company->id,
+            'code' => 'M-UNBOOKED-'.uniqid(),
+            'status' => 'dispatched',
+            'start_date' => '2026-07-27',
+            'previous_stop' => 'Chicago, IL',
+            'next_stop' => 'Detroit, MI',
+        ]);
+        ManifestDriver::create(['manifest_id' => $manifest->id, 'driver_id' => $driver->id]);
+
+        foreach (['new', 'quoted'] as $status) {
+            $order = Order::create([
+                'company_id' => $company->id,
+                'manifest_id' => $manifest->id,
+                'order_type' => 'point_to_point',
+                'status' => $status,
+                'order_number' => 'ORD-'.uniqid(),
+            ]);
+
+            $this->withHeader('Authorization', "Bearer {$token}")
+                ->postJson("/api/driver/orders/{$order->id}/status", ['status' => 'warehousing'])
+                ->assertStatus(422)
+                ->assertJsonPath('message', "This order hasn't been booked yet.");
+
+            $this->withHeader('Authorization', "Bearer {$token}")
+                ->postJson("/api/driver/orders/{$order->id}/cancel", ['reason' => 'Not needed'])
+                ->assertStatus(422)
+                ->assertJsonPath('message', "This order hasn't been booked yet.");
+
+            $this->assertSame($status, $order->fresh()->status);
+        }
+    }
+
+    public function test_booked_order_is_handed_to_the_driver_workflow()
+    {
+        [$company, $driver, $token] = $this->makeDriver();
+
+        $manifest = Manifest::create([
+            'company_id' => $company->id,
+            'code' => 'M-BOOKED-'.uniqid(),
+            'status' => 'dispatched',
+            'start_date' => '2026-07-27',
+            'previous_stop' => 'Chicago, IL',
+            'next_stop' => 'Detroit, MI',
+        ]);
+        ManifestDriver::create(['manifest_id' => $manifest->id, 'driver_id' => $driver->id]);
+
+        $order = Order::create([
+            'company_id' => $company->id,
+            'manifest_id' => $manifest->id,
+            'order_type' => 'point_to_point',
+            'status' => 'booked',
+            'order_number' => 'ORD-'.uniqid(),
+        ]);
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson("/api/driver/orders/{$order->id}")
+            ->assertOk()
+            ->assertJsonPath('data.status_label', 'Booked')
+            ->assertJsonPath('data.next_status', 'warehousing');
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson("/api/driver/orders/{$order->id}/status", ['status' => 'warehousing'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'warehousing');
+
+        $this->assertDatabaseHas('order_status_histories', [
+            'order_id' => $order->id,
+            'from_status' => 'booked',
+            'to_status' => 'warehousing',
+        ]);
+    }
+
     public function test_cancelled_order_can_be_moved_back_into_the_driver_workflow()
     {
         [$company, $driver, $token] = $this->makeDriver();

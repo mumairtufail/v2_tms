@@ -26,6 +26,24 @@ class Order extends Model
         'quickbooks_invoice_id',
     ];
 
+    // Display labels for order_type. The stored keys stay as-is; only the UI wording changes.
+    public const TYPE_LABELS = [
+        'point_to_point'   => 'Origin-to-Destination',
+        'single_shipper'   => 'Multi-Destination',
+        'single_consignee' => 'Milk Run',
+        'sequence'         => 'Shuttle Loop',
+    ];
+
+    public static function typeLabel(?string $type): string
+    {
+        return self::TYPE_LABELS[$type] ?? ucfirst(str_replace('_', ' ', (string) $type));
+    }
+
+    public function getOrderTypeLabelAttribute(): string
+    {
+        return self::typeLabel($this->order_type);
+    }
+
     public function customer()
     {
         return $this->belongsTo(Customer::class);

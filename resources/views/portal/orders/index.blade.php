@@ -21,7 +21,7 @@
     <form method="GET" class="flex flex-col sm:flex-row gap-3">
         <input type="text" name="search" value="{{ request('search') }}" placeholder="Search order #, ref, PO..."
             class="flex-1 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-primary-500 focus:border-primary-500" />
-        <select name="status" class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+        <select name="status" class="pl-4 pr-10 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
             <option value="">All Statuses</option>
             @foreach(['draft', 'new', 'quoted', 'booked', 'in_transit', 'delivered'] as $status)
                 <option value="{{ $status }}" @selected(request('status') === $status)>{{ ucfirst(str_replace('_', ' ', $status)) }}</option>
@@ -58,7 +58,7 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                            {{ ucfirst(str_replace('_', ' ', $order->order_type)) }}
+                            {{ $order->order_type_label }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                             {{ $order->manifest?->code ?? '—' }}
@@ -99,25 +99,28 @@
         @endif
     </div>
 
-    <div x-show="logPanelOpen" class="fixed inset-0 z-50" x-cloak>
-        <div class="absolute inset-0 bg-gray-900/40 backdrop-blur-[1px] transition-opacity"
+    <div x-show="logPanelOpen" class="fixed inset-0 z-50" x-cloak @keydown.escape.window="closeLogs()">
+        <div class="absolute inset-0 transition-opacity"
+             style="background-color: rgba(17, 24, 39, 0.15);"
              x-show="logPanelOpen"
-             x-transition:enter="ease-out duration-300"
+             x-transition:enter="ease-out duration-200"
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100"
-             x-transition:leave="ease-in duration-200"
+             x-transition:leave="ease-in duration-150"
              x-transition:leave-start="opacity-100"
              x-transition:leave-end="opacity-0"
              @click="closeLogs()"></div>
 
-        <aside class="absolute right-0 top-0 h-full w-full max-w-full sm:w-1/2 bg-white dark:bg-gray-900 shadow-2xl border-l border-gray-200 dark:border-gray-800 flex flex-col"
+        {{-- Compact floating card anchored top-right (inline sizing: these values aren't in the prebuilt CSS) --}}
+        <aside class="absolute right-4 w-full max-w-sm bg-white dark:bg-gray-900 shadow-2xl rounded-2xl border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden"
+               style="top: 5rem; max-height: calc(100vh - 7rem); width: calc(100% - 2rem);"
                x-show="logPanelOpen"
-               x-transition:enter="transform transition ease-out duration-300"
-               x-transition:enter-start="translate-x-full"
-               x-transition:enter-end="translate-x-0"
-               x-transition:leave="transform transition ease-in duration-200"
-               x-transition:leave-start="translate-x-0"
-               x-transition:leave-end="translate-x-full"
+               x-transition:enter="transform transition ease-out duration-200"
+               x-transition:enter-start="translate-x-full opacity-0"
+               x-transition:enter-end="translate-x-0 opacity-100"
+               x-transition:leave="transform transition ease-in duration-150"
+               x-transition:leave-start="translate-x-0 opacity-100"
+               x-transition:leave-end="translate-x-full opacity-0"
                @click.stop>
             <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-800 flex items-start justify-between gap-4">
                 <div>
@@ -141,7 +144,7 @@
 
                 <ol class="relative border-l border-gray-200 dark:border-gray-700 ml-3" x-show="!logsLoading && logs.length > 0">
                     <template x-for="log in logs" :key="log.id">
-                        <li class="mb-8 ml-6">
+                        <li class="mb-6 ml-6">
                             <span class="absolute -left-3 flex items-center justify-center w-6 h-6 rounded-full ring-4 ring-white dark:ring-gray-900"
                                   :class="log.successful ? 'bg-primary-100 text-primary-600 dark:bg-primary-900/40 dark:text-primary-300' : 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300'">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>

@@ -101,6 +101,24 @@ class NotificationService
         ));
     }
 
+    public function orderBookedForCustomer(Order $order, Company $company): void
+    {
+        $customer = $order->customer;
+        if (!$customer) {
+            return;
+        }
+
+        $this->notifyCustomer($customer, $this->payload(
+            type: 'order_booked',
+            title: 'Your order has been booked',
+            body: "Order #{$order->order_number} is booked.",
+            icon: 'order',
+            url: route('portal.orders.show', ['company' => $company->slug, 'order' => $order->id]),
+            companyId: $company->id,
+            orderId: $order->id,
+        ));
+    }
+
     public function orderAssignedToManifest(Order $order, Manifest $manifest, Company $company): void
     {
         $order->loadMissing('customer');

@@ -78,6 +78,8 @@ Route::middleware(['auth', CompanyScope::class])->prefix('{company}')->name('v2.
     Route::middleware(['permission:orders,update'])->group(function () {
         Route::patch('orders/{order}', [\App\Http\Controllers\V2\OrderController::class, 'update'])->name('orders.update');
         Route::post('orders/{order}/sync-quickbooks', [\App\Http\Controllers\V2\OrderController::class, 'syncToQuickBooks'])->name('orders.sync-quickbooks');
+        Route::post('orders/{order}/book', [\App\Http\Controllers\V2\OrderController::class, 'book'])->name('orders.book');
+        Route::post('orders/{order}/unbook', [\App\Http\Controllers\V2\OrderController::class, 'unbook'])->name('orders.unbook');
     });
     Route::middleware(['permission:orders,delete'])->group(function () {
         Route::delete('orders/{order}', [\App\Http\Controllers\V2\OrderController::class, 'destroy'])->name('orders.destroy');

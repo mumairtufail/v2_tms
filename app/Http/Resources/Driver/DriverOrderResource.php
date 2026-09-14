@@ -22,6 +22,7 @@ class DriverOrderResource extends JsonResource
             'next_status' => $status?->nextDriverStatus()?->value,
             'next_status_label' => $status?->nextDriverStatus()?->label(),
             'order_type' => $this->order_type,
+            'order_type_label' => $this->order_type_label,
             'ref_number' => $this->ref_number,
             'customer_po_number' => $this->customer_po_number,
             'special_instructions' => $this->special_instructions,
