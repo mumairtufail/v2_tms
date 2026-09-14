@@ -105,15 +105,12 @@
                 class="flex items-center gap-3 p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
                 <div class="w-9 h-9 bg-gradient-to-br from-primary-500 to-accent-600 rounded-xl flex items-center justify-center text-white font-semibold text-sm shadow-sm">
-                    {{ substr(auth()->user()->name, 0, 1) }}
+                    {{ mb_strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}
                 </div>
-                <div class="hidden md:block text-left">
-                    <p class="text-sm font-medium text-gray-700 dark:text-white">{{ auth()->user()->name }}</p>
-                    @if($currentCompany)
-                        <p class="text-xs text-gray-500 dark:text-gray-400">
-                            {{ $currentCompany->name }}@if($currentCompany->shortcode) <span class="font-semibold text-primary-500">[{{ $currentCompany->shortcode }}]</span>@endif
-                        </p>
-                    @endif
+                {{-- Name + role only; email and company live in the dropdown so nothing repeats --}}
+                <div class="hidden md:block text-left min-w-0">
+                    <p class="text-sm font-medium text-gray-800 dark:text-white truncate max-w-[10rem]">{{ auth()->user()->name }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[10rem]">{{ auth()->user()->primaryRoleLabel() }}</p>
                 </div>
                 <svg class="hidden md:block w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
@@ -130,17 +127,25 @@
                 x-transition:leave="transition ease-in duration-150"
                 x-transition:leave-start="opacity-100 scale-100"
                 x-transition:leave-end="opacity-0 scale-95"
-                class="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 py-2 z-50"
+                class="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 py-2 z-50"
                 style="display: none;"
             >
-                <!-- User Info -->
-                <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-                    <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ auth()->user()->name }}</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ auth()->user()->email }}</p>
+                <!-- Account -->
+                <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 space-y-3">
+                    <div class="min-w-0">
+                        <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Signed in as</p>
+                        <p class="mt-0.5 text-sm text-gray-900 dark:text-white truncate" title="{{ auth()->user()->email }}">{{ auth()->user()->email }}</p>
+                    </div>
                     @if($currentCompany)
-                        <p class="text-xs text-gray-500 dark:text-gray-400 truncate mt-1">
-                            {{ $currentCompany->name }}@if($currentCompany->shortcode) &nbsp;<span class="font-semibold text-primary-500">[{{ $currentCompany->shortcode }}]</span>@endif
-                        </p>
+                        <div class="min-w-0">
+                            <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Company</p>
+                            <div class="mt-0.5 flex items-center gap-2">
+                                <p class="min-w-0 flex-1 text-sm text-gray-900 dark:text-white truncate" title="{{ $currentCompany->name }}">{{ $currentCompany->name }}</p>
+                                @if($currentCompany->shortcode)
+                                    <span class="shrink-0 rounded bg-primary-50 dark:bg-primary-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-primary-700 dark:text-primary-300">{{ $currentCompany->shortcode }}</span>
+                                @endif
+                            </div>
+                        </div>
                     @endif
                 </div>
                 

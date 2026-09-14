@@ -15,7 +15,7 @@
 <script>
     window.googleMapsApiKey = @json(config('services.google.maps_api_key'));
 </script>
-<div class="space-y-6" x-data="orderForm()">
+<div class="space-y-5" x-data="orderForm()">
     {{-- 1. Breadcrumb --}}
     @if(!$isPortal)
     <x-v2-breadcrumb :items="[
@@ -42,23 +42,38 @@
         $statusLabel = \App\Enums\OrderStatus::tryFrom((string) $order->status)?->label() ?? ucfirst(str_replace('_', ' ', $order->status));
         $canChangeBooking = !$isPortal && auth()->user()->hasPermission('orders', 'update');
     @endphp
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div class="flex items-center gap-4">
-            <a href="{{ $ordersIndexRoute }}" class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+            <a href="{{ $ordersIndexRoute }}" title="Back to orders" class="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
             </a>
-            @if($isPortal)
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ isset($order) ? 'Order #' . $order->order_number : 'New Order' }}</h1>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Origin-to-destination shipment for {{ $customer->name ?? $order->customer->name ?? 'your account' }}</p>
+            <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                    <h1 class="text-xl font-bold text-gray-900 dark:text-white">
+                        {{ isset($order) ? 'Order #' . $order->order_number : ($isPortal ? 'New Order' : 'New Order Draft') }}
+                    </h1>
+                    <span class="inline-flex items-center px-2 py-0.5 text-[11px] font-semibold rounded-full border {{ $statusClass }}">{{ $statusLabel }}</span>
                 </div>
-            @else
-            <x-page-header :title="isset($order) ? 'Order #' . $order->order_number : 'New Order Draft'" 
-                          :description="'Manage details for ' . ($order->customer->name ?? 'Unknown')" />
-            @endif
+                <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400 truncate">
+                    @if($isPortal)
+                        Origin-to-destination shipment for {{ $customer->name ?? $order->customer->name ?? 'your account' }}
+                    @elseif($order->customer)
+                        <a href="{{ route('v2.customers.edit', ['company' => $company->slug, 'customer' => $order->customer->id]) }}" class="font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 hover:underline">{{ $order->customer->name }}</a>
+                    @else
+                        No customer assigned
+                    @endif
+                </p>
+            </div>
         </div>
-        
+
         <div class="flex items-center gap-2">
+            @unless($isPortal)
+                <x-secondary-button type="button" title="View activity log"
+                    @click="$dispatch('open-order-logs', { id: {{ $order->id }}, number: {{ json_encode($order->order_number) }} })">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Activity
+                </x-secondary-button>
+            @endunless
             @if($canChangeBooking && $order->status === 'quoted')
                 <form method="POST" action="{{ route('v2.orders.book', ['company' => $company->slug, 'order' => $order->id]) }}">
                     @csrf
@@ -82,135 +97,9 @@
         </div>
     </div>
 
-    <div class="flex flex-wrap items-center gap-3 mt-1">
-        <span class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-full border {{ $statusClass }}">
-            Current Status: {{ $statusLabel }}
-        </span>
-        @if($isPortal)
-            <span class="text-xs font-semibold text-gray-600 dark:text-gray-300">
-                Order ID: {{ $order->order_number }}
-            </span>
-        @else
-        <a href="{{ route('v2.orders.edit', ['company' => $company->slug, 'order' => $order->id]) }}" class="text-xs font-semibold text-primary-600 hover:text-primary-700 hover:underline">
-            Order ID: {{ $order->order_number }}
-        </a>
-        @endif
-        @if($order->customer && !$isPortal)
-            <a href="{{ route('v2.customers.edit', ['company' => $company->slug, 'customer' => $order->customer->id]) }}" class="text-xs font-semibold text-primary-600 hover:text-primary-700 hover:underline">
-                Customer: {{ $order->customer->name }}
-            </a>
-        @elseif($isPortal && ($customer ?? $order->customer))
-            <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">
-                Customer: {{ ($customer ?? $order->customer)->name }}
-            </span>
-        @endif
-    </div>
-
-    {{-- 3. Order Type Selection (Modern Radio Style) --}}
-    @if($isPortal)
-    <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm p-5">
-        <div class="flex items-center justify-between">
-            <div>
-                <h3 class="text-[11px] font-bold text-gray-900 dark:text-white uppercase tracking-widest">Order Type</h3>
-                <p class="text-[10px] text-gray-400">Customer portal supports origin-to-destination orders only</p>
-            </div>
-            <div class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase tracking-tighter dark:bg-emerald-900/20">
-                Origin-to-Destination
-            </div>
-        </div>
-    </div>
-    @else
-    <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm p-5">
-        <div class="mb-5 flex items-center justify-between">
-            <div>
-                <h3 class="text-[11px] font-bold text-gray-900 dark:text-white uppercase tracking-widest">Select Strategy</h3>
-                <p class="text-[10px] text-gray-400">Choose the move type for this order</p>
-            </div>
-            <div class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase tracking-tighter dark:bg-emerald-900/20">
-                Mode: {{ $order->order_type_label }}
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            @php
-                $orderTypes = [
-                    'point_to_point' => [
-                        'label' => 'Origin-to-Destination',
-                        'desc' => '1 Pickup / 1 Drop'
-                    ],
-                    'single_shipper' => [
-                        'label' => 'Multi-Destination',
-                        'desc' => '1 Origin / Multi-Drop'
-                    ],
-                    'single_consignee' => [
-                        'label' => 'Milk Run',
-                        'desc' => 'Multi-Pickup / 1 Drop'
-                    ],
-                    'sequence' => [
-                        'label' => 'Shuttle Loop',
-                        'desc' => 'Sequential Chained Legs'
-                    ],
-                ];
-            @endphp
-
-            @foreach($orderTypes as $typeKey => $typeData)
-                @php 
-                    $isSelected = $order->order_type === $typeKey; 
-                    $isLocked = !in_array($typeKey, ['sequence', 'point_to_point']);
-                @endphp
-                <label 
-                    @if($isLocked)
-                        @click.prevent="window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'This strategy is currently under development.', type: 'info' }}))"
-                    @endif
-                    class="relative flex flex-col rounded-xl border-2 p-4 transition-all duration-300 group
-                    {{ $isLocked ? 'cursor-not-allowed opacity-75 bg-gray-50/50 grayscale-[0.5]' : 'cursor-pointer' }}
-                    {{ $isSelected 
-                        ? 'bg-emerald-500 border-emerald-600 shadow-[0_4px_20px_rgba(16,185,129,0.25)]' 
-                        : ($isLocked ? 'border-gray-200' : 'bg-white border-gray-100 hover:border-emerald-200 hover:bg-gray-50/50 dark:bg-gray-900 dark:border-gray-800') }}">
-                    
-                    <input type="radio" name="order_type_selector" value="{{ $typeKey }}" class="sr-only" 
-                        {{ $isSelected ? 'checked' : '' }}
-                        {{ $isLocked ? 'disabled' : '' }}
-                        @if(!$isLocked)
-                            onchange="window.location.href='{{ route('v2.orders.edit', ['company' => $company->slug, 'order' => $order->id]) }}?type={{ $typeKey }}'"
-                        @endif>
-                    
-                    <div class="flex items-center justify-between mb-3">
-                        {{-- Circular Radio --}}
-                        <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300 
-                            {{ $isSelected ? 'border-white bg-white' : ($isLocked ? 'border-gray-200 bg-gray-100' : 'border-gray-300 bg-white group-hover:border-emerald-400') }}">
-                            @if($isSelected)
-                                <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
-                            @elseif($isLocked)
-                                <svg class="w-2.5 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path></svg>
-                            @endif
-                        </div>
-                        
-                        @if($isSelected)
-                            <div class="bg-white/20 rounded-full p-1">
-                                <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-                            </div>
-                        @elseif($isLocked)
-                             <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400 flex items-center gap-1">
-                                <svg class="w-2 h-2" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
-                                Coming Soon
-                             </span>
-                        @endif
-                    </div>
-
-                    <div class="mt-auto">
-                        <span class="block text-[12px] font-bold leading-tight {{ $isSelected ? 'text-white' : 'text-gray-900 dark:text-gray-100' }}">
-                            {{ $typeData['label'] }}
-                        </span>
-                        <span class="block text-[10px] mt-1 font-medium {{ $isSelected ? 'text-emerald-50' : 'text-gray-400' }}">
-                            {{ $isLocked ? 'Feature Locked' : $typeData['desc'] }}
-                        </span>
-                    </div>
-                </label>
-            @endforeach
-        </div>
-    </div>
-    @endif
+    @unless($isPortal)
+        @include('v2.company.orders.partials.activity-log-panel')
+    @endunless
 
     {{-- 4. Main Form --}}
     <form id="orderForm" action="{{ $orderUpdateRoute }}" method="POST" @submit.prevent>
@@ -251,62 +140,109 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 gap-6">
-            {{-- General Info Section --}}
-            <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
-                <div class="flex items-center gap-2 mb-4">
-                    <div class="p-1.5 bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-lg">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    </div>
-                    <h3 class="text-sm font-bold text-gray-900 dark:text-white">Order References</h3>
+        <div class="grid grid-cols-1 gap-5">
+            {{-- Move Type & Order References --}}
+            @php
+                $refLabel = 'block text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase';
+                $refInput = 'mt-1 block w-full py-1.5 text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 rounded-md placeholder:text-gray-400 focus:border-primary-500 focus:ring-primary-500';
+                $orderTypes = [
+                    'point_to_point'   => ['label' => 'Origin-to-Destination', 'desc' => '1 pickup / 1 drop'],
+                    'single_shipper'   => ['label' => 'Multi-Destination',     'desc' => '1 origin / multi-drop'],
+                    'single_consignee' => ['label' => 'Milk Run',              'desc' => 'Multi-pickup / 1 drop'],
+                    'sequence'         => ['label' => 'Shuttle Loop',          'desc' => 'Sequential chained legs'],
+                ];
+            @endphp
+            <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+                    <span class="inline-flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                        <span class="flex h-6 w-6 items-center justify-center rounded-md bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
+                        </span>
+                        Order type
+                    </span>
+
+                    @if($isPortal)
+                        <span class="inline-flex items-center h-8 px-3 rounded-md bg-primary-600 text-sm font-medium text-white">Origin-to-Destination</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">Customer portal supports origin-to-destination orders only</span>
+                    @else
+                        <div class="flex max-w-full overflow-x-auto gap-0.5 p-0.5 rounded-lg bg-gray-100 dark:bg-gray-800" role="radiogroup" aria-label="Order type">
+                            @foreach($orderTypes as $typeKey => $typeData)
+                                @php
+                                    $isSelected = $order->order_type === $typeKey;
+                                    $isLocked = !in_array($typeKey, ['sequence', 'point_to_point']);
+                                @endphp
+                                <label
+                                    @if($isLocked)
+                                        @click.prevent="window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'This strategy is currently under development.', type: 'info' }}))"
+                                    @endif
+                                    title="{{ $isLocked ? 'Coming soon' : $typeData['desc'] }}"
+                                    class="inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-sm whitespace-nowrap transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary-500/40
+                                    {{ $isSelected
+                                        ? 'bg-primary-600 font-medium text-white shadow-sm'
+                                        : ($isLocked ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white cursor-pointer') }}">
+                                    {{-- form="order-type-switch" detaches this radio from #orderForm so it is never submitted; changing type reloads the page. --}}
+                                    <input type="radio" form="order-type-switch" name="order_type_selector" value="{{ $typeKey }}" class="sr-only"
+                                        {{ $isSelected ? 'checked' : '' }}
+                                        {{ $isLocked ? 'disabled' : '' }}
+                                        @if(!$isLocked)
+                                            onchange="window.location.href='{{ route('v2.orders.edit', ['company' => $company->slug, 'order' => $order->id]) }}?type={{ $typeKey }}'"
+                                        @endif>
+                                    @if($isSelected)
+                                        <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+                                    @elseif($isLocked)
+                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
+                                    @endif
+                                    {{ $typeData['label'] }}
+                                    @if($isLocked)
+                                        <span class="text-[10px] font-medium uppercase text-gray-400 dark:text-gray-500">Soon</span>
+                                    @endif
+                                </label>
+                            @endforeach
+                        </div>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">{{ $orderTypes[$order->order_type]['desc'] ?? '' }}</span>
+                    @endif
                 </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4">
                     <div>
-                        <label class="block text-[10px] font-medium text-gray-400 uppercase">Reference Number</label>
-                        <input type="text" name="ref_number" value="{{ old('ref_number', $order->ref_number) }}" class="mt-1 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md" placeholder="Internal/Customer Ref">
+                        <label class="{{ $refLabel }}">Reference Number</label>
+                        <input type="text" name="ref_number" value="{{ old('ref_number', $order->ref_number) }}" class="{{ $refInput }}" placeholder="Internal / customer ref">
                     </div>
                     <div>
-                        <label class="block text-[10px] font-medium text-gray-400 uppercase">Customer PO</label>
-                        <input type="text" name="customer_po_number" value="{{ old('customer_po_number', $order->customer_po_number) }}" class="mt-1 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md" placeholder="PO Number">
+                        <label class="{{ $refLabel }}">Customer PO</label>
+                        <input type="text" name="customer_po_number" value="{{ old('customer_po_number', $order->customer_po_number) }}" class="{{ $refInput }}" placeholder="PO number">
                     </div>
                     <div>
-                        <label class="block text-[10px] font-medium text-gray-400 uppercase">Container Number</label>
-                        <input type="text" name="container_number" x-model="topContainerNumber" @input="onTopContainerInput()" class="mt-1 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md" placeholder="e.g. MSCU1234567">
+                        <label class="{{ $refLabel }}">Container Number</label>
+                        <input type="text" name="container_number" x-model="topContainerNumber" @input="onTopContainerInput()" class="{{ $refInput }}" placeholder="e.g. MSCU1234567">
                     </div>
                     <div>
-                        <label class="block text-[10px] font-medium text-gray-400 uppercase">Special Instructions</label>
-                        <input type="text" name="special_instructions" value="{{ old('special_instructions', $order->special_instructions) }}" class="mt-1 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md" placeholder="Special instructions for this order">
+                        <label class="{{ $refLabel }}">Special Instructions</label>
+                        <input type="text" name="special_instructions" value="{{ old('special_instructions', $order->special_instructions) }}" class="{{ $refInput }}" placeholder="Instructions for this order">
                     </div>
                 </div>
             </div>
 
             {{-- Voyage Legs (Stops) Section --}}
-            <div class="space-y-4">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                        <div class="p-1.5 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                        </div>
-                        <h3 class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Legs (Stops)</h3>
-                        <span class="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-500 rounded text-xs" x-text="stops.length + ' Legs'"></span>
-                    </div>
+            <div class="space-y-3">
+                <div class="flex items-center gap-2">
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Legs</h3>
+                    <span class="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-[11px] font-medium text-gray-500 dark:text-gray-400" x-text="stops.length + (stops.length === 1 ? ' leg' : ' legs')"></span>
                 </div>
-
                 {{-- Stops Summary Table (Rose Rocket style) --}}
                 <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
                     <table class="w-full text-xs">
-                        <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                        <thead class="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
                             <tr>
-                                <th class="px-3 py-2 text-left text-[10px] font-bold text-gray-500 uppercase">Stop #</th>
-                                <th class="px-3 py-2 text-left text-[10px] font-bold text-gray-500 uppercase"
+                                <th class="px-3 py-2 text-left text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase">Stop #</th>
+                                <th class="px-3 py-2 text-left text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase"
                                     x-text="orderType === 'single_consignee' ? 'Pickup (Shipper)' : 'Shipper'"></th>
-                                <th class="px-3 py-2 text-left text-[10px] font-bold text-gray-500 uppercase"
+                                <th class="px-3 py-2 text-left text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase"
                                     x-text="orderType === 'single_shipper' ? 'Delivery (Consignee)' : 'Consignee'"></th>
                                 @if(!$isPortal)
-                                <th class="px-3 py-2 text-left text-[10px] font-bold text-gray-500 uppercase">Manifest</th>
+                                <th class="px-3 py-2 text-left text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase">Manifest</th>
                                 @endif
-                                <th class="px-3 py-2 text-left text-[10px] font-bold text-gray-500 uppercase">Items</th>
+                                <th class="px-3 py-2 text-left text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase">Items</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -348,23 +284,23 @@
                             <div x-show="stopIndex < stops.length - 1" class="absolute left-6 top-12 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-800 z-0"></div>
                             
                             {{-- Stop Card --}}
-                            <div class="relative z-10 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 transition-all hover:shadow-md overflow-hidden" :class="stop.expanded ? 'ring-2 ring-primary-500' : 'group'">
+                            <div class="relative z-10 bg-white dark:bg-gray-900 rounded-xl border transition-shadow overflow-clip" :class="stop.expanded ? 'border-gray-300 dark:border-gray-700 shadow-sm' : 'group border-gray-200 dark:border-gray-800 shadow-sm hover:border-gray-300 dark:hover:border-gray-700'">
                                 {{-- Stop Header --}}
                                 <div @click="stop.expanded = !stop.expanded" class="cursor-pointer p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                                     <div class="flex items-center gap-4">
                                         <div class="flex items-center justify-center w-8 h-8 rounded-full bg-primary-600 text-white text-sm font-bold" x-text="stopIndex + 1"></div>
                                         <div class="flex flex-col">
                                             <div class="flex items-center gap-2">
-                                                <span class="font-bold text-sm text-gray-900 dark:text-white" x-text="stop.shipper.company_name || 'Empty Shipper'"></span>
+                                                <span class="text-sm font-semibold" :class="stop.shipper.company_name ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'" x-text="stop.shipper.company_name || 'Shipper not set'"></span>
                                                 <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                                                <span class="font-bold text-sm text-gray-900 dark:text-white" x-text="stop.consignee.company_name || 'Empty Consignee'"></span>
+                                                <span class="text-sm font-semibold" :class="stop.consignee.company_name ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'" x-text="stop.consignee.company_name || 'Consignee not set'"></span>
                                             </div>
                                             <div class="flex items-center gap-2 text-[10px] text-gray-500 mt-0.5">
-                                                <span x-text="stop.commodities.length + ' items'"></span>
+                                                <span x-text="stop.commodities.length + (stop.commodities.length === 1 ? ' item' : ' items')"></span>
                                                 <span>•</span>
-                                                <span x-text="(stop.shipper.city || 'N/A') + ', ' + (stop.shipper.state || '')"></span>
+                                                <span x-text="[stop.shipper.city, stop.shipper.state].filter(Boolean).join(', ') || '—'"></span>
                                                 <span>→</span>
-                                                <span x-text="(stop.consignee.city || 'N/A') + ', ' + (stop.consignee.state || '')"></span>
+                                                <span x-text="[stop.consignee.city, stop.consignee.state].filter(Boolean).join(', ') || '—'"></span>
                                             </div>
                                         </div>
                                     </div>
@@ -379,17 +315,29 @@
 
                                 {{-- Stop Body (Expanded) --}}
                                 <div x-show="stop.expanded" x-collapse>
-                                    <div class="p-5 border-t border-gray-100 dark:border-gray-800 space-y-6 bg-gray-50/30 dark:bg-gray-800/10">
+                                    <div class="p-5 border-t border-gray-200 dark:border-gray-800 space-y-5 bg-gray-50 dark:bg-gray-950/40">
                                         
-                                        {{-- Shipper & Consignee Side by Side --}}
-                                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                            {{-- Shipper Section --}}
-                                            <div class="space-y-3">
-                                                <div class="flex items-center gap-2">
-                                                    <h4 class="text-xs font-bold text-gray-500 uppercase">Shipper Information (Pickup)</h4>
+                                        {{-- Shipper · Consignee · Additional & Billing (3 cards) --}}
+                                        @php
+                                            $cardClass = 'bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm';
+                                            $cardHeadClass = 'flex items-center gap-2 px-4 h-11 border-b border-gray-100 dark:border-gray-800';
+                                            $cardChip = 'flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400';
+                                            $cardPill = 'text-xs text-gray-400 dark:text-gray-500';
+                                            $billLabel = 'block text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase';
+                                            $billInput = 'mt-1 block w-full py-1.5 text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 rounded-md placeholder:text-gray-400 focus:border-primary-500 focus:ring-primary-500';
+                                        @endphp
+                                        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                                            {{-- Shipper Card --}}
+                                            <div class="{{ $cardClass }}">
+                                                <div class="{{ $cardHeadClass }}">
+                                                    <span class="{{ $cardChip }}">
+                                                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+                                                    </span>
+                                                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Shipper</h4>
+                                                    <span class="{{ $cardPill }}">Pickup</span>
                                                     {{-- Locked badge for single_shipper stops after first --}}
                                                     <template x-if="orderType === 'single_shipper' && stopIndex > 0">
-                                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                                                        <span class="ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
                                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                                                             Shared
                                                         </span>
@@ -397,20 +345,25 @@
                                                 </div>
                                                 <div class="relative">
                                                     <div x-show="orderType === 'single_shipper' && stopIndex > 0"
-                                                         class="absolute inset-0 z-10 rounded-lg cursor-not-allowed"
+                                                         class="absolute inset-0 z-10 rounded-b-lg cursor-not-allowed"
                                                          title="Shared shipper — edit on Stop 1"></div>
                                                     <div :class="(orderType === 'single_shipper' && stopIndex > 0) ? 'opacity-50 pointer-events-none select-none' : ''">
                                                         @include('v2.company.orders.partials.location-fields', ['prefix' => 'shipper'])
-                                                    </div>                                                </div>
+                                                    </div>
+                                                </div>
                                             </div>
 
-                                            {{-- Consignee Section --}}
-                                            <div class="space-y-3">
-                                                <div class="flex items-center gap-2">
-                                                    <h4 class="text-xs font-bold text-gray-500 uppercase">Consignee Information (Delivery)</h4>
+                                            {{-- Consignee Card --}}
+                                            <div class="{{ $cardClass }}">
+                                                <div class="{{ $cardHeadClass }}">
+                                                    <span class="{{ $cardChip }}">
+                                                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+                                                    </span>
+                                                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Consignee</h4>
+                                                    <span class="{{ $cardPill }}">Delivery</span>
                                                     {{-- Locked badge for single_consignee stops after first --}}
                                                     <template x-if="orderType === 'single_consignee' && stopIndex > 0">
-                                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                                                        <span class="ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
                                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                                                             Shared
                                                         </span>
@@ -418,106 +371,104 @@
                                                 </div>
                                                 <div class="relative">
                                                     <div x-show="orderType === 'single_consignee' && stopIndex > 0"
-                                                         class="absolute inset-0 z-10 rounded-lg cursor-not-allowed"
+                                                         class="absolute inset-0 z-10 rounded-b-lg cursor-not-allowed"
                                                          title="Shared consignee — edit on Stop 1"></div>
                                                     <div :class="(orderType === 'single_consignee' && stopIndex > 0) ? 'opacity-50 pointer-events-none select-none' : ''">
                                                         @include('v2.company.orders.partials.location-fields', ['prefix' => 'consignee'])
-                                                    </div>                                                </div>
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </div>
 
-                                        {{-- Additional & Billing Details --}}
-                                        <div class="pt-4 border-t border-gray-100 dark:border-gray-800">
-                                            <div class="flex items-center gap-2 mb-3">
-                                                <h4 class="text-xs font-bold text-gray-500 uppercase">Additional & Billing Details</h4>
-                                            </div>
-                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                                                <div class="space-y-4">
-                                                    <div>
-                                                        <label class="block text-[10px] uppercase text-gray-400 font-bold mb-1">Customs Broker</label>
-                                                        <input type="text" x-model="stop.billing.customs_broker" placeholder="Customs broker" class="block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md">
-                                                    </div>
-                                                    <div>
-                                                        <label class="block text-[10px] uppercase text-gray-400 font-bold mb-1">Port of Entry</label>
-                                                        <input type="text" x-model="stop.billing.port_of_entry" placeholder="Port of entry" class="block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md">
-                                                    </div>
-                                                    <div class="grid grid-cols-2 gap-4">
-                                                        <div>
-                                                            <label class="block text-[10px] uppercase text-gray-400 font-bold mb-1">Declared value</label>
-                                                            <div class="relative">
-                                                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                                                                <input type="number" step="0.01" x-model="stop.billing.declared_value" class="pl-7 block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md" placeholder="0.00">
+                                            {{-- Additional & Billing Card (full width on lg, third column on xl) --}}
+                                            <div class="{{ $cardClass }} lg:col-span-2 xl:col-span-1 flex flex-col">
+                                                <div class="{{ $cardHeadClass }}">
+                                                    <span class="{{ $cardChip }}">
+                                                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>
+                                                    </span>
+                                                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Additional &amp; Billing</h4>
+                                                </div>
+                                                <div class="flex-1 flex flex-col gap-4 p-4">
+                                                    <div class="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-2 gap-x-3 gap-y-4">
+                                                        <div class="col-span-2">
+                                                            <label class="{{ $billLabel }}">Container Number <span class="text-red-500">*</span></label>
+                                                            <input type="text" x-model="stop.billing.container_number" placeholder="e.g. MSCU1234567"
+                                                                   :readonly="Boolean(topContainerNumber && topContainerNumber.trim())"
+                                                                   :class="[stop._containerError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 dark:border-gray-700 focus:border-primary-500 focus:ring-primary-500', (topContainerNumber && topContainerNumber.trim()) ? 'bg-gray-50 dark:bg-gray-800/60 text-gray-500' : 'dark:bg-gray-800']"
+                                                                   class="mt-1 block w-full py-1.5 text-sm dark:text-gray-200 rounded-md placeholder:text-gray-400">
+                                                            <p x-show="topContainerNumber && topContainerNumber.trim()" class="text-[11px] text-gray-500 mt-1">Using top-level container number.</p>
+                                                            <p x-show="stop._containerError" class="text-red-500 text-[11px] mt-1">Container number is required for each leg.</p>
+                                                        </div>
+                                                        <div class="col-span-2">
+                                                            <label class="{{ $billLabel }}">Declared Value</label>
+                                                            <div class="mt-1 flex">
+                                                                <div class="relative flex-1 min-w-0">
+                                                                    <span class="pointer-events-none absolute z-20 left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                                                                    <input type="number" step="0.01" x-model="stop.billing.declared_value" class="pl-7 block w-full py-1.5 text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 rounded-l-md rounded-r-none focus:border-primary-500 focus:ring-primary-500 focus:z-10 relative" placeholder="0.00">
+                                                                </div>
+                                                                <select x-model="stop.billing.currency" aria-label="Currency" class="-ml-px w-24 shrink-0 pl-3 pr-8 py-1.5 text-sm border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-r-md rounded-l-none focus:border-primary-500 focus:ring-primary-500 focus:z-10">
+                                                                    <option value="USD">USD</option>
+                                                                    <option value="CAD">CAD</option>
+                                                                </select>
                                                             </div>
                                                         </div>
                                                         <div>
-                                                            <label class="block text-[10px] uppercase text-gray-400 font-bold mb-1">Currency</label>
-                                                            <select x-model="stop.billing.currency" class="block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md">
-                                                                <option value="USD">USD</option>
-                                                                <option value="CAD">CAD</option>
-                                                            </select>
+                                                            <label class="{{ $billLabel }}">REF Number</label>
+                                                            <input type="text" x-model="stop.billing.ref_number" placeholder="REF #" class="{{ $billInput }}">
+                                                        </div>
+                                                        <div>
+                                                            <label class="{{ $billLabel }}">Customer PO</label>
+                                                            <input type="text" x-model="stop.billing.customer_po_number" placeholder="PO #" class="{{ $billInput }}">
+                                                        </div>
+                                                        <div>
+                                                            <label class="{{ $billLabel }}">Customs Broker</label>
+                                                            <input type="text" x-model="stop.billing.customs_broker" placeholder="Broker" class="{{ $billInput }}">
+                                                        </div>
+                                                        <div>
+                                                            <label class="{{ $billLabel }}">Port of Entry</label>
+                                                            <input type="text" x-model="stop.billing.port_of_entry" placeholder="Port" class="{{ $billInput }}">
                                                         </div>
                                                     </div>
-                                                </div>
-                                                <div class="space-y-4">
-                                                    <div>
-                                                        <label class="block text-[10px] uppercase text-gray-400 font-bold mb-1">Container Number <span class="text-red-500">*</span></label>
-                                                        <input type="text" x-model="stop.billing.container_number" placeholder="Container Number (required)"
-                                                               :readonly="Boolean(topContainerNumber && topContainerNumber.trim())"
-                                                               :class="stop._containerError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 dark:border-gray-700'"
-                                                               class="block w-full text-sm dark:bg-gray-800 dark:text-gray-300 rounded-md">
-                                                        <p x-show="topContainerNumber && topContainerNumber.trim()" class="text-[10px] text-gray-500 mt-1">Using top-level container number.</p>
-                                                        <p x-show="stop._containerError" class="text-red-500 text-[10px] mt-1">Container number is required for each leg.</p>
-                                                    </div>
-                                                    <div>
-                                                        <label class="block text-[10px] uppercase text-gray-400 font-bold mb-1">REF Number</label>
-                                                        <input type="text" x-model="stop.billing.ref_number" placeholder="REF Number" class="block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md">
-                                                    </div>
-                                                    <div>
-                                                        <label class="block text-[10px] uppercase text-gray-400 font-bold mb-1">Customer Po Number</label>
-                                                        <input type="text" x-model="stop.billing.customer_po_number" placeholder="Customer Po Number" class="block w-full text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md">
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
 
-                                        {{-- ── Special Instructions (Required) ── --}}
-                                        <div class="pt-4 border-t border-gray-100 dark:border-gray-800">
-                                            <div class="flex items-center gap-2 mb-3">
-                                                <h4 class="text-xs font-bold text-gray-500 uppercase">
-                                                    Special Instructions
-                                                    <span class="text-red-500 ml-0.5">*</span>
-                                                    <span class="ml-2 text-[9px] font-normal text-gray-400 normal-case">Required for each leg</span>
-                                                </h4>
+                                                    {{-- ── Special Instructions (Required) ── --}}
+                                                    <div class="pt-4 border-t border-gray-100 dark:border-gray-800">
+                                                        <label class="block text-[10px] font-semibold text-gray-700 dark:text-gray-300 uppercase">
+                                                            Special Instructions <span class="text-red-500">*</span>
+                                                        </label>
+                                                        <textarea
+                                                            x-model="stop.special_instructions"
+                                                            rows="3"
+                                                            placeholder="Special handling, pickup, or delivery instructions for this leg…"
+                                                            :class="stop._siError
+                                                                ? 'border-red-400 focus:border-red-500 focus:ring-red-400 bg-red-50 dark:bg-red-900/10'
+                                                                : 'border-gray-200 dark:border-gray-700 focus:ring-primary-500 focus:border-primary-500'"
+                                                            @input="stop._siError = false"
+                                                            class="mt-2 h-28 block w-full text-sm rounded-md dark:bg-gray-800 dark:text-gray-200 placeholder:text-gray-400 transition-colors resize-none"
+                                                        ></textarea>
+                                                        <p x-show="stop._siError" class="mt-1 text-xs text-red-500 flex items-center gap-1">
+                                                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                                            Special instructions are required for this leg.
+                                                        </p>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <textarea
-                                                x-model="stop.special_instructions"
-                                                rows="3"
-                                                placeholder="Enter any special handling, pickup, or delivery instructions for this leg…"
-                                                :class="stop._siError
-                                                    ? 'border-red-400 focus:border-red-500 focus:ring-red-400 bg-red-50 dark:bg-red-900/10'
-                                                    : 'border-gray-200 dark:border-gray-700 focus:ring-primary-500 focus:border-primary-500'"
-                                                @input="stop._siError = false"
-                                                class="block w-full text-sm rounded-md dark:bg-gray-800 dark:text-gray-300 transition-colors resize-none"
-                                            ></textarea>
-                                            <p x-show="stop._siError" class="mt-1 text-xs text-red-500 flex items-center gap-1">
-                                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
-                                                Special instructions are required for this leg.
-                                            </p>
                                         </div>
 
                                         {{-- Commodities Section - Rose Rocket Style --}}
 
-                                        <div class="pt-4 border-t border-gray-100 dark:border-gray-800">
-                                            <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+                                        <div>
+                                            <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
                                                 {{-- Commodities Header with Count --}}
-                                                <div class="px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
+                                                <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
                                                     <div class="flex flex-wrap items-center justify-between gap-4">
-                                                        <h4 class="text-sm font-bold text-gray-900 dark:text-white">
+                                                        <h4 class="inline-flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-white">
+                                                            <span class="{{ $cardChip }}">
+                                                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                                                            </span>
                                                             Commodities (<span x-text="stop.commodities.length"></span>)
                                                         </h4>
-                                                        <button type="button" @click="addCommodity(stopIndex)" class="text-xs text-primary-600 hover:text-primary-700 font-bold flex items-center gap-1">
+                                                        <button type="button" @click="addCommodity(stopIndex)" class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
                                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                                                            + Add commodity
+                                                            Add commodity
                                                         </button>
                                                     </div>
                                                     

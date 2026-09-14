@@ -9,6 +9,8 @@ use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Storage;
+use App\Mail\ResetPasswordMail;
+use App\Services\MailService;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -58,6 +60,26 @@ class User extends Authenticatable
         'email_notifications' => 'boolean',
         'two_factor_enabled' => 'boolean',
     ];
+
+    /**
+     * Send the reset link through MailService so it is queued and delivered via
+     * the company's active SMTP account instead of the default notification mailer.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $broker = config('auth.defaults.passwords');
+
+        app(MailService::class)->queue(
+            new ResetPasswordMail(
+                userName: trim((string) $this->name) ?: 'there',
+                url: route('password.reset', ['token' => $token, 'email' => $this->getEmailForPasswordReset()]),
+                expireMinutes: (int) config("auth.passwords.{$broker}.expire", 60),
+                brandName: $this->company?->name ?? config('app.name'),
+            ),
+            $this->email,
+            $this->company_id,
+        );
+    }
 
     // Relationships
     public function company(): BelongsTo

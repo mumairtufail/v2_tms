@@ -90,7 +90,9 @@ class GooglePlacesService
             throw new RuntimeException('Place ID is required.');
         }
 
-        $fields = ['id', 'displayName', 'formattedAddress', 'addressComponents', 'location'];
+        // Phone numbers are billed at Google's higher "Enterprise" Place Details rate.
+        // Google has no email or contact-person fields for places.
+        $fields = ['id', 'displayName', 'formattedAddress', 'addressComponents', 'location', 'internationalPhoneNumber', 'nationalPhoneNumber'];
 
         $this->log('Step 2 | DETAILS REQUEST', [
             'place_id'      => $placeId,
@@ -150,17 +152,47 @@ class GooglePlacesService
             return '';
         };
 
+        // Building/tower names come back as premise, or as a component with no types at all
+        $untyped = '';
+        foreach ($components as $component) {
+            if (empty(data_get($component, 'types'))) {
+                $untyped = (string) data_get($component, 'longText', '');
+                break;
+            }
+        }
+
         $streetNumber = $getComponent(['street_number']);
         $route        = $getComponent(['route']);
 
+        $address1 = trim(($streetNumber !== '' ? $streetNumber . ' ' : '') . $route);
+        $address2 = implode(', ', array_unique(array_filter([
+            $untyped,
+            $getComponent(['premise']),
+            $getComponent(['subpremise']),
+        ])));
+
+        if ($address1 === '') {
+            [$address1, $address2] = [$address2, ''];
+        }
+
+        // Not every country has a "locality" (e.g. Jakarta), so fall back to the nearest city-level area
+        $city = $getComponent(['locality'])
+            ?: $getComponent(['postal_town'])
+            ?: $getComponent(['sublocality_level_1'])
+            ?: $getComponent(['administrative_area_level_2'])
+            ?: $getComponent(['administrative_area_level_3']);
+
         $parsed = [
             'company_name'      => (string) data_get($place, 'displayName.text', ''),
-            'address_1'         => trim(($streetNumber !== '' ? $streetNumber . ' ' : '') . $route),
-            'address_2'         => '',
-            'city'              => $getComponent(['locality']) ?: $getComponent(['sublocality_level_1']),
+            'address_1'         => $address1,
+            'address_2'         => $address2,
+            'city'              => $city,
             'state'             => $getShortComponent(['administrative_area_level_1']),
             'zip'               => $getComponent(['postal_code']),
+            // ISO code (US, PK, ID), matching the 'US' default stored on stops
             'country'           => $getShortComponent(['country']),
+            'country_name'      => $getComponent(['country']),
+            'phone'             => (string) (data_get($place, 'internationalPhoneNumber') ?: data_get($place, 'nationalPhoneNumber', '')),
             'lat'               => data_get($place, 'location.latitude'),
             'lng'               => data_get($place, 'location.longitude'),
             'formatted_address' => (string) data_get($place, 'formattedAddress', ''),
@@ -169,10 +201,12 @@ class GooglePlacesService
         $this->log('Step 2 | ADDRESS PARSED', [
             'company'  => $parsed['company_name'],
             'address'  => $parsed['address_1'],
+            'address2' => $parsed['address_2'],
             'city'     => $parsed['city'],
             'state'    => $parsed['state'],
             'zip'      => $parsed['zip'],
-            'country'  => $parsed['country'],
+            'country'  => $parsed['country'] . ' (' . $parsed['country_name'] . ')',
+            'phone'    => $parsed['phone'],
             'lat_lng'  => $parsed['lat'] . ', ' . $parsed['lng'],
             'full'     => $parsed['formatted_address'],
         ]);

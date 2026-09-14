@@ -1,15 +1,15 @@
 <div
     @mousedown.outside="close()"
 >
-    <label class="block text-[10px] font-medium text-gray-400 uppercase">Company Name</label>
+    <label class="block text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase">Company Name</label>
 
-    <div class="relative group">
+    <div class="relative group mt-1">
         <input type="text"
                x-model="query"
                @input.debounce.150ms="searchLocal()"
                @keydown.enter.prevent="searchGoogle"
                @focus="if(query.length >= 2 && (results.length || googleResults.length)) showDropdown = true"
-               class="mt-0.5 block w-full pr-9 text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-md focus:border-primary-500 focus:ring-primary-500"
+               class="block w-full py-1.5 pr-9 text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 rounded-md placeholder:text-gray-400 focus:border-primary-500 focus:ring-primary-500"
                placeholder="Search contact book, or press Enter for Google">
 
         {{-- Loading spinner --}}

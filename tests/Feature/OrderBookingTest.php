@@ -108,14 +108,15 @@ class OrderBookingTest extends TestCase
             ->get($this->orderRoute('v2.orders.edit', $booked))
             ->assertOk()
             ->assertSee('Revert to Quoted')
-            ->assertSee('Current Status: Booked');
+            ->assertSee('open-order-logs', false);
 
         $this->actingAs($this->user)
             ->get(route('v2.orders.index', ['company' => $this->company->slug]))
             ->assertOk()
             ->assertSee('BKD')
             ->assertSee('QTD')
-            ->assertSee('Mark as booked');
+            ->assertDontSee('Mark as booked')
+            ->assertSee('open-order-logs', false);
     }
 
     public function test_only_quoted_orders_can_be_booked(): void

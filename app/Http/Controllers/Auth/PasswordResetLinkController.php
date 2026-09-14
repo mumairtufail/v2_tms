@@ -7,6 +7,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\View\View;
+use Throwable;
 
 class PasswordResetLinkController extends Controller
 {
@@ -29,16 +30,24 @@ class PasswordResetLinkController extends Controller
             'email' => ['required', 'email'],
         ]);
 
-        // We will send the password reset link to this user. Once we have attempted
-        // to send the link, we will examine the response then see the message we
-        // need to show to the user. Finally, we'll send out a proper response.
-        $status = Password::sendResetLink(
-            $request->only('email')
-        );
+        try {
+            // The email itself is queued by User::sendPasswordResetNotification via MailService
+            $status = Password::sendResetLink($request->only('email'));
+        } catch (Throwable $e) {
+            report($e);
 
-        return $status == Password::RESET_LINK_SENT
-                    ? back()->with('status', __($status))
-                    : back()->withInput($request->only('email'))
-                            ->withErrors(['email' => __($status)]);
+            return back()->withInput($request->only('email'))
+                ->withErrors(['email' => __('We couldn\'t send the reset email right now. Please try again in a few minutes or contact your administrator.')]);
+        }
+
+        if ($status === Password::RESET_THROTTLED) {
+            return back()->withInput($request->only('email'))
+                ->withErrors(['email' => __($status)]);
+        }
+
+        // Same response whether or not the account exists, so this form can't be used to discover registered emails
+        return back()->with('status', __('If an account exists for :email, a password reset link is on its way. It can take a minute to arrive, so check your spam folder too.', [
+            'email' => $request->input('email'),
+        ]));
     }
 }

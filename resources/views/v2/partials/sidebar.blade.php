@@ -14,7 +14,7 @@
     $sidebarLogoDark  = $currentCompany?->logo_dark  ?? \App\Models\SystemSetting::instance()->logo_dark  ?? null;
 @endphp
 <aside
-    class="fixed left-0 z-50 w-64 bg-white dark:bg-[#0B1120] border-r border-gray-200 dark:border-gray-800/50
+    class="fixed left-0 z-50 w-64 flex flex-col bg-white dark:bg-[#0B1120] border-r border-gray-200 dark:border-gray-800/50
            transition-transform duration-300 ease-in-out
            lg:translate-x-0
            {{ ($impersonating ?? false) ? 'top-10 h-[calc(100vh-2.5rem)]' : 'top-0 h-screen' }}"
@@ -24,7 +24,7 @@
     }"
 >
     <!-- Logo Section -->
-    <div class="h-16 flex items-center justify-between px-4 border-b border-gray-100 dark:border-gray-800/50">
+    <div class="h-16 shrink-0 flex items-center justify-between px-4 border-b border-gray-100 dark:border-gray-800/50">
         <a href="{{ $currentCompany ? route('v2.dashboard', ['company' => $companySlug]) : route('admin.dashboard') }}" class="flex items-center gap-3 group">
             @php
                 $logoUrlLight = \App\Support\BrandingHelper::getUrl($sidebarLogoLight);
@@ -50,9 +50,9 @@
                 @endif
             @else
                 {{-- Default TMS icon --}}
-                <div class="w-9 h-9 bg-gradient-to-br from-primary-500 to-accent-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary-500/20 group-hover:scale-105 transition-transform duration-300">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                <div class="w-9 h-9 bg-primary-600 rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/>
                     </svg>
                 </div>
                 <div class="flex flex-col">
@@ -73,7 +73,8 @@
     </div>
 
     <!-- Navigation -->
-    <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-6 no-scrollbar h-[calc(100vh-160px)]">
+    {{-- flex-1 + min-h-0 lets the nav take the space between header and footer and scroll within it --}}
+    <nav class="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-4 space-y-6 no-scrollbar">
         
         @if($isAdminPanel)
         <!-- Super Admin Panel - Only show admin items -->
@@ -349,7 +350,7 @@
     </nav>
 
     <!-- User Profile Section -->
-    <div class="absolute bottom-0 left-0 w-full p-4 bg-white dark:bg-[#0B1120] border-t border-gray-200 dark:border-gray-800/50">
+    <div class="shrink-0 w-full p-4 bg-white dark:bg-[#0B1120] border-t border-gray-200 dark:border-gray-800/50">
         <div class="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-gray-800/30 border border-gray-100 dark:border-gray-700/30">
             <a href="{{ $currentCompany ? route('v2.profile.edit', ['company' => $companySlug]) : route('admin.profile') }}" class="flex items-center gap-3 flex-1 min-w-0 group">
                 <div class="relative">

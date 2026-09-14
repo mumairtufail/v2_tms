@@ -146,6 +146,22 @@ Route::middleware(['auth', CompanyScope::class])->prefix('{company}')->name('v2.
     Route::get('settings', [CompanySettingsController::class, 'index'])->name('settings.index');
     Route::get('settings/branding', [CompanySettingsController::class, 'branding'])->name('settings.branding');
     Route::put('settings/branding', [CompanySettingsController::class, 'updateBranding'])->name('settings.branding.update');
+
+    // Email (SMTP) accounts
+    Route::prefix('settings/email')->name('settings.smtp.')->controller(\App\Http\Controllers\V2\SmtpSettingController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::post('test', 'testDraft')->middleware('throttle:10,1')->name('test-draft');
+        Route::get('{smtpSetting}', 'show')->name('show');
+        Route::get('{smtpSetting}/edit', 'edit')->name('edit');
+        Route::put('{smtpSetting}', 'update')->name('update');
+        Route::delete('{smtpSetting}', 'destroy')->name('destroy');
+        Route::post('{smtpSetting}/activate', 'activate')->name('activate');
+        Route::post('{smtpSetting}/deactivate', 'deactivate')->name('deactivate');
+        Route::post('{smtpSetting}/test', 'test')->middleware('throttle:10,1')->name('test');
+    });
+
     Route::get('plugins', [\App\Http\Controllers\V2\PluginController::class, 'index'])->name('plugins.index');
     Route::get('plugins/{slug}/settings', [\App\Http\Controllers\V2\PluginController::class, 'settings'])->name('plugins.settings');
     Route::post('plugins/toggle', [\App\Http\Controllers\V2\PluginController::class, 'toggle'])->name('plugins.toggle');

@@ -60,8 +60,8 @@
 
         get label() {
             return this.selH === null
-                ? '-- : --'
-                : String(this.selH).padStart(2,'0') + ' : ' + String(this.selM ?? 0).padStart(2,'0');
+                ? '--:--'
+                : String(this.selH).padStart(2,'0') + ':' + String(this.selM ?? 0).padStart(2,'0');
         }
     }"
     x-modelable="value"
@@ -79,7 +79,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-            <span x-text="label" class="font-mono text-sm font-semibold tracking-widest"
+            <span x-text="label" class="text-sm font-medium tabular-nums"
                   :class="selH === null ? 'text-gray-400' : 'text-gray-800 dark:text-gray-100'"></span>
         </div>
         <svg class="w-3 h-3 text-gray-400 transition-transform duration-200" :class="open ? 'rotate-180' : ''"
@@ -117,7 +117,7 @@
                         :class="selH === {{ $h }}
                             ? 'bg-primary-500 text-white font-bold mx-1 rounded-lg'
                             : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/60'"
-                        class="w-[calc(100%-8px)] mx-1 h-9 text-sm font-mono text-center transition-colors rounded-lg">
+                        class="w-[calc(100%-8px)] mx-1 h-9 text-sm tabular-nums text-center transition-colors rounded-lg">
                     {{ str_pad($h, 2, '0', STR_PAD_LEFT) }}
                 </button>
                 @endfor
@@ -132,7 +132,7 @@
                         :class="selM === {{ $m }}
                             ? 'bg-primary-500 text-white font-bold mx-1 rounded-lg'
                             : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/60'"
-                        class="w-[calc(100%-8px)] mx-1 h-9 text-sm font-mono text-center transition-colors rounded-lg">
+                        class="w-[calc(100%-8px)] mx-1 h-9 text-sm tabular-nums text-center transition-colors rounded-lg">
                     {{ str_pad($m, 2, '0', STR_PAD_LEFT) }}
                 </button>
                 @endfor
