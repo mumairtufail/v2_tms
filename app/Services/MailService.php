@@ -29,12 +29,47 @@ class MailService
      */
     public function queue(Mailable $mailable, string|array $to, ?int $companyId = null): void
     {
+        Log::channel('mail')->info('Email queued', [
+            'mailable' => class_basename($mailable),
+            'to' => $to,
+            'company_id' => $companyId,
+        ]);
+
         SendMailJob::dispatch($mailable, $to, $companyId);
     }
 
     public function sendNow(Mailable $mailable, string|array $to, ?int $companyId = null): void
     {
-        $this->mailerFor($companyId)->to($to)->send($mailable);
+        $setting = $this->activeSetting($companyId);
+
+        Log::channel('mail')->info('Sending email', [
+            'mailable' => class_basename($mailable),
+            'to' => $to,
+            'company_id' => $companyId,
+            // Which account actually carries it — the usual cause of "nothing arrived"
+            'account' => $setting ? "{$setting->name} ({$setting->host})" : 'system default (.env)',
+        ]);
+
+        try {
+            $mailer = $setting ? $this->mailerForSetting($setting) : Mail::mailer();
+            $mailer->to($to)->send($mailable);
+
+            Log::channel('mail')->info('Email sent', [
+                'mailable' => class_basename($mailable),
+                'to' => $to,
+            ]);
+        } catch (Throwable $e) {
+            Log::channel('mail')->error('Email failed', [
+                'mailable' => class_basename($mailable),
+                'to' => $to,
+                'company_id' => $companyId,
+                'account' => $setting ? "{$setting->name} ({$setting->host})" : 'system default (.env)',
+                'reason' => $setting ? $this->friendlyError($e, $setting) : $e->getMessage(),
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
     }
 
     public function activeSetting(?int $companyId): ?SmtpSetting
@@ -87,7 +122,7 @@ class MailService
                 brandName: $setting->from_name ?: config('app.name'),
             ));
         } catch (Throwable $e) {
-            Log::warning('SMTP test email failed', [
+            Log::channel('mail')->warning('SMTP test email failed', [
                 'smtp_setting_id' => $setting->id,
                 'host'            => $setting->host,
                 'port'            => $setting->port,

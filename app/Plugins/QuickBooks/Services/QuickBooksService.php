@@ -49,20 +49,20 @@ class QuickBooksService
         // (Though QBO API usually handles nulls, it's cleaner to remove them)
         // $payload = array_filter($payload, fn($value) => !is_null($value));
 
-        Log::channel('plugins')->info("QuickBooks Service: Creating Customer", [
+        Log::channel('quickbooks')->info("QuickBooks Service: Creating Customer", [
             'payload' => $payload,
             'customer_id' => $customerData['id'] ?? 'new'
         ]);
 
         try {
             $response = $this->apiClient->post('customer', $payload);
-            Log::channel('plugins')->info("QuickBooks Service: Customer Created Successfully", [
+            Log::channel('quickbooks')->info("QuickBooks Service: Customer Created Successfully", [
                 'customer_id' => $response['Customer']['Id'] ?? 'Unknown',
                 'response' => $response
             ]);
             return $response['Customer'] ?? null;
         } catch (Exception $e) {
-            Log::channel('plugins')->error("QuickBooks Service: Create Customer Failed", [
+            Log::channel('quickbooks')->error("QuickBooks Service: Create Customer Failed", [
                 'error' => $e->getMessage(),
                 'customer_data' => $customerData
             ]);
@@ -114,14 +114,14 @@ class QuickBooksService
             // 'TxnDate' => now()->format('Y-m-d'), // Defaults to today
         ];
 
-        Log::channel('plugins')->info("QuickBooks Service: Creating Invoice", ['payload' => $payload]);
+        Log::channel('quickbooks')->info("QuickBooks Service: Creating Invoice", ['payload' => $payload]);
 
         try {
             $response = $this->apiClient->post('invoice', $payload);
-            Log::channel('plugins')->info("QuickBooks Service: Invoice Created Successfully", ['invoice_id' => $response['Invoice']['Id'] ?? 'Unknown']);
+            Log::channel('quickbooks')->info("QuickBooks Service: Invoice Created Successfully", ['invoice_id' => $response['Invoice']['Id'] ?? 'Unknown']);
             return $response['Invoice'] ?? null;
         } catch (Exception $e) {
-            Log::channel('plugins')->error("QuickBooks Service: Create Invoice Failed", ['error' => $e->getMessage()]);
+            Log::channel('quickbooks')->error("QuickBooks Service: Create Invoice Failed", ['error' => $e->getMessage()]);
             throw $e;
         }
     }

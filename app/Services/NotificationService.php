@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Notifications\TmsDatabaseNotification;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class NotificationService
@@ -43,6 +44,11 @@ class NotificationService
     public function notifyUser(User $user, array $payload): void
     {
         if ($user->isInactive()) {
+            Log::channel('notifications')->info('User not notified: account inactive', [
+                'user_id' => $user->id,
+                'type' => $payload['type'] ?? null,
+            ]);
+
             return;
         }
 
@@ -55,18 +61,35 @@ class NotificationService
      */
     public function notifyCustomer(Customer $customer, array $payload, ?CustomerNotificationEvent $event = null): void
     {
+        $log = Log::channel('notifications');
+
         if (!$customer->is_active || $customer->is_deleted) {
+            $log->info('Customer not notified: account inactive', [
+                'customer_id' => $customer->id,
+                'type' => $payload['type'] ?? null,
+            ]);
+
             return;
         }
 
         $customer->loadMissing('company');
 
-        foreach ($customer->contacts()->get() as $contact) {
+        $contacts = $customer->contacts()->get();
+        $inApp = 0;
+        $emailed = 0;
+        $skipped = [];
+
+        foreach ($contacts as $contact) {
             if ($contact->portal_access) {
                 $contact->notify(new TmsDatabaseNotification($payload));
+                $inApp++;
             }
 
-            if ($event && $contact->wantsEmailFor($event)) {
+            if (!$event) {
+                continue;
+            }
+
+            if ($contact->wantsEmailFor($event)) {
                 app(MailService::class)->queue(new CustomerOrderUpdateMail(
                     recipientName: $contact->first_name,
                     title: $payload['title'] ?? $event->label(),
@@ -74,8 +97,29 @@ class NotificationService
                     url: $contact->portal_access ? ($payload['url'] ?? null) : null,
                     brandName: $customer->company?->name ?? config('app.name'),
                 ), $contact->email, $customer->company_id);
+                $emailed++;
+                continue;
             }
+
+            // Why a person did not get an email — the usual support question
+            $skipped[$contact->email ?: "contact #{$contact->id}"] = match (true) {
+                blank($contact->email) => 'no email address',
+                !$event->isAvailable() => 'event not available yet',
+                default => 'not opted in to this event',
+            };
         }
+
+        $log->info('Customer notified', [
+            'customer_id' => $customer->id,
+            'company_id' => $customer->company_id,
+            'type' => $payload['type'] ?? null,
+            'event' => $event?->value,
+            'order_id' => $payload['order_id'] ?? null,
+            'contacts' => $contacts->count(),
+            'in_app' => $inApp,
+            'emails_queued' => $emailed,
+            'email_skipped' => $skipped,
+        ]);
     }
 
     public function notifyCompanyUsers(Company $company, array $payload, ?string $permission = null, string $action = 'view'): void
@@ -105,6 +149,12 @@ class NotificationService
         ), permission: 'orders');
     }
 
+    /**
+     * Not called by the app any more: OrderObserver notifies the customer when the
+     * status changes, so every path is covered once. Kept because it is still a valid
+     * way to raise this notification by hand — do not wire it into a status change,
+     * or the customer will be notified twice.
+     */
     public function orderQuotedForCustomer(Order $order, Company $company): void
     {
         $customer = $order->customer;
@@ -123,6 +173,9 @@ class NotificationService
         ));
     }
 
+    /**
+     * Not called by the app any more — see orderQuotedForCustomer above.
+     */
     public function orderBookedForCustomer(Order $order, Company $company): void
     {
         $customer = $order->customer;
@@ -239,19 +292,8 @@ class NotificationService
             actor: ['type' => 'driver', 'name' => $driver->name],
         ), permission: 'orders');
 
-        if ($order->customer && in_array($toStatus, ['in_transit', 'delivered', 'cancelled', 'booked'], true)) {
-            $this->notifyCustomer($order->customer, event: CustomerNotificationEvent::forOrderStatus($toStatus), payload: $this->payload(
-                type: 'order_status_updated',
-                title: 'Order status updated',
-                body: "Order #{$order->order_number} is now {$label}.",
-                icon: 'order',
-                url: route('portal.orders.show', ['company' => $company->slug, 'order' => $order->id]),
-                companyId: $company->id,
-                orderId: $order->id,
-                meta: ['from_status' => $fromStatus, 'to_status' => $toStatus],
-                actor: ['type' => 'driver', 'name' => $driver->name],
-            ));
-        }
+        // The customer is notified by OrderObserver when the status itself changes,
+        // so this only tells the office side.
     }
 
     public function driverUpdatedManifestStatus(Manifest $manifest, User $driver, string $toStatus, Company $company): void

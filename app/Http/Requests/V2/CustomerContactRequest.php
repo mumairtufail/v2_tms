@@ -31,7 +31,6 @@ class CustomerContactRequest extends FormRequest
         return [
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['nullable', 'string', 'max:100'],
-            'job_title' => ['nullable', 'string', 'max:100'],
             'email' => [
                 Rule::requiredIf($portalAccess || $this->boolean('send_invoices') || $this->boolean('cc_on_invoices')),
                 'nullable',

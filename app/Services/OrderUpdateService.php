@@ -64,6 +64,26 @@ class OrderUpdateService
                 unset($stopData);
             }
 
+            // A customer at their credit limit cannot submit new work from the portal.
+            // Drafts are still allowed, and staff may still submit on their behalf.
+            if ($portal && !$saveAsDraft && app(CustomerCreditService::class)->isOverLimit($order->customer)) {
+                $usage = app(CustomerCreditService::class)->usage($order->customer);
+
+                \Log::channel('portal')->warning('Order submission blocked: credit limit reached', [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'customer_id' => $order->customer_id,
+                    'used' => $usage['used'],
+                    'limit' => $usage['limit'],
+                ]);
+
+                return back()->withInput()->with('error', sprintf(
+                    'This order cannot be submitted: the account has reached its credit limit ($%s of $%s used). It is saved as a draft — please contact us to continue.',
+                    number_format($usage['used'], 2),
+                    number_format($usage['limit'], 2),
+                ));
+            }
+
             if ($portal) {
                 $nextStatus = $saveAsDraft ? 'draft' : 'new';
             } else {
@@ -136,9 +156,22 @@ class OrderUpdateService
                     ->with('success', $message);
             }
 
-            return redirect()
+            $redirect = redirect()
                 ->route($redirectRoute, ['company' => $company->slug, 'order' => $order->id])
                 ->with('success', $message);
+
+            // Staff are warned rather than blocked when the customer is at their limit
+            if (!$portal && !$saveAsDraft && app(CustomerCreditService::class)->isOverLimit($order->customer)) {
+                $usage = app(CustomerCreditService::class)->usage($order->customer);
+                $redirect->with('warning', sprintf(
+                    '%s has reached its credit limit ($%s of $%s used).',
+                    $order->customer->name,
+                    number_format($usage['used'], 2),
+                    number_format($usage['limit'], 2),
+                ));
+            }
+
+            return $redirect;
         } catch (\Illuminate\Validation\ValidationException $e) {
             $ordersLog->warning('Order update validation failed', [
                 'order_id' => $order->id,
@@ -522,7 +555,7 @@ class OrderUpdateService
         }
 
         if (!$portal && !$saveAsDraft && $order->status === 'quoted' && $previousStatus !== 'quoted') {
-            $notifications->orderQuotedForCustomer($order, $company);
+            // Customer notification is raised by OrderObserver on the status change
         }
 
         if ($portal) {

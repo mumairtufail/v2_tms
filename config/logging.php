@@ -162,6 +162,68 @@ return [
             'days' => 14,
             'tap' => [\App\Logging\GooglePlacesFormatter::class],
         ],
+
+        /*
+        |----------------------------------------------------------------------
+        | Per-module channels
+        |----------------------------------------------------------------------
+        | One file per area so a problem can be traced without reading through
+        | everything else. Each is daily-rotated with its own retention.
+        */
+
+        // Every outgoing email: which SMTP account sent it, to whom, and why it failed
+        'mail' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/mail.log'),
+            'level' => 'debug',
+            'days' => 30,
+            'replace_placeholders' => true,
+        ],
+
+        // In-app and email notifications: who was notified, who was skipped and why
+        'notifications' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/notifications.log'),
+            'level' => 'debug',
+            'days' => 30,
+            'replace_placeholders' => true,
+        ],
+
+        // Customers module: people, portal access, commodities, accessorials, credit
+        'customers' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/customers.log'),
+            'level' => 'debug',
+            'days' => 30,
+            'replace_placeholders' => true,
+        ],
+
+        // Manifests: cost estimates, resource assignment, status changes
+        'manifests' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/manifests.log'),
+            'level' => 'debug',
+            'days' => 30,
+            'replace_placeholders' => true,
+        ],
+
+        // Customer portal: sign-in, order submission, credit limit blocks
+        'portal' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/portal.log'),
+            'level' => 'debug',
+            'days' => 30,
+            'replace_placeholders' => true,
+        ],
+
+        // QuickBooks sync: customers, invoices and API errors
+        'quickbooks' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/quickbooks.log'),
+            'level' => 'debug',
+            'days' => 30,
+            'replace_placeholders' => true,
+        ],
     ],
 
 ];

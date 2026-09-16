@@ -7,7 +7,6 @@
         'id' => $c->id,
         'first_name' => $c->first_name,
         'last_name' => $c->last_name,
-        'job_title' => $c->job_title,
         'email' => $c->email,
         'notes' => $c->notes,
         'send_invoices' => $c->send_invoices,
@@ -24,7 +23,6 @@
             'id' => old('_contact_id') ?: null,
             'first_name' => old('first_name'),
             'last_name' => old('last_name'),
-            'job_title' => old('job_title'),
             'email' => old('email'),
             'notes' => old('notes'),
             'send_invoices' => (bool) old('send_invoices'),
@@ -79,7 +77,6 @@
                             <span class="w-7 h-7 rounded-full shrink-0 grid place-items-center bg-gray-100 dark:bg-gray-800 text-[10px] font-bold text-gray-600 dark:text-gray-300">{{ $contact->initials() }}</span>
                             <div class="min-w-0">
                                 <p class="font-medium text-gray-900 dark:text-white">{{ $contact->name }}</p>
-                                @if($contact->job_title)<p class="text-xs text-gray-500">{{ $contact->job_title }}</p>@endif
                             </div>
                         </div>
                     </td>
@@ -142,10 +139,6 @@
                         <input type="text" name="last_name" x-model="form.last_name" class="{{ $input }}">
                     </div>
                     <div>
-                        <label class="{{ $label }}">Job</label>
-                        <input type="text" name="job_title" x-model="form.job_title" class="{{ $input }}">
-                    </div>
-                    <div>
                         <label class="{{ $label }}">Email</label>
                         <input type="email" name="email" x-model="form.email" class="{{ $input }}">
                         @error('email')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
@@ -203,21 +196,55 @@
                     </label>
                 </div>
 
+                {{-- Portal password: same strength meter, checklist and generator as the Users module --}}
                 <div x-show="form.portal_access" x-cloak class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 p-3">
                     <div>
-                        <label class="{{ $label }}">Portal password</label>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="{{ $label }}">Portal password</label>
+                            <button type="button" @click="generatePassword()" class="flex items-center gap-1 text-[11px] font-medium text-primary-600 hover:underline">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                Generate
+                            </button>
+                        </div>
                         <div class="relative">
                             <input :type="showPassword ? 'text' : 'password'" name="password" x-model="password" autocomplete="new-password"
-                                   :placeholder="form.has_password ? 'Leave blank to keep current password' : 'At least 8 characters'" class="{{ $input }} pr-16">
-                            <button type="button" @click="showPassword = !showPassword" class="absolute inset-y-0 right-2 flex items-center text-[11px] font-medium text-gray-500 hover:text-gray-800" x-text="showPassword ? 'Hide' : 'Show'"></button>
+                                   data-lpignore="true" data-1p-ignore data-bwignore data-form-type="other"
+                                   :placeholder="form.has_password ? 'Leave blank to keep current password' : '••••••••'" class="{{ $input }} pr-16">
+                            <button type="button" @click="showPassword = !showPassword" class="absolute inset-y-0 right-2 flex items-center text-[11px] font-medium text-gray-500 hover:text-gray-800 dark:hover:text-gray-200" x-text="showPassword ? 'Hide' : 'Show'"></button>
                         </div>
                         @error('password')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+
+                        <div x-show="password.length > 0" x-cloak class="mt-2 space-y-2">
+                            <div class="flex gap-1">
+                                <template x-for="i in [1,2,3,4,5]" :key="i">
+                                    <div class="h-1.5 flex-1 rounded-full transition-colors duration-300"
+                                         :class="strength >= i ? (strength <= 2 ? 'bg-red-500' : (strength <= 3 ? 'bg-yellow-500' : 'bg-primary-500')) : 'bg-gray-200 dark:bg-gray-700'"></div>
+                                </template>
+                            </div>
+                            <p class="text-[11px]" :class="strength <= 2 ? 'text-red-500' : (strength <= 3 ? 'text-yellow-600' : 'text-primary-600')"
+                               x-text="['', 'Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'][strength]"></p>
+                            <div class="grid grid-cols-2 gap-x-3 gap-y-1">
+                                <template x-for="item in [{key:'length',label:'8+ characters'},{key:'uppercase',label:'Uppercase letter'},{key:'lowercase',label:'Lowercase letter'},{key:'number',label:'Number'},{key:'special',label:'Special character'}]" :key="item.key">
+                                    <div class="flex items-center gap-1.5 text-[11px]" :class="checks[item.key] ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400'">
+                                        <svg x-show="checks[item.key]" class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                        <svg x-show="!checks[item.key]" class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-width="2"/></svg>
+                                        <span x-text="item.label"></span>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
                     </div>
                     <div>
                         <label class="{{ $label }}">Confirm password</label>
-                        <input :type="showPassword ? 'text' : 'password'" name="password_confirmation" x-model="passwordConfirmation" autocomplete="new-password" class="{{ $input }}">
+                        <div class="relative">
+                            <input :type="showConfirmation ? 'text' : 'password'" name="password_confirmation" x-model="passwordConfirmation" autocomplete="new-password"
+                                   data-lpignore="true" data-1p-ignore data-bwignore data-form-type="other"
+                                   placeholder="••••••••" class="{{ $input }} pr-16"
+                                   :class="passwordConfirmation.length > 0 ? (password === passwordConfirmation ? 'border-primary-500' : 'border-red-400') : ''">
+                            <button type="button" @click="showConfirmation = !showConfirmation" class="absolute inset-y-0 right-2 flex items-center text-[11px] font-medium text-gray-500 hover:text-gray-800 dark:hover:text-gray-200" x-text="showConfirmation ? 'Hide' : 'Show'"></button>
+                        </div>
+                        <p x-show="passwordConfirmation.length > 0 && password !== passwordConfirmation" x-cloak class="mt-1 text-[11px] text-red-500">Passwords do not match</p>
                     </div>
-                    <p class="sm:col-span-2 text-[11px] text-gray-500">Use upper and lower case letters, a number and a symbol. <button type="button" @click="generatePassword()" class="font-medium text-primary-600 hover:underline">Generate one</button></p>
                 </div>
 
                 {{-- Notifications --}}
@@ -269,7 +296,7 @@
 <script>
 function peopleManager(config) {
     const blank = () => ({
-        id: null, first_name: '', last_name: '', job_title: '', email: '', notes: '',
+        id: null, first_name: '', last_name: '', email: '', notes: '',
         send_invoices: false, portal_access: false, cc_on_invoices: false, has_password: false,
         phones: [], email_prefs: {},
     });
@@ -279,6 +306,7 @@ function peopleManager(config) {
         password: '',
         passwordConfirmation: '',
         showPassword: false,
+        showConfirmation: false,
         confirmAction: '',
         confirmTitle: '',
         confirmBody: '',
@@ -308,7 +336,28 @@ function peopleManager(config) {
             this.password = '';
             this.passwordConfirmation = '';
             this.showPassword = false;
+            this.showConfirmation = false;
             this.$dispatch('open-modal', 'person-modal');
+        },
+
+        get strength() {
+            let s = 0;
+            if (this.password.length >= 8) s++;
+            if (/[A-Z]/.test(this.password)) s++;
+            if (/[a-z]/.test(this.password)) s++;
+            if (/[0-9]/.test(this.password)) s++;
+            if (/[\W_]/.test(this.password)) s++;
+            return s;
+        },
+
+        get checks() {
+            return {
+                length: this.password.length >= 8,
+                uppercase: /[A-Z]/.test(this.password),
+                lowercase: /[a-z]/.test(this.password),
+                number: /[0-9]/.test(this.password),
+                special: /[\W_]/.test(this.password),
+            };
         },
 
         addPhone() {
@@ -322,6 +371,7 @@ function peopleManager(config) {
             while (value.length < 14) value += pick(sets.join(''));
             this.password = this.passwordConfirmation = value.split('').sort(() => Math.random() - 0.5).join('');
             this.showPassword = true;
+            this.showConfirmation = true;
         },
     };
 }

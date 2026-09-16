@@ -34,7 +34,7 @@ class SendMailJob implements ShouldQueue
 
     public function failed(Throwable $e): void
     {
-        Log::error('Queued email failed', [
+        Log::channel('mail')->error('Queued email gave up after all retries', [
             'mailable'   => get_class($this->mailable),
             'to'         => $this->to,
             'company_id' => $this->companyId,

@@ -140,8 +140,8 @@ class OrderController extends Controller
             return back();
         }
 
+        // OrderObserver notifies the customer on the status change itself
         $this->changeStatus($order, \App\Enums\OrderStatus::Booked);
-        app(\App\Services\NotificationService::class)->orderBookedForCustomer($order->loadMissing('customer'), $company);
 
         Toast::success("Order {$order->order_number} marked as booked.");
         $request->attributes->set('activity_order_id', $order->id);

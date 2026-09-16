@@ -45,6 +45,7 @@
 
             <main class="flex-1 py-8 px-4 sm:px-6 lg:px-8 pt-24">
                 <div class="max-w-7xl mx-auto w-full">
+                    @include('portal.partials.credit-banner')
                     @yield('content')
                 </div>
             </main>

@@ -35,7 +35,7 @@ class ApiClient
         $separator = strpos($url, '?') !== false ? '&' : '?';
         $url .= $separator . 'minorversion=70';
         
-        Log::channel('plugins')->debug("QuickBooks API URL constructed", [
+        Log::channel('quickbooks')->debug("QuickBooks API URL constructed", [
             'endpoint' => $endpoint,
             'full_url' => $url,
             'realm_id' => $this->realmId
@@ -55,7 +55,7 @@ class ApiClient
 
     public function get($endpoint, $params = [])
     {
-        Log::channel('plugins')->info("QuickBooks API GET Request: $endpoint", ['params' => $params]);
+        Log::channel('quickbooks')->info("QuickBooks API GET Request: $endpoint", ['params' => $params]);
         
         $response = Http::withoutVerifying()
             ->withHeaders($this->headers())
@@ -66,7 +66,7 @@ class ApiClient
 
     public function post($endpoint, $data = [])
     {
-        Log::channel('plugins')->info("QuickBooks API POST Request: $endpoint", ['data' => $data]);
+        Log::channel('quickbooks')->info("QuickBooks API POST Request: $endpoint", ['data' => $data]);
 
         $response = Http::withoutVerifying()
             ->withHeaders($this->headers())
@@ -78,11 +78,11 @@ class ApiClient
     protected function handleResponse($response, $endpoint = null, $params = [], $method = 'GET')
     {
         if ($response->status() === 401) {
-            Log::channel('plugins')->warning("QuickBooks API Token Expired. Attempting refresh.");
+            Log::channel('quickbooks')->warning("QuickBooks API Token Expired. Attempting refresh.");
             
             // Token expired, attempt refresh
             if ($this->refreshToken()) {
-                Log::channel('plugins')->info("QuickBooks API Token Refreshed. Retrying request.");
+                Log::channel('quickbooks')->info("QuickBooks API Token Refreshed. Retrying request.");
                 
                 // Retry original request
                 if ($method === 'POST') {
@@ -91,17 +91,17 @@ class ApiClient
                     return $this->get($endpoint, $params);
                 }
             } else {
-                Log::channel('plugins')->error("QuickBooks API Token Refresh Failed.");
+                Log::channel('quickbooks')->error("QuickBooks API Token Refresh Failed.");
             }
         }
 
         if ($response->successful()) {
-            Log::channel('plugins')->info("QuickBooks API Response Success", ['status' => $response->status(), 'body' => $response->json()]);
+            Log::channel('quickbooks')->info("QuickBooks API Response Success", ['status' => $response->status(), 'body' => $response->json()]);
             return $response->json();
         }
 
         // Handle errors (token expiry, validation, etc.)
-        Log::channel('plugins')->error("QuickBooks API Error", [
+        Log::channel('quickbooks')->error("QuickBooks API Error", [
             'status' => $response->status(),
             'body' => $response->body(),
             'endpoint' => $endpoint
@@ -154,7 +154,7 @@ class ApiClient
         $configId = $this->config['config_id'] ?? null;
 
         if (!$clientId || !$clientSecret || !$refreshToken) {
-            Log::channel('plugins')->error("QuickBooks Token Refresh: Missing credentials", [
+            Log::channel('quickbooks')->error("QuickBooks Token Refresh: Missing credentials", [
                 'has_client_id' => !empty($clientId),
                 'has_client_secret' => !empty($clientSecret),
                 'has_refresh_token' => !empty($refreshToken)
@@ -164,7 +164,7 @@ class ApiClient
 
         $authHeader = base64_encode("$clientId:$clientSecret");
 
-        Log::channel('plugins')->info("QuickBooks: Attempting token refresh", ['config_id' => $configId]);
+        Log::channel('quickbooks')->info("QuickBooks: Attempting token refresh", ['config_id' => $configId]);
 
         $response = Http::withoutVerifying()
             ->asForm()
@@ -179,7 +179,7 @@ class ApiClient
         if ($response->successful()) {
             $tokens = $response->json();
             
-            Log::channel('plugins')->info("QuickBooks: Token refresh successful");
+            Log::channel('quickbooks')->info("QuickBooks: Token refresh successful");
             
             // Update local state
             $this->accessToken = $tokens['access_token'];
@@ -193,14 +193,14 @@ class ApiClient
                     $newConfig['access_token'] = $tokens['access_token'];
                     $newConfig['refresh_token'] = $tokens['refresh_token'];
                     $configModel->update(['configuration' => $newConfig]);
-                    Log::channel('plugins')->info("QuickBooks: Database updated with new tokens");
+                    Log::channel('quickbooks')->info("QuickBooks: Database updated with new tokens");
                 }
             }
             
             return true;
         }
 
-        Log::channel('plugins')->error("QuickBooks: Token refresh failed", [
+        Log::channel('quickbooks')->error("QuickBooks: Token refresh failed", [
             'status' => $response->status(),
             'body' => $response->body()
         ]);

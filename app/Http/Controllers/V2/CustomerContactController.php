@@ -30,6 +30,8 @@ class CustomerContactController extends Controller
             return $contact;
         });
 
+        $this->sendPortalWelcome($contact, $company);
+
         Toast::success("Added {$contact->name}.");
 
         return $this->customerTab($company, $customer, 'people');
@@ -40,6 +42,9 @@ class CustomerContactController extends Controller
         $this->ensureCustomerInCompany($company, $customer);
         $this->ensureBelongsToCustomer($customer, $contact);
 
+        // Whether they could already sign in, so the welcome only goes out once
+        $couldUsePortal = $contact->canUsePortal();
+
         DB::transaction(function () use ($request, $contact) {
             [$attributes, $phones] = $this->attributesFrom($request);
 
@@ -47,6 +52,10 @@ class CustomerContactController extends Controller
             $contact->phones()->delete();
             $contact->phones()->createMany($phones);
         });
+
+        if (! $couldUsePortal) {
+            $this->sendPortalWelcome($contact->fresh(), $company);
+        }
 
         Toast::success("Saved {$contact->name}.");
 
@@ -64,6 +73,29 @@ class CustomerContactController extends Controller
         Toast::success("Removed {$name}. They can no longer sign in to the portal.");
 
         return $this->customerTab($company, $customer, 'people');
+    }
+
+    /**
+     * Welcome email for someone who can now sign in to the portal.
+     * The password is set by the company, so it is never sent by email.
+     */
+    private function sendPortalWelcome(CustomerContact $contact, Company $company): void
+    {
+        if (! $contact->canUsePortal() || blank($contact->email)) {
+            return;
+        }
+
+        app(\App\Services\MailService::class)->queue(
+            new \App\Mail\PortalWelcomeMail(
+                recipientName: $contact->first_name ?: $contact->name,
+                appName: config('app.name', 'TMS'),
+                companyName: $company->name,
+                portalUrl: route('portal.login', ['company' => $company->slug]),
+                signInEmail: $contact->email,
+            ),
+            $contact->email,
+            $company->id,
+        );
     }
 
     /** @return array{0: array, 1: array} */

@@ -20,6 +20,39 @@
     </div>
 
     <div class="flex items-center gap-3">
+        @php
+            $creditCustomer = app()->bound('current.customer') ? app('current.customer') : $customer?->customer;
+            $credit = $creditCustomer ? app(\App\Services\CustomerCreditService::class)->usage($creditCustomer) : null;
+        @endphp
+        @if($credit && $credit['has_limit'])
+        @php
+            $creditTone = $credit['over']
+                ? ['text' => 'text-red-700 dark:text-red-300', 'bar' => 'bg-red-500', 'ring' => 'border-red-200 dark:border-red-900/60', 'bg' => 'bg-red-50 dark:bg-red-900/20']
+                : (($credit['percent'] ?? 0) >= 80
+                    ? ['text' => 'text-amber-700 dark:text-amber-300', 'bar' => 'bg-amber-500', 'ring' => 'border-amber-200 dark:border-amber-900/60', 'bg' => 'bg-amber-50 dark:bg-amber-900/20']
+                    : ['text' => 'text-primary-700 dark:text-primary-300', 'bar' => 'bg-primary-500', 'ring' => 'border-primary-200 dark:border-primary-900/60', 'bg' => 'bg-primary-50 dark:bg-primary-900/20']);
+        @endphp
+        <div class="flex items-center gap-2.5 rounded-xl border {{ $creditTone['ring'] }} {{ $creditTone['bg'] }} px-3 py-1.5"
+             title="Credit used ${{ number_format($credit['used'], 2) }} of ${{ number_format($credit['limit'], 2) }}{{ $credit['over'] ? ' — limit reached' : '' }}">
+            <div class="leading-tight">
+                <p class="text-[9px] font-bold uppercase tracking-wider {{ $creditTone['text'] }} opacity-80">Credit</p>
+                <p class="text-[13px] font-bold {{ $creditTone['text'] }} tabular-nums whitespace-nowrap">
+                    ${{ number_format($credit['used'], 0) }} <span class="opacity-60">/ ${{ number_format($credit['limit'], 0) }}</span>
+                </p>
+            </div>
+            <div class="hidden sm:block w-16">
+                <div class="h-1.5 w-full rounded-full bg-white/70 dark:bg-gray-800/70 overflow-hidden">
+                    <div class="h-full rounded-full {{ $creditTone['bar'] }}" style="width: {{ $credit['percent'] ?? 0 }}%"></div>
+                </div>
+                @if($credit['over'])
+                    <p class="mt-0.5 text-[9px] font-semibold text-red-600 dark:text-red-400">Limit reached</p>
+                @else
+                    <p class="mt-0.5 text-[9px] text-gray-500 dark:text-gray-400">${{ number_format(max(0, $credit['available']), 0) }} left</p>
+                @endif
+            </div>
+        </div>
+        @endif
+
         <button @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)"
             class="relative flex items-center justify-center w-10 h-10 rounded-xl text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 transition-all duration-300"
             :title="darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'">

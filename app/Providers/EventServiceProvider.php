@@ -26,6 +26,10 @@ class EventServiceProvider extends ServiceProvider
     public function boot(): void
     {
         \App\Models\ContactBookEntry::observe(\App\Observers\ContactBookEntryObserver::class);
+
+        // One place that notifies the customer when an order's status changes,
+        // whichever part of the app changed it.
+        \App\Models\Order::observe(\App\Observers\OrderObserver::class);
     }
 
     /**
