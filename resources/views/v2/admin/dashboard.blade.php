@@ -4,29 +4,7 @@
 
 @section('content')
 @php
-    use App\Enums\OrderStatus;
-
     $cardClass = 'rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm';
-    $totalOrders = max(1, (int) $stats['orders']);
-
-    // Statuses worth charting, in the order work actually moves
-    $statusBar = collect(['draft', 'new', 'quoted', 'booked', 'in_transit', 'delivered', 'cancelled'])
-        ->map(fn ($s) => [
-            'key' => $s,
-            'label' => OrderStatus::tryFrom($s)?->label() ?? ucfirst($s),
-            'count' => (int) ($ordersByStatus[$s] ?? 0),
-        ])
-        ->filter(fn ($row) => $row['count'] > 0);
-
-    $statusColour = [
-        'draft' => 'bg-gray-400',
-        'new' => 'bg-blue-500',
-        'quoted' => 'bg-indigo-500',
-        'booked' => 'bg-primary-500',
-        'in_transit' => 'bg-amber-500',
-        'delivered' => 'bg-emerald-600',
-        'cancelled' => 'bg-red-500',
-    ];
 @endphp
 
 <div class="space-y-5">
@@ -53,7 +31,7 @@
                 [
                     'label' => 'Orders',
                     'value' => $stats['orders'],
-                    'note' => $stats['orders_live'] . ' moving now' . ($stats['orders_new'] ? ' · ' . $stats['orders_new'] . ' new this month' : ''),
+                    'note' => $stats['orders_live'] . ' moving' . ($stats['orders_new'] ? ' · ' . $stats['orders_new'] . ' new this month' : ''),
                     'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
                     'url' => null,
                 ],
@@ -80,43 +58,6 @@
             <p class="mt-1 text-xs text-gray-400 dark:text-gray-500 truncate">{{ $card['note'] }}</p>
         </{{ $card['url'] ? 'a' : 'div' }}>
         @endforeach
-    </div>
-
-    {{-- Orders by status --}}
-    <div class="{{ $cardClass }}">
-        <div class="flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-            <div>
-                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Orders by status</h3>
-                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Across every organization</p>
-            </div>
-            <span class="rounded-md bg-gray-100 dark:bg-gray-800 px-2.5 py-1 text-xs font-semibold text-gray-600 dark:text-gray-300 tabular-nums">
-                {{ number_format($stats['orders']) }} total
-            </span>
-        </div>
-
-        @if($statusBar->isEmpty())
-            <p class="px-5 py-10 text-center text-sm text-gray-500 dark:text-gray-400">No orders yet.</p>
-        @else
-        <div class="p-5">
-            <div class="flex h-2.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
-                @foreach($statusBar as $row)
-                <div class="{{ $statusColour[$row['key']] ?? 'bg-gray-400' }}"
-                     style="width: {{ round($row['count'] / $totalOrders * 100, 2) }}%"
-                     title="{{ $row['label'] }}: {{ $row['count'] }}"></div>
-                @endforeach
-            </div>
-
-            <div class="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-2">
-                @foreach($statusBar as $row)
-                <div class="flex items-center gap-2">
-                    <span class="h-2 w-2 shrink-0 rounded-full {{ $statusColour[$row['key']] ?? 'bg-gray-400' }}"></span>
-                    <span class="text-xs text-gray-600 dark:text-gray-300 truncate">{{ $row['label'] }}</span>
-                    <span class="ml-auto text-xs font-semibold text-gray-900 dark:text-white tabular-nums">{{ number_format($row['count']) }}</span>
-                </div>
-                @endforeach
-            </div>
-        </div>
-        @endif
     </div>
 
     {{-- Organizations --}}

@@ -33,11 +33,6 @@ class AdminController extends Controller
             'manifests' => Manifest::count(),
         ];
 
-        // Orders per status, for the breakdown bar
-        $ordersByStatus = Order::selectRaw('status, COUNT(*) as total')
-            ->groupBy('status')
-            ->pluck('total', 'status');
-
         // Busiest organizations, with what sits inside each
         $topCompanies = Company::where('is_deleted', false)
             ->withCount([
@@ -53,6 +48,6 @@ class AdminController extends Controller
             ->take(5)
             ->get();
 
-        return view('v2.admin.dashboard', compact('stats', 'ordersByStatus', 'topCompanies', 'recentCompanies'));
+        return view('v2.admin.dashboard', compact('stats', 'topCompanies', 'recentCompanies'));
     }
 }
