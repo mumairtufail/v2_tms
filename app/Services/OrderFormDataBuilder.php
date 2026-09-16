@@ -50,7 +50,7 @@ class OrderFormDataBuilder
                 'percentage' => $c->percentage ?? null,
                 'is_default' => false,
             ])->values()->toArray(),
-            // Carrier cost is entered on the manifest and only read back here
+            // Filled below from the manifest, or from the order while it has none
             'carrier_rows' => [],
         ];
 
@@ -62,7 +62,10 @@ class OrderFormDataBuilder
         $carrierTargetManifest = $stopManifestIds->count() === 1
             ? \App\Models\Manifest::with('costEstimates')->find($stopManifestIds->first())
             : null;
-        $carrierEditable = (bool) $carrierTargetManifest;
+
+        // Editable with one manifest (saved there) or none yet (saved on the order until
+        // a manifest exists). Across several manifests it stays read-only.
+        $carrierEditable = $stopManifestIds->count() <= 1;
 
         if ($carrierTargetManifest) {
             $quoteData['carrier_rows'] = $carrierTargetManifest->costEstimates->map(fn ($c) => [
@@ -72,6 +75,17 @@ class OrderFormDataBuilder
                 'rate' => $c->rate ?? 0,
                 'cost' => $c->est_cost ?? 0,
                 'percentage' => null,
+                'is_default' => false,
+            ])->values()->toArray();
+        } elseif ($carrierEditable) {
+            // No manifest yet: the estimate lives on the order
+            $quoteData['carrier_rows'] = $quote->costs->where('category', 'carrier')->map(fn ($c) => [
+                'type' => $c->type ?? 'Freight',
+                'description' => $c->description ?? '',
+                'qty' => $c->qty ?? 0,
+                'rate' => $c->rate ?? 0,
+                'cost' => $c->cost ?? 0,
+                'percentage' => $c->percentage ?? null,
                 'is_default' => false,
             ])->values()->toArray();
         }

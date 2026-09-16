@@ -392,8 +392,34 @@ class OrderUpdateService
             ]);
         }
 
-        // Carrier cost belongs to the manifest (that is what the rate confirmation pays),
-        // so the order never writes 'carrier' rows. Any left by older saves are cleared above.
+        // Carrier cost belongs to the manifest once there is one. Until then it is quoted on
+        // the order, so it is kept here and moves across when a manifest is assigned.
+        if ($order->stops()->whereNotNull('manifest_id')->doesntExist()) {
+            $carrierFreightBase = $calcFreightSubtotal($quoteData['carrier_rows'] ?? []);
+
+            foreach ($quoteData['carrier_rows'] ?? [] as $row) {
+                $isSurcharge = strtolower($row['type'] ?? '') === 'fuel (surcharge)';
+                $qty = (float) ($row['qty'] ?? 0);
+                $rate = (float) ($row['rate'] ?? 0);
+                $cost = $isSurcharge
+                    ? round($carrierFreightBase * ($qty / 100), 2)
+                    : round($qty * $rate, 2);
+
+                if ($cost <= 0 && blank($row['description'] ?? null)) {
+                    continue;
+                }
+
+                $quote->costs()->create([
+                    'category' => 'carrier',
+                    'type' => $row['type'] ?? 'Freight',
+                    'description' => $row['description'] ?? '',
+                    'qty' => $qty,
+                    'rate' => $isSurcharge ? $carrierFreightBase : $rate,
+                    'cost' => $cost,
+                    'percentage' => $isSurcharge ? $qty : null,
+                ]);
+            }
+        }
 
         $log->info('Processed quote', [
             'quote_id' => $quote->id,
@@ -426,6 +452,9 @@ class OrderUpdateService
         }
 
         app(ManifestService::class)->replaceCostEstimates($manifest, $carrierRows);
+
+        // It now lives on the manifest, so the order's copy is dropped rather than double counted
+        $order->quote?->costs()->where('category', 'carrier')->delete();
 
         $log->info('Carrier cost written to manifest', [
             'manifest_id' => $manifest->id,

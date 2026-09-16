@@ -139,7 +139,7 @@
                         <div class="flex items-center gap-2">
                             <h4 class="text-[11px] font-black uppercase tracking-widest text-orange-600 dark:text-orange-400">Carrier Cost</h4>
                             <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-500 dark:bg-orange-900/40 dark:text-orange-400">
-                                Saves to {{ $carrierTargetManifest->code }}
+                                {{ $carrierTargetManifest ? 'Saves to ' . $carrierTargetManifest->code : 'Saved on this order' }}
                             </span>
                         </div>
                         <div class="flex items-center gap-2">
@@ -295,7 +295,11 @@
                         </table>
 
                         <p class="px-4 py-2.5 text-[10px] leading-4 text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-700/40">
-                            Saved on manifest {{ $carrierTargetManifest->code }} — the same figures the rate confirmation pays. Edit them here or on the manifest.
+                            @if($carrierTargetManifest)
+                                Saved on manifest {{ $carrierTargetManifest->code }} — the same figures the rate confirmation pays. Edit them here or on the manifest.
+                            @else
+                                No manifest yet, so this is kept on the order. Assign the stops below to a manifest and it moves across, ready for the rate confirmation.
+                            @endif
                         </p>
                     </div>
                 </div>

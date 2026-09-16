@@ -179,7 +179,7 @@ class OrderCarrierCostAllocationTest extends TestCase
         $this->assertEqualsCanonicalizing([400.0, 600.0], array_column($allocation['rows'], 'amount'));
     }
 
-    public function test_order_with_no_manifest_has_no_carrier_cost(): void
+    public function test_order_with_no_manifest_has_no_allocated_carrier_cost(): void
     {
         $order = $this->makeOrder();
         $this->addStops($order, null, 2);
@@ -188,6 +188,51 @@ class OrderCarrierCostAllocationTest extends TestCase
 
         $this->assertSame([], $allocation['rows']);
         $this->assertSame(0.0, $allocation['total']);
+    }
+
+    public function test_carrier_cost_can_be_quoted_before_a_manifest_exists(): void
+    {
+        $order = $this->makeOrder();
+        $this->addStops($order, null, 2);
+
+        $this->saveOrderWithCarrierRows($order, [
+            ['type' => 'Freight', 'description' => 'Partner Freight', 'qty' => 1, 'rate' => 700],
+        ])->assertSessionHasNoErrors();
+
+        // Kept on the order until there is a manifest to own it
+        $carrier = $order->fresh()->quote->costs->where('category', 'carrier');
+        $this->assertCount(1, $carrier);
+        $this->assertSame(700.0, (float) $carrier->sum('cost'));
+
+        // and the panel offers it back for editing
+        $data = $this->build($order);
+        $this->assertTrue($data['carrierEditable']);
+        $this->assertNull($data['carrierTargetManifest']);
+        $this->assertCount(1, $data['quoteData']['carrier_rows']);
+        $this->assertSame('Partner Freight', $data['quoteData']['carrier_rows'][0]['description']);
+    }
+
+    public function test_quoted_carrier_cost_moves_to_the_manifest_once_one_is_assigned(): void
+    {
+        $order = $this->makeOrder();
+        $this->addStops($order, null, 1);
+
+        $this->saveOrderWithCarrierRows($order, [
+            ['type' => 'Freight', 'description' => 'Partner Freight', 'qty' => 1, 'rate' => 700],
+        ])->assertSessionHasNoErrors();
+
+        // The stops are put on a manifest, and the same figures are saved again
+        $manifest = $this->makeManifest();
+        $order->stops()->update(['manifest_id' => $manifest->id]);
+
+        $this->saveOrderWithCarrierRows($order, [
+            ['type' => 'Freight', 'description' => 'Partner Freight', 'qty' => 1, 'rate' => 700],
+        ])->assertSessionHasNoErrors();
+
+        // It now belongs to the manifest, and the order's copy is gone — counted once
+        $this->assertSame(700.0, (float) $manifest->fresh()->costEstimates->sum('est_cost'));
+        $this->assertCount(0, $order->fresh()->quote->costs->where('category', 'carrier'));
+        $this->assertSame(700.0, $this->service->carrierCostForOrder($order->fresh())['total']);
     }
 
     // ── What the order form is given ────────────────────────────────────
@@ -222,6 +267,7 @@ class OrderCarrierCostAllocationTest extends TestCase
 
         $data = $this->build($order);
 
+        // Two manifests: one typed figure could not be split safely, so it stays read-only
         $this->assertFalse($data['carrierEditable']);
         $this->assertNull($data['carrierTargetManifest']);
         $this->assertSame([], $data['quoteData']['carrier_rows']);

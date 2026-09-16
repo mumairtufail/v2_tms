@@ -676,9 +676,9 @@
                                                      x-transition:leave-start="transform opacity-100 scale-100"
                                                      x-transition:leave-end="transform opacity-0 scale-95"
                                                      @click.outside="accessorialDropdownOpen = false"
-                                                     class="absolute z-50 bottom-full mb-1 left-0 w-72 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl max-h-60 overflow-y-auto">
-                                                    <div class="p-2">
-                                                        @forelse($allAccessorials->groupBy('category') as $category => $categoryAccessorials)
+                                                     class="absolute z-50 bottom-full mb-1.5 left-0 w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 ring-1 ring-black/5 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                                    @forelse($allAccessorials->groupBy('category') as $category => $categoryAccessorials)
+                                                    @if($loop->first)<div class="p-2">@endif
                                                         <p class="px-2 pt-1.5 pb-0.5 text-[10px] font-semibold uppercase text-gray-400">{{ \App\Support\AccessorialCategories::label($category) }}</p>
                                                         @foreach($categoryAccessorials as $acc)
                                                         <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors">
@@ -686,10 +686,28 @@
                                                             <span class="text-xs text-gray-700 dark:text-gray-300">{{ $acc->name }}</span>
                                                         </label>
                                                         @endforeach
-                                                        @empty
-                                                        <p class="px-2 py-3 text-xs text-gray-500 dark:text-gray-400">No accessorials are turned on for this customer. Enable them on the customer's Accessorials tab.</p>
-                                                        @endforelse
+                                                    @if($loop->last)</div>@endif
+                                                    @empty
+                                                    {{-- Empty state: a plain sentence on white read as a stray box, so give it a surface of its own --}}
+                                                    <div class="flex items-start gap-2.5 p-3 bg-gray-50 dark:bg-gray-800/60 rounded-lg">
+                                                        <svg class="mt-0.5 h-4 w-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                        </svg>
+                                                        <div class="min-w-0">
+                                                            <p class="text-xs font-medium text-gray-700 dark:text-gray-200">No accessorials for this customer</p>
+                                                            <p class="mt-0.5 text-[11px] leading-5 text-gray-500 dark:text-gray-400">
+                                                                Turn them on under
+                                                                @if(!$isPortal && $order->customer)
+                                                                    <a href="{{ route('v2.customers.show', ['company' => $company->slug, 'customer' => $order->customer_id]) }}?tab=accessorials"
+                                                                       target="_blank" rel="noopener"
+                                                                       class="font-medium text-primary-600 dark:text-primary-400 hover:underline">{{ $order->customer->name }} → Accessorials</a>.
+                                                                @else
+                                                                    the customer's Accessorials tab.
+                                                                @endif
+                                                            </p>
+                                                        </div>
                                                     </div>
+                                                    @endforelse
                                                 </div>
                                             </div>
                                         </div>

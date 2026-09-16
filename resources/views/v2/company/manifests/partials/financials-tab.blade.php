@@ -55,8 +55,8 @@
     <div class="{{ $cardClass }}">
         <div class="{{ $headClass }}">
             <div>
-                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Manifest costs</h3>
-                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">What this trip costs you — carrier, fuel and extras</p>
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Carrier cost</h3>
+                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">What you pay for this trip — carrier, fuel and extras</p>
             </div>
             <div class="flex items-center gap-2">
                 <span class="rounded-md bg-gray-100 dark:bg-gray-700 px-2.5 py-1 text-sm font-semibold text-gray-700 dark:text-gray-200" x-text="formatCurrency(total)"></span>
@@ -190,7 +190,7 @@
                     </tbody>
                     <tfoot class="border-t border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-900/40">
                         <tr>
-                            <td colspan="4" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Manifest total</td>
+                            <td colspan="4" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Carrier total</td>
                             <td class="px-4 py-3 text-right text-base font-semibold text-gray-900 dark:text-white" x-text="formatCurrency(total)"></td>
                             <td></td>
                         </tr>
@@ -236,7 +236,7 @@
                             <th class="{{ $thClass }} text-left">Order</th>
                             <th class="{{ $thClass }} text-left w-40">Stops here</th>
                             <th class="{{ $thClass }} text-right w-32">Revenue</th>
-                            <th class="{{ $thClass }} text-right w-40">Share of manifest cost</th>
+                            <th class="{{ $thClass }} text-right w-40">Share of carrier cost</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700/60">
