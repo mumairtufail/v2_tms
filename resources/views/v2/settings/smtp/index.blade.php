@@ -9,14 +9,14 @@
 
 <div class="space-y-5">
     <x-v2-breadcrumb :items="[
-        ['label' => 'Settings', 'url' => route('v2.settings.index', $company)],
+        ['label' => 'Settings', 'url' => $settingsIndexUrl],
         ['label' => 'Email (SMTP)']
     ]" />
 
     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <x-page-header title="Email (SMTP)" description="Connect the email account used to send password resets and other emails." />
         @if($settings->isNotEmpty())
-            <a href="{{ route('v2.settings.smtp.create', $company) }}" class="inline-flex shrink-0 items-center justify-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors">
+            <a href="{{ $smtpUrl('create') }}" class="inline-flex shrink-0 items-center justify-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
@@ -54,7 +54,7 @@
                 @endforeach
             </ol>
 
-            <a href="{{ route('v2.settings.smtp.create', $company) }}" class="mt-8 inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-lg shadow-sm shadow-primary-500/20 transition-colors">
+            <a href="{{ $smtpUrl('create') }}" class="mt-8 inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-lg shadow-sm shadow-primary-500/20 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
@@ -94,10 +94,10 @@
             @foreach($settings as $setting)
                 <div class="flex flex-col rounded-xl border bg-white dark:bg-[#0B1120] shadow-sm transition-all {{ $setting->is_active ? 'border-primary-300 dark:border-primary-800 ring-1 ring-primary-100 dark:ring-primary-900/40' : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700' }}">
                     <div class="flex items-start gap-3 p-4">
-                        @include('v2.company.settings.smtp.partials.provider-badge', ['provider' => $setting->provider])
+                        @include('v2.settings.smtp.partials.provider-badge', ['provider' => $setting->provider])
                         <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-2">
-                                <a href="{{ route('v2.settings.smtp.show', [$company, $setting]) }}" class="truncate text-sm font-semibold text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+                                <a href="{{ $smtpUrl('show', $setting) }}" class="truncate text-sm font-semibold text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
                                     {{ $setting->name }}
                                 </a>
                                 @if($setting->is_active)
@@ -129,15 +129,15 @@
 
                         <div class="flex items-center gap-0.5">
                             @unless($setting->is_active)
-                                <form method="POST" action="{{ route('v2.settings.smtp.activate', [$company, $setting]) }}" class="mr-1">
+                                <form method="POST" action="{{ $smtpUrl('activate', $setting) }}" class="mr-1">
                                     @csrf
                                     <button type="submit" class="rounded-md px-2 py-1 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">Set active</button>
                                 </form>
                             @endunless
-                            <a href="{{ route('v2.settings.smtp.show', [$company, $setting]) }}" class="p-1.5 rounded-md text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-800" title="View">
+                            <a href="{{ $smtpUrl('show', $setting) }}" class="p-1.5 rounded-md text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-800" title="View">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                             </a>
-                            <a href="{{ route('v2.settings.smtp.edit', [$company, $setting]) }}" class="p-1.5 rounded-md text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-800" title="Edit">
+                            <a href="{{ $smtpUrl('edit', $setting) }}" class="p-1.5 rounded-md text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-800" title="Edit">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                             </a>
                             <button type="button" x-data @click="$dispatch('open-modal', 'delete-smtp-{{ $setting->id }}')" class="p-1.5 rounded-md text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800" title="Delete">
@@ -157,6 +157,6 @@
 </div>
 
 @foreach($settings as $setting)
-    @include('v2.company.settings.smtp.partials.delete-modal', ['setting' => $setting])
+    @include('v2.settings.smtp.partials.delete-modal', ['setting' => $setting])
 @endforeach
 @endsection

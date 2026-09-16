@@ -10,7 +10,7 @@
     @endif
     <x-slot name="footer">
         <button type="button" @click="$dispatch('close-modal', 'delete-smtp-{{ $setting->id }}')" class="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
-        <form action="{{ route('v2.settings.smtp.destroy', [$company, $setting]) }}" method="POST">
+        <form action="{{ $smtpUrl('destroy', $setting) }}" method="POST">
             @csrf @method('DELETE')
             <button type="submit" class="px-3 py-1.5 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg">Delete</button>
         </form>

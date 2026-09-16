@@ -53,6 +53,21 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\IsSuperAdmin::class]
     Route::get('/settings', [App\Http\Controllers\Admin\SystemSettingsController::class, 'index'])->name('settings.index');
     Route::get('/settings/branding', [App\Http\Controllers\Admin\SystemSettingsController::class, 'branding'])->name('settings.branding');
     Route::put('/settings/branding', [App\Http\Controllers\Admin\SystemSettingsController::class, 'updateBranding'])->name('settings.branding.update');
+
+    // Platform email (SMTP) accounts — also the fallback for companies without their own
+    Route::prefix('settings/email')->name('settings.smtp.')->controller(\App\Http\Controllers\Admin\SmtpSettingController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::post('test', 'testDraft')->middleware('throttle:10,1')->name('test-draft');
+        Route::get('{smtpSetting}', 'show')->name('show');
+        Route::get('{smtpSetting}/edit', 'edit')->name('edit');
+        Route::put('{smtpSetting}', 'update')->name('update');
+        Route::delete('{smtpSetting}', 'destroy')->name('destroy');
+        Route::post('{smtpSetting}/activate', 'activate')->name('activate');
+        Route::post('{smtpSetting}/deactivate', 'deactivate')->name('deactivate');
+        Route::post('{smtpSetting}/test', 'test')->middleware('throttle:10,1')->name('test');
+    });
     // Super admin profile — lives under /admin/profile
     Route::get('/profile', function () {
         return view('v2.admin.profile.index');

@@ -74,7 +74,15 @@ class MailService
 
     public function activeSetting(?int $companyId): ?SmtpSetting
     {
-        return SmtpSetting::forCompany($companyId)->active()->first();
+        $setting = SmtpSetting::forCompany($companyId)->active()->first();
+
+        // A company with no account of its own falls back to the platform account
+        // the super admin configured, and only then to the mailer in .env
+        if (! $setting && $companyId !== null) {
+            $setting = SmtpSetting::forCompany(null)->active()->first();
+        }
+
+        return $setting;
     }
 
     public function mailerFor(?int $companyId): MailerContract

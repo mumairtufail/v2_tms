@@ -20,17 +20,17 @@
 
 <div class="space-y-5">
     <x-v2-breadcrumb :items="[
-        ['label' => 'Settings', 'url' => route('v2.settings.index', $company)],
-        ['label' => 'Email (SMTP)', 'url' => route('v2.settings.smtp.index', $company)],
+        ['label' => 'Settings', 'url' => $settingsIndexUrl],
+        ['label' => 'Email (SMTP)', 'url' => $smtpUrl('index')],
         ['label' => $setting->name]
     ]" />
 
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex min-w-0 items-center gap-3">
-            <a href="{{ route('v2.settings.smtp.index', $company) }}" class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+            <a href="{{ $smtpUrl('index') }}" class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
             </a>
-            @include('v2.company.settings.smtp.partials.provider-badge', ['provider' => $setting->provider, 'size' => 'lg'])
+            @include('v2.settings.smtp.partials.provider-badge', ['provider' => $setting->provider, 'size' => 'lg'])
             <div class="min-w-0">
                 <div class="flex items-center gap-2">
                     <h1 class="truncate text-xl font-bold text-gray-900 dark:text-white">{{ $setting->name }}</h1>
@@ -48,7 +48,7 @@
         </div>
 
         <div class="flex shrink-0 items-center gap-2">
-            <a href="{{ route('v2.settings.smtp.edit', [$company, $setting]) }}" class="inline-flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3.5 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+            <a href="{{ $smtpUrl('edit', $setting) }}" class="inline-flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3.5 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                 Edit
             </a>
@@ -71,7 +71,7 @@
                             <p class="mt-0.5 text-xs leading-5 text-green-700 dark:text-green-400/90">Password resets and other emails go out from {{ $setting->from_address }}.</p>
                         </div>
                     </div>
-                    <form method="POST" action="{{ route('v2.settings.smtp.deactivate', [$company, $setting]) }}" class="shrink-0">
+                    <form method="POST" action="{{ $smtpUrl('deactivate', $setting) }}" class="shrink-0">
                         @csrf
                         <button type="submit" class="rounded-lg border border-green-300 dark:border-green-800 px-3 py-1.5 text-xs font-semibold text-green-800 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors">Deactivate</button>
                     </form>
@@ -85,7 +85,7 @@
                             <p class="mt-0.5 text-xs leading-5 text-gray-500 dark:text-gray-400">Set it as active to send emails through it. The account currently in use will be switched off.</p>
                         </div>
                     </div>
-                    <form method="POST" action="{{ route('v2.settings.smtp.activate', [$company, $setting]) }}" class="shrink-0">
+                    <form method="POST" action="{{ $smtpUrl('activate', $setting) }}" class="shrink-0">
                         @csrf
                         <button type="submit" class="rounded-lg bg-primary-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-primary-700 transition-colors">Set as active</button>
                     </form>
@@ -122,7 +122,7 @@
                 </div>
                 <p class="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">Check this account can sign in and deliver email.</p>
 
-                <form method="POST" action="{{ route('v2.settings.smtp.test', [$company, $setting]) }}" x-data="{ sending: false }" @submit="sending = true" class="mt-4">
+                <form method="POST" action="{{ $smtpUrl('test', $setting) }}" x-data="{ sending: false }" @submit="sending = true" class="mt-4">
                     @csrf
                     <label for="test_to" class="block mb-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">Send test to</label>
                     <input id="test_to" name="test_to" type="email" required value="{{ old('test_to', auth()->user()->email) }}"
@@ -158,5 +158,5 @@
     </div>
 </div>
 
-@include('v2.company.settings.smtp.partials.delete-modal', ['setting' => $setting])
+@include('v2.settings.smtp.partials.delete-modal', ['setting' => $setting])
 @endsection

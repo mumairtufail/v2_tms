@@ -213,6 +213,10 @@ class SmtpSettingsTest extends TestCase
     {
         $service = app(MailService::class);
 
+        // A platform-wide account would otherwise be picked up as the fallback,
+        // so park any that exist to isolate the "nothing configured" case
+        SmtpSetting::forCompany(null)->update(['is_active' => false]);
+
         $this->assertNull($service->activeSetting($this->company->id));
 
         $setting = SmtpSetting::create($this->payload(['company_id' => $this->company->id, 'name' => 'Active', 'username' => 'u']));

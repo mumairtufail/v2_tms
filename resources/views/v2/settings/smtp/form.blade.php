@@ -19,7 +19,7 @@
         'provider'     => $providerKey,
         'name'         => old('name', $setting->name ?? ''),
         'from_address' => old('from_address', $setting->from_address ?? ''),
-        'from_name'    => old('from_name', $setting ? $setting->from_name : $company->name),
+        'from_name'    => old('from_name', $setting ? $setting->from_name : $brandName),
         'username'     => old('username', $savedUsername),
         'host'         => old('host', $setting->host ?? $providerMeta['host']),
         'port'         => (int) old('port', $setting->port ?? $providerMeta['port']),
@@ -36,7 +36,7 @@
         'encryptions'  => \App\Models\SmtpSetting::ENCRYPTIONS,
         'initial'      => $initial,
         'showAdvanced' => $showAdvanced,
-        'testUrl'      => route('v2.settings.smtp.test-draft', $company),
+        'testUrl'      => $smtpUrl('test-draft'),
         'testTo'       => auth()->user()->email,
     ];
 
@@ -48,13 +48,13 @@
 
 <div class="space-y-5" x-data="smtpForm(@js($formConfig))">
     <x-v2-breadcrumb :items="[
-        ['label' => 'Settings', 'url' => route('v2.settings.index', $company)],
-        ['label' => 'Email (SMTP)', 'url' => route('v2.settings.smtp.index', $company)],
+        ['label' => 'Settings', 'url' => $settingsIndexUrl],
+        ['label' => 'Email (SMTP)', 'url' => $smtpUrl('index')],
         ['label' => $setting ? 'Edit' : 'Add account']
     ]" />
 
     <div class="flex items-center gap-4">
-        <a href="{{ $setting ? route('v2.settings.smtp.show', [$company, $setting]) : route('v2.settings.smtp.index', $company) }}" class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+        <a href="{{ $setting ? $smtpUrl('show', $setting) : $smtpUrl('index') }}" class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
         </a>
         <x-page-header
@@ -65,7 +65,7 @@
 
     <div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <form x-ref="form" method="POST"
-              action="{{ $setting ? route('v2.settings.smtp.update', [$company, $setting]) : route('v2.settings.smtp.store', $company) }}"
+              action="{{ $setting ? $smtpUrl('update', $setting) : $smtpUrl('store') }}"
               @submit="submitting = true"
               class="space-y-5 lg:col-span-2">
             @csrf
@@ -95,7 +95,7 @@
                                 :class="form.provider === '{{ $key }}'
                                     ? 'border-primary-500 bg-primary-50/60 dark:border-primary-500 dark:bg-primary-900/20'
                                     : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900'">
-                            @include('v2.company.settings.smtp.partials.provider-badge', ['provider' => $key])
+                            @include('v2.settings.smtp.partials.provider-badge', ['provider' => $key])
                             <div class="min-w-0">
                                 <p class="truncate text-sm font-semibold text-gray-900 dark:text-white">{{ $provider['label'] }}</p>
                                 <p class="truncate text-[11px] text-gray-500 dark:text-gray-400">{{ $provider['subtitle'] }}</p>
@@ -137,7 +137,7 @@
 
                     <div>
                         <label for="from_name" class="{{ $labelClass }}">Sender name <span class="font-normal text-gray-400">(optional)</span></label>
-                        <input id="from_name" name="from_name" type="text" x-model="form.from_name" maxlength="100" placeholder="{{ $company->name }}" class="{{ $inputClass }}">
+                        <input id="from_name" name="from_name" type="text" x-model="form.from_name" maxlength="100" placeholder="{{ $brandName }}" class="{{ $inputClass }}">
                         <p class="{{ $hintClass }}">What people see in their inbox.</p>
                         <x-input-error :messages="$errors->get('from_name')" class="mt-1" />
                     </div>
@@ -265,7 +265,7 @@
             </section>
 
             <div class="flex items-center justify-end gap-3">
-                <a href="{{ $setting ? route('v2.settings.smtp.show', [$company, $setting]) : route('v2.settings.smtp.index', $company) }}"
+                <a href="{{ $setting ? $smtpUrl('show', $setting) : $smtpUrl('index') }}"
                    class="px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Cancel</a>
                 <button type="submit" :disabled="submitting"
                         class="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-primary-500/20 transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60">
