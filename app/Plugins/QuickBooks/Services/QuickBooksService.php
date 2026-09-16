@@ -84,7 +84,8 @@ class QuickBooksService
         }
 
         $lines = [];
-        foreach ($order->quote->costs as $cost) {
+        // Only what the customer is charged: carrier costs are an expense, never an invoice line
+        foreach ($order->quote->costs->where('category', 'customer') as $cost) {
             $lines[] = [
                 'DetailType' => 'SalesItemLineDetail',
                 'Amount' => $cost->cost,
@@ -101,7 +102,7 @@ class QuickBooksService
         }
 
         if (empty($lines)) {
-            throw new Exception("Quote has no costs. Cannot create a zero-value invoice.");
+            throw new Exception("Quote has no customer charges. Cannot create a zero-value invoice.");
         }
 
         $payload = [

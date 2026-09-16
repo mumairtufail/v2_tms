@@ -128,14 +128,19 @@
 
                 {{-- ═══════════════════════════════════════════════
                      CARRIER COST — Orange
+                     Editable when one manifest covers the whole order (saves to that
+                     manifest); otherwise read-only, showing the allocation from manifests.
                      ═══════════════════════════════════════════════ --}}
+                @if($carrierEditable ?? false)
                 <div class="flex flex-col">
                     <div class="flex items-center justify-between px-4 py-2.5 shrink-0
                                 bg-orange-50/80 dark:bg-orange-950/30
                                 border-b border-orange-200/60 dark:border-orange-900/30">
                         <div class="flex items-center gap-2">
                             <h4 class="text-[11px] font-black uppercase tracking-widest text-orange-600 dark:text-orange-400">Carrier Cost</h4>
-                            <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-500 dark:bg-orange-900/40 dark:text-orange-400">Expenses</span>
+                            <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-500 dark:bg-orange-900/40 dark:text-orange-400">
+                                Saves to {{ $carrierTargetManifest->code }}
+                            </span>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-[11px] font-black px-2.5 py-0.5 rounded-full
@@ -167,27 +172,22 @@
                             <tbody class="divide-y divide-slate-100 dark:divide-slate-700/30">
                                 <template x-for="(row, idx) in quote.carrier_rows" :key="'c-' + idx">
                                     <tr class="group transition-colors hover:bg-orange-50/50 dark:hover:bg-slate-800/40">
-
                                         {{-- TYPE --}}
                                         <td class="px-2 py-1.5">
-                                            {{-- Row 0: Freight types --}}
                                             <template x-if="idx === 0">
                                                 <select x-model="row.type"
                                                         @change="row.description = row.type; normalizeQuoteRows(quote.carrier_rows)"
-                                                        class="w-full text-[10px] py-1 px-1.5 rounded-md
-                                                               border border-slate-200 dark:border-slate-600/40
+                                                        class="w-full text-[10px] py-1 px-1.5 rounded-md border border-slate-200 dark:border-slate-600/40
                                                                bg-white dark:bg-slate-800/60 text-slate-700 dark:text-slate-200
                                                                focus:ring-2 focus:ring-orange-400 focus:border-orange-400">
                                                     <option value="Freight">Freight</option>
                                                     <option value="Freight (per mile)">Freight (per mile)</option>
                                                 </select>
                                             </template>
-                                            {{-- Row 1: Fuel types --}}
                                             <template x-if="idx === 1">
                                                 <select x-model="row.type"
                                                         @change="normalizeQuoteRows(quote.carrier_rows)"
-                                                        class="w-full text-[10px] py-1 px-1.5 rounded-md
-                                                               border border-slate-200 dark:border-slate-600/40
+                                                        class="w-full text-[10px] py-1 px-1.5 rounded-md border border-slate-200 dark:border-slate-600/40
                                                                bg-white dark:bg-slate-800/60 text-slate-700 dark:text-slate-200
                                                                focus:ring-2 focus:ring-orange-400 focus:border-orange-400">
                                                     <option value="Fuel (surcharge)">Fuel (surcharge)</option>
@@ -195,7 +195,6 @@
                                                     <option value="Fuel (flat)">Fuel (flat)</option>
                                                 </select>
                                             </template>
-                                            {{-- Row 2+: Miscellaneous (label only) --}}
                                             <template x-if="idx >= 2">
                                                 <div class="flex items-center gap-1.5 px-1">
                                                     <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Miscellaneous</span>
@@ -207,8 +206,7 @@
                                         <td class="px-2 py-1.5">
                                             <input type="text" x-model="row.description"
                                                    :readonly="row.type === 'Fuel (surcharge)' && idx === 1"
-                                                   class="w-full text-[10px] py-1 px-1.5 rounded-md
-                                                          border border-slate-200 dark:border-slate-600/40
+                                                   class="w-full text-[10px] py-1 px-1.5 rounded-md border border-slate-200 dark:border-slate-600/40
                                                           bg-white dark:bg-slate-800/60 text-slate-700 dark:text-slate-200
                                                           placeholder-slate-300 dark:placeholder-slate-600
                                                           focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
@@ -224,12 +222,10 @@
                                                 <input type="number" step="0.01" x-model="row.qty"
                                                        @focus="$event.target.select()"
                                                        @input="normalizeQuoteRows(quote.carrier_rows)"
-                                                       class="w-full text-[10px] py-1 px-1.5 rounded-md text-center
-                                                              border border-slate-200 dark:border-slate-600/40
+                                                       class="w-full text-[10px] py-1 px-1.5 rounded-md text-center border border-slate-200 dark:border-slate-600/40
                                                               bg-white dark:bg-slate-800/60 text-slate-700 dark:text-slate-200
                                                               focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
                                                        :placeholder="(row.type === 'Fuel (surcharge)' && idx === 1) ? '%' : '1'">
-                                                {{-- % suffix badge for fuel surcharge --}}
                                                 <template x-if="row.type === 'Fuel (surcharge)' && idx === 1">
                                                     <span class="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-orange-400 pointer-events-none select-none">%</span>
                                                 </template>
@@ -240,40 +236,32 @@
                                         <td class="px-2 py-1.5">
                                             <div class="flex items-center gap-0.5 justify-end">
                                                 <span class="text-[10px] text-slate-300 dark:text-slate-600 select-none">$</span>
-                                                {{-- Fuel surcharge: rate is auto-set by normalizeQuoteRows, show as read-only --}}
                                                 <template x-if="row.type === 'Fuel (surcharge)' && idx === 1">
-                                                    <input type="number" step="0.01" x-model="row.rate" readonly
+                                                    <input type="number" step="0.01" x-model="row.rate" readonly placeholder="0.00"
                                                            class="w-20 text-[10px] py-1 px-1 rounded-md text-right
                                                                   border border-dashed border-orange-200 dark:border-orange-900/40
                                                                   bg-orange-50/50 dark:bg-slate-800/20
-                                                                  text-orange-500/70 dark:text-orange-600/60
-                                                                  cursor-not-allowed italic">
+                                                                  text-orange-500/70 dark:text-orange-600/60 cursor-not-allowed italic">
                                                 </template>
-                                                {{-- All other rows: normal editable rate --}}
                                                 <template x-if="!(row.type === 'Fuel (surcharge)' && idx === 1)">
-                                                    <input type="number" step="0.01" x-model="row.rate"
+                                                    <input type="number" step="0.01" x-model="row.rate" placeholder="0.00"
                                                            @input="normalizeQuoteRows(quote.carrier_rows)"
-                                                           class="w-20 text-[10px] py-1 px-1 rounded-md text-right
-                                                                  border border-slate-200 dark:border-slate-600/40
+                                                           class="w-20 text-[10px] py-1 px-1 rounded-md text-right border border-slate-200 dark:border-slate-600/40
                                                                   bg-white dark:bg-slate-800/60 text-slate-700 dark:text-slate-200
                                                                   focus:ring-2 focus:ring-orange-400 focus:border-orange-400">
                                                 </template>
                                             </div>
                                         </td>
 
-                                        {{-- COST (CAD) — always from normalizeQuoteRows via calculateRowAmount --}}
+                                        {{-- COST --}}
                                         <td class="px-2 py-1.5 text-right font-bold text-orange-600 dark:text-orange-300"
-                                            x-text="'$' + formatMoney(calculateRowAmount(row, quote.carrier_rows))">
-                                        </td>
+                                            x-text="'$' + formatMoney(calculateRowAmount(row, quote.carrier_rows))"></td>
 
-                                        {{-- ACTION BUTTONS (only for misc rows idx≥2) --}}
+                                        {{-- ACTIONS --}}
                                         <td class="px-1.5 py-1.5">
                                             <template x-if="idx >= 2">
                                                 <div class="flex items-center gap-0.5 justify-center">
-                                                    {{-- Duplicate --}}
-                                                    <button type="button"
-                                                            @click="duplicateQuoteRow('carrier', idx)"
-                                                            title="Duplicate"
+                                                    <button type="button" @click="duplicateQuoteRow('carrier', idx)" title="Duplicate"
                                                             class="w-5 h-5 flex items-center justify-center rounded-md transition-all
                                                                    text-slate-300 hover:text-indigo-500 hover:bg-indigo-50
                                                                    dark:text-slate-600 dark:hover:text-indigo-400 dark:hover:bg-indigo-950/40">
@@ -281,7 +269,6 @@
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                                                         </svg>
                                                     </button>
-                                                    {{-- Delete (appears on hover) --}}
                                                     <button type="button"
                                                             @click="quote.carrier_rows.splice(idx, 1); normalizeQuoteRows(quote.carrier_rows)"
                                                             class="w-5 h-5 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 transition-all
@@ -306,8 +293,86 @@
                                 </tr>
                             </tfoot>
                         </table>
+
+                        <p class="px-4 py-2.5 text-[10px] leading-4 text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-700/40">
+                            Saved on manifest {{ $carrierTargetManifest->code }} — the same figures the rate confirmation pays. Edit them here or on the manifest.
+                        </p>
                     </div>
                 </div>
+                @else
+                <div class="flex flex-col">
+                    <div class="flex items-center justify-between px-4 py-2.5 shrink-0
+                                bg-orange-50/80 dark:bg-orange-950/30
+                                border-b border-orange-200/60 dark:border-orange-900/30">
+                        <div class="flex items-center gap-2">
+                            <h4 class="text-[11px] font-black uppercase tracking-widest text-orange-600 dark:text-orange-400">Carrier Cost</h4>
+                            <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-500 dark:bg-orange-900/40 dark:text-orange-400">From manifests</span>
+                        </div>
+                        <span class="text-[11px] font-black px-2.5 py-0.5 rounded-full
+                                     bg-orange-100 text-orange-600 border border-orange-200
+                                     dark:bg-orange-950/60 dark:text-orange-400 dark:border-orange-800/40"
+                              x-text="'$' + formatMoney(carrierCostTotal)"></span>
+                    </div>
+
+                    <div class="flex-1 bg-white dark:bg-transparent overflow-x-auto">
+                        <table class="w-full text-[11px]">
+                            <thead class="sticky top-0 z-10">
+                                <tr class="bg-slate-100 dark:bg-slate-800/90 border-b border-slate-200 dark:border-slate-700/50">
+                                    <th class="px-3 py-2 text-left   text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Manifest</th>
+                                    <th class="px-3 py-2 text-center text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 w-[90px]">Stops</th>
+                                    <th class="px-3 py-2 text-right  text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 w-[80px]">Share</th>
+                                    <th class="px-3 py-2 text-right  text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 w-[110px]">Cost (CAD)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 dark:divide-slate-700/30">
+                                <template x-for="row in carrierAllocation" :key="row.id">
+                                    <tr class="transition-colors hover:bg-orange-50/50 dark:hover:bg-slate-800/40">
+                                        <td class="px-3 py-2">
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="font-semibold text-slate-700 dark:text-slate-200" x-text="row.code"></span>
+                                                <span x-show="row.is_shared"
+                                                      class="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+                                                      title="This manifest carries other orders too, so its cost is split by stops">Shared</span>
+                                            </div>
+                                            <span class="block text-[9px] text-slate-400 dark:text-slate-500"
+                                                  x-text="'$' + formatMoney(row.manifest_cost) + ' on this manifest'"></span>
+                                        </td>
+                                        <td class="px-3 py-2 text-center text-slate-500 dark:text-slate-400"
+                                            x-text="row.stops_here + ' of ' + row.stops_on_trip"></td>
+                                        <td class="px-3 py-2 text-right text-slate-500 dark:text-slate-400"
+                                            x-text="Math.round(row.share * 100) + '%'"></td>
+                                        <td class="px-3 py-2 text-right font-bold text-orange-600 dark:text-orange-300"
+                                            x-text="'$' + formatMoney(row.amount)"></td>
+                                    </tr>
+                                </template>
+
+                                <template x-if="carrierAllocation.length === 0">
+                                    <tr>
+                                        <td colspan="4" class="px-4 py-10 text-center">
+                                            <p class="text-[11px] font-semibold text-slate-500 dark:text-slate-300">No manifest assigned yet</p>
+                                            <p class="mt-1 text-[10px] text-slate-400 dark:text-slate-500">
+                                                Assign the stops below to a manifest, then enter the carrier cost on that manifest.
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                            <tfoot>
+                                <tr class="border-t-2 border-orange-200 dark:border-orange-900/30 bg-orange-50 dark:bg-orange-950/20">
+                                    <td colspan="3" class="px-3 py-2 text-right text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Cost Total</td>
+                                    <td class="px-3 py-2 text-right font-black text-[13px] text-orange-600 dark:text-orange-400"
+                                        x-text="'$' + formatMoney(carrierCostTotal)"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                        <p class="px-4 py-2.5 text-[10px] leading-4 text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-700/40">
+                            Carrier cost is entered on the manifest — that is what the rate confirmation pays. Change a manifest assignment and this updates after the order is saved.
+                        </p>
+                    </div>
+                </div>
+
+                @endif
 
                 {{-- ═══════════════════════════════════════════════
                      CUSTOMER QUOTE — Indigo
@@ -421,7 +486,7 @@
                                             <div class="flex items-center gap-0.5 justify-end">
                                                 <span class="text-[10px] text-slate-300 dark:text-slate-600 select-none">$</span>
                                                 <template x-if="row.type === 'Fuel (surcharge)' && idx === 1">
-                                                    <input type="number" step="0.01" x-model="row.rate" readonly
+                                                    <input type="number" step="0.01" x-model="row.rate" readonly placeholder="0.00"
                                                            class="w-20 text-[10px] py-1 px-1 rounded-md text-right
                                                                   border border-dashed border-indigo-200 dark:border-indigo-900/40
                                                                   bg-indigo-50/50 dark:bg-slate-800/20
@@ -429,7 +494,7 @@
                                                                   cursor-not-allowed italic">
                                                 </template>
                                                 <template x-if="!(row.type === 'Fuel (surcharge)' && idx === 1)">
-                                                    <input type="number" step="0.01" x-model="row.rate"
+                                                    <input type="number" step="0.01" x-model="row.rate" placeholder="0.00"
                                                            @input="normalizeQuoteRows(quote.customer_rows)"
                                                            class="w-20 text-[10px] py-1 px-1 rounded-md text-right
                                                                   border border-slate-200 dark:border-slate-600/40

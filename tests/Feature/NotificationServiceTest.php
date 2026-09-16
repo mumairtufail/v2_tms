@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Company;
 use App\Models\Customer;
+use App\Models\CustomerContact;
 use App\Models\Order;
 use App\Models\User;
 use App\Services\NotificationService;
@@ -83,6 +84,14 @@ class NotificationServiceTest extends TestCase
             'is_deleted' => false,
         ]);
 
+        $contact = CustomerContact::create([
+            'company_id' => $company->id,
+            'customer_id' => $customer->id,
+            'first_name' => 'Shipment',
+            'email' => 'shipment@example.com',
+            'portal_access' => true,
+        ]);
+
         $order = Order::create([
             'company_id' => $company->id,
             'customer_id' => $customer->id,
@@ -98,10 +107,10 @@ class NotificationServiceTest extends TestCase
             'in_transit'
         );
 
-        $this->assertSame(1, $customer->fresh()->unreadNotifications()->count());
+        $this->assertSame(1, $contact->fresh()->unreadNotifications()->count());
         $this->assertStringContainsString(
             'in transit',
-            strtolower($customer->fresh()->unreadNotifications()->first()->data['body'])
+            strtolower($contact->fresh()->unreadNotifications()->first()->data['body'])
         );
     }
 

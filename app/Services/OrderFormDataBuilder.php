@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Accessorial;
 use App\Models\Company;
 use App\Models\Order;
 use Carbon\Carbon;
@@ -25,8 +26,13 @@ class OrderFormDataBuilder
         }
 
         $services = \App\Models\Service::all();
-        $allAccessorials = \App\Models\Accessorial::orderBy('name')->get();
+        $allAccessorials = $this->accessorialsFor($company, $order);
         $manifests = \App\Models\Manifest::where('company_id', $company->id)->get();
+
+        $customerCommodities = $order->customer
+            ? $order->customer->commodities()->orderBy('description')->get()->map->toOrderPreset()->values()
+            : collect();
+        $requireDimensions = (bool) $order->customer?->require_dimensions;
 
         $stopsData = $order->stops->map(fn ($stop) => $this->mapStop($stop));
 
@@ -44,16 +50,31 @@ class OrderFormDataBuilder
                 'percentage' => $c->percentage ?? null,
                 'is_default' => false,
             ])->values()->toArray(),
-            'carrier_rows' => $quote->costs->where('category', 'carrier')->map(fn ($c) => [
+            // Carrier cost is entered on the manifest and only read back here
+            'carrier_rows' => [],
+        ];
+
+        $carrierAllocation = app(ManifestService::class)->carrierCostForOrder($order);
+
+        // Carrier cost lives on the manifest. It can be typed here too, but only when every
+        // stop sits on the same manifest — otherwise there is no safe way to divide one figure.
+        $stopManifestIds = $order->stops->pluck('manifest_id')->filter()->unique()->values();
+        $carrierTargetManifest = $stopManifestIds->count() === 1
+            ? \App\Models\Manifest::with('costEstimates')->find($stopManifestIds->first())
+            : null;
+        $carrierEditable = (bool) $carrierTargetManifest;
+
+        if ($carrierTargetManifest) {
+            $quoteData['carrier_rows'] = $carrierTargetManifest->costEstimates->map(fn ($c) => [
                 'type' => $c->type ?? 'Freight',
                 'description' => $c->description ?? '',
                 'qty' => $c->qty ?? 0,
                 'rate' => $c->rate ?? 0,
-                'cost' => $c->cost ?? 0,
-                'percentage' => $c->percentage ?? null,
+                'cost' => $c->est_cost ?? 0,
+                'percentage' => null,
                 'is_default' => false,
-            ])->values()->toArray(),
-        ];
+            ])->values()->toArray();
+        }
 
         $manifestsMap = $manifests->pluck('code', 'id')->toArray();
 
@@ -61,7 +82,26 @@ class OrderFormDataBuilder
             $quoteData['customer_rows'][] = ['type' => 'Freight', 'description' => '', 'cost' => 0];
         }
 
-        return compact('company', 'order', 'services', 'stopsData', 'allAccessorials', 'manifests', 'quoteData', 'manifestsMap');
+        return compact('company', 'order', 'services', 'stopsData', 'allAccessorials', 'manifests', 'quoteData', 'manifestsMap', 'customerCommodities', 'requireDimensions', 'carrierAllocation', 'carrierEditable', 'carrierTargetManifest');
+    }
+
+    /**
+     * The company's accessorials this order can use: the ones enabled for the
+     * customer, plus any already on the order so existing selections never vanish.
+     */
+    protected function accessorialsFor(Company $company, Order $order)
+    {
+        $companyAccessorials = Accessorial::forCompany($company->id)->orderBy('name')->get();
+        $attachedIds = $order->stops->flatMap(fn ($stop) => $stop->accessorials->pluck('id'))->unique();
+
+        $allowedIds = $order->customer
+            ? $order->customer->accessorials()->pluck('accessorials.id')
+            : $companyAccessorials->pluck('id');
+
+        return $companyAccessorials
+            ->filter(fn (Accessorial $accessorial) => $attachedIds->contains($accessorial->id)
+                || ($accessorial->is_active && $allowedIds->contains($accessorial->id)))
+            ->values();
     }
 
     protected function mapStop($stop): array

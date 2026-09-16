@@ -23,7 +23,7 @@ class OrderUpdateService
             'order_id' => $order->id,
             'order_number' => $order->order_number,
             'user_id' => Auth::id(),
-            'customer_id' => Auth::guard('customer')->id(),
+            'customer_id' => Auth::guard('customer')->user()?->customer_id,
             'portal' => $portal,
             'order_type' => $request->input('order_type'),
         ]);
@@ -105,6 +105,10 @@ class OrderUpdateService
 
             if (!$portal && !empty($quoteData)) {
                 $this->processQuote($order, $quoteData, $ordersLog);
+            }
+
+            if (!$portal && is_array($quoteData) && array_key_exists('carrier_rows', $quoteData)) {
+                $this->applyCarrierCostToManifest($order, $quoteData['carrier_rows'] ?? [], $ordersLog);
             }
 
             if (!$portal) {
@@ -312,7 +316,8 @@ class OrderUpdateService
         $quote = $order->quote ?? new \App\Models\OrderQuote(['order_id' => $order->id]);
 
         $quote->fill([
-            'service_id' => $quoteData['service_id'] ?: null,
+            // Missing keys must not abort the whole order save
+            'service_id' => ($quoteData['service_id'] ?? null) ?: null,
             'delivery_start_date' => $this->parseQuoteDate($quoteData['delivery_start'] ?? null),
             'delivery_end_date' => $this->parseQuoteDate($quoteData['delivery_end'] ?? null),
         ]);
@@ -332,7 +337,6 @@ class OrderUpdateService
         };
 
         $customerFreightBase = $calcFreightSubtotal($quoteData['customer_rows'] ?? []);
-        $carrierFreightBase = $calcFreightSubtotal($quoteData['carrier_rows'] ?? []);
 
         foreach ($quoteData['customer_rows'] ?? [] as $row) {
             $typeStr = strtolower($row['type'] ?? '');
@@ -355,32 +359,44 @@ class OrderUpdateService
             ]);
         }
 
-        foreach ($quoteData['carrier_rows'] ?? [] as $row) {
-            $typeStr = strtolower($row['type'] ?? '');
-            $isSurcharge = ($typeStr === 'fuel (surcharge)');
-            $qty = (float) ($row['qty'] ?? 0);
-            $rate = (float) ($row['rate'] ?? 0);
-
-            $cost = $isSurcharge
-                ? round($carrierFreightBase * ($qty / 100), 2)
-                : round($qty * $rate, 2);
-
-            $quote->costs()->create([
-                'category' => 'carrier',
-                'type' => $row['type'] ?? 'Freight',
-                'description' => $row['description'] ?? '',
-                'qty' => $qty,
-                'rate' => $isSurcharge ? $carrierFreightBase : $rate,
-                'cost' => $cost,
-                'percentage' => $isSurcharge ? $qty : null,
-            ]);
-        }
+        // Carrier cost belongs to the manifest (that is what the rate confirmation pays),
+        // so the order never writes 'carrier' rows. Any left by older saves are cleared above.
 
         $log->info('Processed quote', [
             'quote_id' => $quote->id,
             'service_id' => $quote->service_id,
             'customer_rows' => count($quoteData['customer_rows'] ?? []),
-            'carrier_rows' => count($quoteData['carrier_rows'] ?? []),
+        ]);
+    }
+
+    /**
+     * Carrier cost is stored on the manifest, never on the order. The order screen may only
+     * edit it when every stop sits on the same manifest, so one figure can never be split
+     * ambiguously across trips — with several manifests the order panel is read-only.
+     */
+    protected function applyCarrierCostToManifest(Order $order, array $carrierRows, $log): void
+    {
+        $manifestIds = $order->stops()->pluck('manifest_id')->filter()->unique()->values();
+
+        if ($manifestIds->count() !== 1) {
+            $log->info('Carrier cost not written: order does not sit on exactly one manifest', [
+                'manifest_count' => $manifestIds->count(),
+            ]);
+
+            return;
+        }
+
+        $manifest = Manifest::find($manifestIds->first());
+
+        if (! $manifest) {
+            return;
+        }
+
+        app(ManifestService::class)->replaceCostEstimates($manifest, $carrierRows);
+
+        $log->info('Carrier cost written to manifest', [
+            'manifest_id' => $manifest->id,
+            'rows' => count($carrierRows),
         ]);
     }
 

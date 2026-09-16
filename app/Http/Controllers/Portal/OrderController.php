@@ -28,7 +28,7 @@ class OrderController extends Controller
 
     public function index(Request $request, Company $company): View
     {
-        $customer = Auth::guard('customer')->user();
+        $customer = app('current.customer');
 
         $orders = $this->portalService->getOrders($customer, [
             'search' => $request->search,
@@ -40,7 +40,7 @@ class OrderController extends Controller
 
     public function store(Request $request, Company $company): RedirectResponse
     {
-        $customer = Auth::guard('customer')->user();
+        $customer = app('current.customer');
         $this->portalService->assertCustomerBelongsToCompany($customer, $company);
 
         $order = DB::transaction(function () use ($customer, $company) {
@@ -69,7 +69,7 @@ class OrderController extends Controller
 
     public function edit(Company $company, Order $order): View
     {
-        $customer = Auth::guard('customer')->user();
+        $customer = app('current.customer');
         $this->portalService->assertOrderEditableByCustomer($order, $customer);
 
         $order->order_type = 'point_to_point';
@@ -83,7 +83,7 @@ class OrderController extends Controller
 
     public function update(Request $request, Company $company, Order $order): RedirectResponse
     {
-        $customer = Auth::guard('customer')->user();
+        $customer = app('current.customer');
         $this->portalService->assertOrderEditableByCustomer($order, $customer);
 
         return $this->orderUpdateService->update($request, $company, $order, [
@@ -95,7 +95,7 @@ class OrderController extends Controller
 
     public function show(Company $company, Order $order): View
     {
-        $customer = Auth::guard('customer')->user();
+        $customer = app('current.customer');
 
         $this->portalService->assertOrderBelongsToCustomer($order, $customer);
 
@@ -106,7 +106,7 @@ class OrderController extends Controller
 
     public function activityLogs(Company $company, Order $order, ActivityLogListingService $listingService): JsonResponse
     {
-        $customer = Auth::guard('customer')->user();
+        $customer = app('current.customer');
         $this->portalService->assertOrderBelongsToCustomer($order, $customer);
 
         return response()->json([

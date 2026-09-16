@@ -1,7 +1,7 @@
 <div
     @mousedown.outside="close()"
 >
-    <label class="block text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase">Company Name</label>
+    <label class="block text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase">{{ $searchLabel ?? 'Company Name' }}</label>
 
     <div class="relative group mt-1">
         <input type="text"
@@ -10,7 +10,7 @@
                @keydown.enter.prevent="searchGoogle"
                @focus="if(query.length >= 2 && (results.length || googleResults.length)) showDropdown = true"
                class="block w-full py-1.5 pr-9 text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 rounded-md placeholder:text-gray-400 focus:border-primary-500 focus:ring-primary-500"
-               placeholder="Search contact book, or press Enter for Google">
+               placeholder="{{ $searchPlaceholder ?? 'Search contact book, or press Enter for Google' }}">
 
         {{-- Loading spinner --}}
         <div x-show="isGoogleLoading" class="absolute right-3 top-1/2 -translate-y-1/2">
@@ -69,7 +69,12 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
                                 </svg>
                                 <span class="flex flex-col gap-0.5 min-w-0">
-                                    <span class="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate" x-text="entry.company_name"></span>
+                                    <span class="flex items-center gap-1.5 min-w-0">
+                                        <span class="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate" x-text="entry.company_name"></span>
+                                        <template x-if="entry.source === 'customer'">
+                                            <span class="shrink-0 px-1.5 py-px rounded text-[10px] font-medium bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300">Customer address</span>
+                                        </template>
+                                    </span>
                                     <span class="text-[10px] text-slate-400 truncate" x-text="[entry.address_1, entry.city, entry.state].filter(Boolean).join(', ')"></span>
                                 </span>
                             </button>

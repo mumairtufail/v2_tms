@@ -1,0 +1,25 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('customer_contact_phones', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('customer_contact_id')->constrained('customer_contacts')->cascadeOnDelete();
+            $table->string('type', 20)->default('office');
+            $table->string('number', 50);
+            $table->string('ext', 10)->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('customer_contact_phones');
+    }
+};

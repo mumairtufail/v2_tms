@@ -117,14 +117,14 @@ class ActivityLog
             ];
         }
 
-        if ($customer = Auth::guard('customer')->user()) {
-            /** @var Customer $customer */
+        if ($contact = Auth::guard('customer')->user()) {
+            /** @var \App\Models\CustomerContact $contact */
             return [
                 'type' => 'customer',
                 'user_id' => null,
-                'customer_id' => $customer->id,
-                'name' => $customer->name,
-                'company_id' => $customer->company_id,
+                'customer_id' => $contact->customer_id,
+                'name' => $contact->name,
+                'company_id' => $contact->company_id,
             ];
         }
 

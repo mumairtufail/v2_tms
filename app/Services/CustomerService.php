@@ -2,21 +2,39 @@
 
 namespace App\Services;
 
+use App\Models\Accessorial;
 use App\Models\Customer;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class CustomerService
 {
-    public function getCustomers(array $filters = [], int $perPage = 15): LengthAwarePaginator
+    public const SHORT_CODE_LENGTH = 4;
+
+    private const SORTABLE = ['name', 'short_code', 'is_active', 'location_sharing', 'network_customer', 'created_at'];
+
+    private const ADDRESS_FIELDS = ['address_1', 'address_2', 'city', 'state', 'postal_code', 'country', 'lat', 'lng'];
+
+    private const DETAIL_FIELDS = [
+        'name', 'external_id', 'credit_limit', 'is_active', 'require_dimensions', 'network_customer',
+        'location_sharing', 'currency', 'customer_type', 'quote_required', 'default_billing_option',
+    ];
+
+    public function getCustomers(array $filters = [], int $perPage = 25): LengthAwarePaginator
     {
+        $sort = in_array($filters['sort'] ?? null, self::SORTABLE, true) ? $filters['sort'] : 'name';
+        $direction = ($filters['direction'] ?? 'asc') === 'desc' ? 'desc' : 'asc';
+
         return Customer::query()
-            ->when($filters['company_id'] ?? null, fn($q, $id) => $q->where('company_id', $id))
+            ->when($filters['company_id'] ?? null, fn ($q, $id) => $q->where('company_id', $id))
             ->when($filters['search'] ?? null, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('customer_email', 'like', "%{$search}%")
-                      ->orWhere('short_code', 'like', "%{$search}%");
+                      ->orWhere('short_code', 'like', "%{$search}%")
+                      ->orWhere('customer_email', 'like', "%{$search}%");
                 });
             })
             ->when(isset($filters['status']), function ($query) use ($filters) {
@@ -27,71 +45,105 @@ class CustomerService
                 }
             })
             ->where('is_deleted', false)
-            ->latest()
-            ->paginate($perPage);
+            ->withExists(['portalContacts as has_portal_access'])
+            ->withCount('orders')
+            ->orderBy($sort, $direction)
+            ->orderBy('id')
+            ->paginate($perPage)
+            ->withQueryString();
     }
 
+    /**
+     * Creates the customer with its billing address and access to every active accessorial.
+     */
     public function createCustomer(array $data): Customer
     {
         return DB::transaction(function () use ($data) {
-            $data = $this->preparePasswordData($data);
+            $customer = Customer::create([
+                'company_id' => $data['company_id'],
+                'name' => $data['name'],
+                'short_code' => ($data['short_code'] ?? null) ?: $this->generateUniqueShortCode($data['company_id'], $data['name']),
+                'currency' => $data['currency'],
+                'customer_type' => $data['customer_type'] ?? 'other',
+                'quote_required' => (bool) ($data['quote_required'] ?? false),
+                'default_billing_option' => $data['default_billing_option'] ?? 'shipper',
+                'is_active' => true,
+            ]);
 
-            if (empty($data['short_code'])) {
-                $data['short_code'] = $this->generateUniqueShortCode($data['company_id'], $data['name']);
-            }
+            $customer->addresses()->create(array_merge(Arr::only($data, self::ADDRESS_FIELDS), [
+                'company_id' => $customer->company_id,
+                'company_name' => $customer->name,
+                'is_billing' => true,
+            ]));
 
-            return Customer::create($data);
+            $this->attachAllAccessorials($customer);
+
+            return $customer;
         });
     }
 
-    public function updateCustomer(Customer $customer, array $data): Customer
+    /**
+     * Details tab. The short code is locked after creation: orders and invoices reference it.
+     */
+    public function updateDetails(Customer $customer, array $data, ?UploadedFile $logo = null, bool $removeLogo = false): Customer
     {
-        return DB::transaction(function () use ($customer, $data) {
-            $data = $this->preparePasswordData($data, isUpdate: true);
+        return DB::transaction(function () use ($customer, $data, $logo, $removeLogo) {
+            $attributes = Arr::only($data, self::DETAIL_FIELDS);
 
-            // Short code is immutable after creation — it's referenced by
-            // downstream records (orders, invoices) and must not silently
-            // change on an unrelated profile edit.
-            unset($data['short_code']);
+            if (($removeLogo || $logo) && $customer->logo_path) {
+                Storage::disk('public')->delete($customer->logo_path);
+                $attributes['logo_path'] = null;
+            }
 
-            $customer->update($data);
+            if ($logo) {
+                $attributes['logo_path'] = $logo->store("customers/{$customer->company_id}/logos", 'public');
+            }
+
+            $customer->update($attributes);
 
             return $customer->fresh();
         });
     }
 
+    public function attachAllAccessorials(Customer $customer): void
+    {
+        $ids = Accessorial::forCompany($customer->company_id)->active()->pluck('id');
+
+        $customer->accessorials()->syncWithoutDetaching($ids);
+    }
+
+    public function canDelete(Customer $customer): bool
+    {
+        return ! $customer->orders()->exists();
+    }
+
     /**
-     * Generate a unique 3-char short code for a customer, scoped to the company.
+     * Suggest a unique 4-character short code, scoped to the company.
+     * Starts from the name's initials (7 Mountain Logistics → 7ML1), like Rose Rocket codes.
      */
     public function generateUniqueShortCode(int $companyId, string $name, ?int $excludeId = null): string
     {
+        $length = self::SHORT_CODE_LENGTH;
         $clean = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $name));
+        $words = array_values(array_filter(preg_split('/[^A-Za-z0-9]+/', strtoupper($name)) ?: []));
         $candidates = [];
 
         if ($clean !== '') {
-            $len = strlen($clean);
+            $initials = implode('', array_map(fn ($word) => $word[0], $words));
+            $base = str_pad(substr($initials . substr($clean, 1), 0, $length - 1), $length - 1, '0');
 
-            // Primary: first 3 chars (padded with digits if short)
-            $base = str_pad(substr($clean, 0, 3), 3, '0');
-            $candidates[] = $base;
-
-            // Variations: replace last char, then middle char, with 1-9
             for ($i = 1; $i <= 9; $i++) {
-                $candidates[] = substr($base, 0, 2) . $i;
-            }
-            for ($i = 1; $i <= 9; $i++) {
-                $candidates[] = substr($base, 0, 1) . $i . substr($base, 2, 1);
+                $candidates[] = $base . $i;
             }
 
-            // Variations: pick chars spread across the name
-            for ($offset = 1; $offset < $len - 1; $offset++) {
-                $spread = $clean[0] . $clean[min($offset, $len - 1)] . $clean[min($offset * 2, $len - 1)];
-                $candidates[] = str_pad(substr($spread, 0, 3), 3, '0');
+            foreach (range('A', 'Z') as $letter) {
+                $candidates[] = $base . $letter;
             }
+
+            $candidates[] = str_pad(substr($clean, 0, $length), $length, '0');
         }
 
         foreach ($candidates as $candidate) {
-            $candidate = strtoupper(substr($candidate, 0, 3));
             if (!$this->shortCodeExists($candidate, $companyId, $excludeId)) {
                 return $candidate;
             }
@@ -99,7 +151,7 @@ class CustomerService
 
         // Last resort: random alphanumeric
         do {
-            $random = strtoupper(substr(str_shuffle('ABCDEFGHJKLMNPQRSTUVWXYZ23456789'), 0, 3));
+            $random = strtoupper(substr(str_shuffle('ABCDEFGHJKLMNPQRSTUVWXYZ23456789'), 0, $length));
         } while ($this->shortCodeExists($random, $companyId, $excludeId));
 
         return $random;
@@ -110,22 +162,8 @@ class CustomerService
         return Customer::where('company_id', $companyId)
             ->where('short_code', $code)
             ->where('is_deleted', false)
-            ->when($excludeId, fn($q) => $q->where('id', '!=', $excludeId))
+            ->when($excludeId, fn ($q) => $q->where('id', '!=', $excludeId))
             ->exists();
-    }
-
-    /**
-     * Remove empty passwords on update; model casts hash on set.
-     */
-    private function preparePasswordData(array $data, bool $isUpdate = false): array
-    {
-        if ($isUpdate && empty($data['password'])) {
-            unset($data['password']);
-        }
-
-        unset($data['password_confirmation']);
-
-        return $data;
     }
 
     public function deleteCustomer(Customer $customer): bool

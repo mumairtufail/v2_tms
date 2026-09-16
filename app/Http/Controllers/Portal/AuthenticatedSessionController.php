@@ -29,13 +29,13 @@ class AuthenticatedSessionController extends Controller
 
     public function destroy(Request $request, Company $company): RedirectResponse
     {
-        $customer = Auth::guard('customer')->user();
+        $contact = Auth::guard('customer')->user();
 
-        if ($customer) {
+        if ($contact) {
             app(ActivityLog::class)->logAuth('portal.logout', [
                 'description' => 'Customer logged out of portal',
-                'email' => $customer->customer_email,
-                'customer_id' => $customer->id,
+                'email' => $contact->email,
+                'customer_id' => $contact->customer_id,
                 'company_id' => $company->id,
             ]);
         }

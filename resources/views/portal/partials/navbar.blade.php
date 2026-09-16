@@ -1,4 +1,5 @@
 @php
+    // Signed-in person at the customer (CustomerContact)
     $customer = auth('customer')->user();
 @endphp
 
@@ -65,7 +66,7 @@
                 x-cloak>
                 <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
                     <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ $customer->name }}</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ $customer->customer_email }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ $customer->email }}</p>
                 </div>
                 <div class="py-2">
                     <a href="{{ route('portal.settings', ['company' => $company->slug]) }}"

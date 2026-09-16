@@ -70,9 +70,10 @@ return [
             'model' => App\Models\User::class,
         ],
 
+        // Portal sign-in is per person at a customer (People tab → Portal access).
         'customers' => [
             'driver' => 'eloquent',
-            'model' => App\Models\Customer::class,
+            'model' => App\Models\CustomerContact::class,
         ],
     ],
 

@@ -16,7 +16,7 @@ class DashboardController extends Controller
 
     public function index(Company $company): View
     {
-        $customer = Auth::guard('customer')->user();
+        $customer = app('current.customer');
         $stats = $this->portalService->getDashboardStats($customer);
 
         return view('portal.dashboard.index', compact('company', 'customer', 'stats'));

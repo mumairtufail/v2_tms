@@ -4,8 +4,10 @@ namespace Tests\Feature\Portal;
 
 use App\Models\Company;
 use App\Models\Customer;
+use App\Models\CustomerContact;
 use App\Models\Order;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class CustomerPortalOrderTest extends TestCase
@@ -15,6 +17,8 @@ class CustomerPortalOrderTest extends TestCase
     protected Company $company;
 
     protected Customer $customer;
+
+    protected CustomerContact $contact;
 
     protected Order $order;
 
@@ -37,6 +41,15 @@ class CustomerPortalOrderTest extends TestCase
             'portal' => true,
             'is_active' => true,
             'is_deleted' => false,
+        ]);
+
+        $this->contact = CustomerContact::create([
+            'company_id' => $this->company->id,
+            'customer_id' => $this->customer->id,
+            'first_name' => 'Pat',
+            'email' => 'portal@customer.com',
+            'password' => Hash::make('portal-password'),
+            'portal_access' => true,
         ]);
 
         $this->order = Order::create([
@@ -69,7 +82,7 @@ class CustomerPortalOrderTest extends TestCase
 
     public function test_customer_can_view_own_orders_list(): void
     {
-        $response = $this->actingAs($this->customer, 'customer')
+        $response = $this->actingAs($this->contact, 'customer')
             ->get(route('portal.orders.index', ['company' => $this->company->slug]));
 
         $response->assertStatus(200);
@@ -79,7 +92,7 @@ class CustomerPortalOrderTest extends TestCase
 
     public function test_customer_can_view_own_order_detail(): void
     {
-        $response = $this->actingAs($this->customer, 'customer')
+        $response = $this->actingAs($this->contact, 'customer')
             ->get(route('portal.orders.show', [
                 'company' => $this->company->slug,
                 'order' => $this->order,
@@ -91,7 +104,7 @@ class CustomerPortalOrderTest extends TestCase
 
     public function test_customer_cannot_view_another_customers_order(): void
     {
-        $response = $this->actingAs($this->customer, 'customer')
+        $response = $this->actingAs($this->contact, 'customer')
             ->get(route('portal.orders.show', [
                 'company' => $this->company->slug,
                 'order' => $this->otherOrder,
@@ -102,7 +115,7 @@ class CustomerPortalOrderTest extends TestCase
 
     public function test_customer_can_create_draft_order(): void
     {
-        $response = $this->actingAs($this->customer, 'customer')
+        $response = $this->actingAs($this->contact, 'customer')
             ->post(route('portal.orders.store', ['company' => $this->company->slug]));
 
         $response->assertRedirect();
@@ -131,7 +144,7 @@ class CustomerPortalOrderTest extends TestCase
             'status' => 'draft',
         ]);
 
-        $response = $this->actingAs($this->customer, 'customer')
+        $response = $this->actingAs($this->contact, 'customer')
             ->get(route('portal.orders.edit', [
                 'company' => $this->company->slug,
                 'order' => $draft,
@@ -144,7 +157,7 @@ class CustomerPortalOrderTest extends TestCase
 
     public function test_customer_cannot_edit_non_draft_order(): void
     {
-        $response = $this->actingAs($this->customer, 'customer')
+        $response = $this->actingAs($this->contact, 'customer')
             ->get(route('portal.orders.edit', [
                 'company' => $this->company->slug,
                 'order' => $this->order,
@@ -197,7 +210,7 @@ class CustomerPortalOrderTest extends TestCase
             'special_instructions' => 'Handle with care',
         ]]);
 
-        $response = $this->actingAs($this->customer, 'customer')
+        $response = $this->actingAs($this->contact, 'customer')
             ->patch(route('portal.orders.update', [
                 'company' => $this->company->slug,
                 'order' => $draft,
@@ -259,7 +272,7 @@ class CustomerPortalOrderTest extends TestCase
             'special_instructions' => 'Handle with care',
         ]]);
 
-        $response = $this->actingAs($this->customer, 'customer')
+        $response = $this->actingAs($this->contact, 'customer')
             ->patch(route('portal.orders.update', [
                 'company' => $this->company->slug,
                 'order' => $draft,
@@ -323,7 +336,7 @@ class CustomerPortalOrderTest extends TestCase
             'special_instructions' => 'Handle with care',
         ]]);
 
-        $response = $this->actingAs($this->customer, 'customer')
+        $response = $this->actingAs($this->contact, 'customer')
             ->patch(route('portal.orders.update', [
                 'company' => $this->company->slug,
                 'order' => $draft,
@@ -359,7 +372,7 @@ class CustomerPortalOrderTest extends TestCase
             ],
         ]);
 
-        $response = $this->actingAs($this->customer, 'customer')
+        $response = $this->actingAs($this->contact, 'customer')
             ->getJson(route('portal.orders.activity-logs', [
                 'company' => $this->company->slug,
                 'order' => $this->order,
@@ -372,7 +385,7 @@ class CustomerPortalOrderTest extends TestCase
 
     public function test_customer_cannot_view_another_customers_order_activity_logs(): void
     {
-        $response = $this->actingAs($this->customer, 'customer')
+        $response = $this->actingAs($this->contact, 'customer')
             ->getJson(route('portal.orders.activity-logs', [
                 'company' => $this->company->slug,
                 'order' => $this->otherOrder,
@@ -383,7 +396,7 @@ class CustomerPortalOrderTest extends TestCase
 
     public function test_portal_orders_index_includes_activity_log_panel(): void
     {
-        $response = $this->actingAs($this->customer, 'customer')
+        $response = $this->actingAs($this->contact, 'customer')
             ->get(route('portal.orders.index', ['company' => $this->company->slug]));
 
         $response->assertOk();

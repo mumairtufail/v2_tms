@@ -13,7 +13,7 @@
             initialQuery: {{ $loc }}.company_name,
             prefix: '{{ $prefix }}',
             stopIndex: stopIndex,
-            contactBookUrl: '{{ route('v2.contact-book.index', ['company' => $company->slug]) }}'
+            contactBookUrl: '{{ route('v2.contact-book.index', array_filter(['company' => $company->slug, 'customer_id' => $order->customer_id ?? null])) }}'
         }),
         _stopIndex: stopIndex,
         showDetails: false,
@@ -73,6 +73,20 @@
             if (data.contact_name) {{ $loc }}.contact_name = data.contact_name;
             if (data.phone)        {{ $loc }}.phone        = data.phone;
             if (data.email)        {{ $loc }}.email        = data.email;
+
+            // The customer's saved addresses carry stop defaults: hours, notes, broker and accessorials.
+            if (data.source === 'customer') {
+                if (data.opening_time) {{ $loc }}.opening_time = data.opening_time;
+                if (data.closing_time) {{ $loc }}.closing_time = data.closing_time;
+                const savedNote = '{{ $prefix }}' === 'shipper' ? data.shipper_notes : data.consignee_notes;
+                if (savedNote && !{{ $loc }}.notes) {{ $loc }}.notes = savedNote;
+                if (data.customs_broker && stop.billing && !stop.billing.customs_broker) stop.billing.customs_broker = data.customs_broker;
+                if (Array.isArray(data.accessorial_ids)) {
+                    data.accessorial_ids
+                        .filter(id => accessorialsList[id] !== undefined && !stop.accessorials.includes(id))
+                        .forEach(id => stop.accessorials.push(id));
+                }
+            }
 
             console.log('--- Failsafe Sync Complete ---');
         }

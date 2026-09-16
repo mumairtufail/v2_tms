@@ -51,7 +51,8 @@ $maxWidth = [
     x-on:keydown.tab.prevent="$event.shiftKey || nextFocusable().focus()"
     x-on:keydown.shift.tab.prevent="prevFocusable().focus()"
     x-show="show"
-    class="fixed inset-0 overflow-y-auto px-4 py-6 sm:px-0 z-50"
+    {{-- Above the impersonation bar (z-[80]) and navbar so modals never slide underneath them --}}
+    class="fixed inset-0 overflow-y-auto px-4 py-6 sm:px-0 z-[90]"
     style="display: {{ $show ? 'block' : 'none' }};"
 >
     <div

@@ -514,8 +514,59 @@
                                                         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                                                             <template x-for="(commodity, cIndex) in stop.commodities" :key="cIndex">
                                                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/30">
-                                                                    <td class="px-2 py-1.5">
-                                                                        <input type="text" x-model="commodity.description" class="w-full border-0 bg-transparent focus:ring-1 focus:ring-primary-500 rounded p-1 text-xs dark:text-white" placeholder="Description">
+                                                                    {{-- Description: searches the customer's saved commodities as you type.
+                                                                         The list is teleported to <body> and positioned from the input's screen
+                                                                         rect, because the table's overflow-x-auto wrapper would clip it. --}}
+                                                                    <td class="px-2 py-1.5"
+                                                                        x-data="{
+                                                                            open: false,
+                                                                            hi: 0,
+                                                                            box: { top: 0, left: 0, width: 0 },
+                                                                            position() {
+                                                                                const r = $refs.cInput.getBoundingClientRect();
+                                                                                this.box = { top: r.bottom + 4, left: r.left, width: Math.max(r.width, 240) };
+                                                                            },
+                                                                            show() {
+                                                                                this.position();
+                                                                                this.hi = 0;
+                                                                                this.open = commodityMatches(commodity.description).length > 0;
+                                                                            }
+                                                                        }"
+                                                                        @click.outside="open = false">
+                                                                        <input type="text"
+                                                                               x-ref="cInput"
+                                                                               x-model="commodity.description"
+                                                                               autocomplete="off"
+                                                                               @focus="show()"
+                                                                               @input="show()"
+                                                                               @keydown.escape.stop="open = false"
+                                                                               @keydown.arrow-down.prevent="open ? hi = Math.min(hi + 1, commodityMatches(commodity.description).length - 1) : show()"
+                                                                               @keydown.arrow-up.prevent="hi = Math.max(hi - 1, 0)"
+                                                                               @keydown.enter="const m = commodityMatches(commodity.description); if (open && m[hi]) { $event.preventDefault(); applyCommodityPreset(commodity, m[hi]); open = false; }"
+                                                                               @blur="applyCommodityPreset(commodity)"
+                                                                               class="w-full border-0 bg-transparent focus:ring-1 focus:ring-primary-500 rounded p-1 text-xs dark:text-white"
+                                                                               placeholder="Description">
+
+                                                                        <template x-teleport="body">
+                                                                            <div x-show="open && commodityMatches(commodity.description).length > 0"
+                                                                                 x-cloak
+                                                                                 @scroll.window="open && position()"
+                                                                                 @resize.window="open && position()"
+                                                                                 :style="`top:${box.top}px; left:${box.left}px; width:${box.width}px`"
+                                                                                 class="fixed z-[80] max-h-56 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg">
+                                                                                <template x-for="(preset, pIdx) in commodityMatches(commodity.description)" :key="preset.id ?? pIdx">
+                                                                                    <button type="button"
+                                                                                            @mousedown.prevent
+                                                                                            @click="applyCommodityPreset(commodity, preset); open = false"
+                                                                                            @mouseenter="hi = pIdx"
+                                                                                            :class="hi === pIdx ? 'bg-primary-50 dark:bg-primary-900/20' : ''"
+                                                                                            class="w-full px-2.5 py-1.5 text-left hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
+                                                                                        <span class="block text-xs font-medium text-gray-900 dark:text-white truncate" x-text="preset.description"></span>
+                                                                                        <span class="block text-[10px] text-gray-500 dark:text-gray-400 truncate" x-text="commodityMeta(preset)"></span>
+                                                                                    </button>
+                                                                                </template>
+                                                                            </div>
+                                                                        </template>
                                                                     </td>
                                                                     <td class="px-2 py-1.5 text-center">
                                                                         <input type="number" x-model="commodity.qty" 
@@ -627,12 +678,17 @@
                                                      @click.outside="accessorialDropdownOpen = false"
                                                      class="absolute z-50 bottom-full mb-1 left-0 w-72 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl max-h-60 overflow-y-auto">
                                                     <div class="p-2">
-                                                        @foreach($allAccessorials as $acc)
+                                                        @forelse($allAccessorials->groupBy('category') as $category => $categoryAccessorials)
+                                                        <p class="px-2 pt-1.5 pb-0.5 text-[10px] font-semibold uppercase text-gray-400">{{ \App\Support\AccessorialCategories::label($category) }}</p>
+                                                        @foreach($categoryAccessorials as $acc)
                                                         <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors">
                                                             <input type="checkbox" value="{{ $acc->id }}" x-model="stop.accessorials" class="rounded border-gray-300 text-primary-600 shadow-sm focus:ring-primary-500 w-4 h-4">
                                                             <span class="text-xs text-gray-700 dark:text-gray-300">{{ $acc->name }}</span>
                                                         </label>
                                                         @endforeach
+                                                        @empty
+                                                        <p class="px-2 py-3 text-xs text-gray-500 dark:text-gray-400">No accessorials are turned on for this customer. Enable them on the customer's Accessorials tab.</p>
+                                                        @endforelse
                                                     </div>
                                                 </div>
                                             </div>
@@ -673,7 +729,7 @@
 @push('scripts')
 <script>
 @if(!$isPortal)
-window.__contactBookUrl = '{{ route('v2.contact-book.index', ['company' => $company->slug]) }}';
+window.__contactBookUrl = '{{ route('v2.contact-book.index', array_filter(['company' => $company->slug, 'customer_id' => $order->customer_id])) }}';
 @endif
 
 function orderForm() {
@@ -684,6 +740,13 @@ function orderForm() {
         manifests: @json($manifests),
         manifestsMap: @json($manifestsMap ?? []),
         accessorialsList: @json($allAccessorials->pluck('name', 'id')),
+        // Carrier cost allocated from the manifests this order's stops sit on (read-only)
+        carrierAllocation: @json($carrierAllocation['rows'] ?? []),
+        carrierCostTotal: @json($carrierAllocation['total'] ?? 0),
+        // Editable here only when the whole order sits on one manifest; it saves to that manifest
+        carrierEditable: @json($carrierEditable ?? false),
+        customerCommodities: @json($customerCommodities ?? []),
+        requireDimensions: @json($requireDimensions ?? false),
 
         creatingManifest: false,
 
@@ -760,15 +823,25 @@ function orderForm() {
                 'Fuel Surcharge (0%)'
             );
 
-            this.quote.carrier_rows = ensureDefaultRows(
-                this.quote.carrier_rows,
-                'Partner Freight',
-                'Fuel Surcharge (0%)'
-            );
+            // Carrier cost lives on the manifest. When one manifest covers the whole order it can
+            // be typed here and saves back to that manifest; otherwise the panel is read-only.
+            if (this.carrierEditable) {
+                this.quote.carrier_rows = ensureDefaultRows(
+                    this.quote.carrier_rows,
+                    'Partner Freight',
+                    'Fuel Surcharge (0%)'
+                );
+                this.normalizeQuoteRows(this.quote.carrier_rows);
+                this.blankZeroQuoteRows(this.quote.carrier_rows);
+            } else {
+                this.quote.carrier_rows = [];
+            }
 
             // Run normalizeQuoteRows so fuel surcharge rate/description are synced on load
             this.normalizeQuoteRows(this.quote.customer_rows);
-            this.normalizeQuoteRows(this.quote.carrier_rows);
+
+            // Empty boxes with a 0.00 hint beat a literal 0 you have to delete before typing
+            this.blankZeroQuoteRows(this.quote.customer_rows);
 
             this.quote.delivery_start = this.toDateTimeLocal(this.quote.delivery_start);
             this.quote.delivery_end = this.toDateTimeLocal(this.quote.delivery_end);
@@ -835,6 +908,51 @@ function orderForm() {
 
         getAccessorialName(id) {
             return this.accessorialsList[id] || 'Unknown';
+        },
+
+        // The customer's saved commodities matching what has been typed (description, SKU or NMFC).
+        commodityMatches(query) {
+            const list = this.customerCommodities || [];
+            const q = String(query || '').trim().toLowerCase();
+
+            if (!q) return list.slice(0, 8);
+
+            return list.filter(p =>
+                String(p.description || '').toLowerCase().includes(q)
+                || String(p.sku || '').toLowerCase().includes(q)
+                || String(p.nmfc || '').toLowerCase().includes(q)
+            ).slice(0, 8);
+        },
+
+        // One-line summary under each suggestion
+        commodityMeta(preset) {
+            const units = preset.unit === 'cm_kg' ? { d: 'cm', w: 'kg' } : { d: 'in', w: 'lbs' };
+            const dims = [preset.length, preset.width, preset.height].filter(v => v !== null && v !== undefined && v !== '');
+
+            return [
+                preset.type ? String(preset.type).charAt(0).toUpperCase() + String(preset.type).slice(1) : null,
+                preset.weight ? `${Number(preset.weight).toLocaleString()} ${units.w}` : null,
+                dims.length === 3 ? `${dims.join(' × ')} ${units.d}` : null,
+                preset.freight_class ? `Class ${preset.freight_class}` : null,
+                preset.sku ? `SKU ${preset.sku}` : null,
+            ].filter(Boolean).join(' · ');
+        },
+
+        // Fill a commodity row from a chosen preset, or from an exact description match on blur.
+        applyCommodityPreset(commodity, preset = null) {
+            if (!preset) {
+                const key = String(commodity.description || '').trim().toLowerCase();
+                preset = key && this.customerCommodities.find(p => String(p.description || '').toLowerCase() === key);
+            }
+            if (!preset) return;
+
+            commodity.description = preset.description || commodity.description;
+
+            ['type', 'weight', 'length', 'width', 'height', 'lf', 'cube', 'freight_class'].forEach(field => {
+                if (preset[field] !== null && preset[field] !== undefined && preset[field] !== '') {
+                    commodity[field] = preset[field];
+                }
+            });
         },
 
         toDateTimeLocal(value) {
@@ -1093,8 +1211,8 @@ function orderForm() {
             this.quote[type + '_rows'].push({ 
                 type: 'Miscellaneous', 
                 description: '', 
-                qty: 1, 
-                rate: 0, 
+                qty: 1,
+                rate: '',
                 cost: 0,
                 is_default: false 
             });
@@ -1148,8 +1266,8 @@ calculateRowAmount(row, rows) {
         const rowType = String(row.type || '').toLowerCase();
         
         if (rowType === 'fuel (surcharge)') {
-            // Mirror Freight Cost to the Rate field (for display)
-            row.rate = freightBase.toFixed(2);
+            // Mirror Freight Cost to the Rate field (for display); stay blank while there is no freight to base it on
+            row.rate = freightBase ? freightBase.toFixed(2) : '';
             // Dynamic description showing %
             row.description = `Fuel Surcharge (${row.qty || 0}%)`;
             row.cost = (freightBase * ((parseFloat(row.qty) || 0) / 100)).toFixed(2);
@@ -1159,12 +1277,26 @@ calculateRowAmount(row, rows) {
     });
 },
 
+        // Show an empty box (with its placeholder) instead of a 0 the user has to clear first.
+        // Every total already reads these with parseFloat(x) || 0, so blank still means zero.
+        blankZeroQuoteRows(rows) {
+            (rows || []).forEach(row => {
+                ['qty', 'rate'].forEach(field => {
+                    if (row[field] === 0 || row[field] === '0' || parseFloat(row[field]) === 0) {
+                        row[field] = '';
+                    }
+                });
+            });
+        },
+
         canDeleteQuoteRow(row) {
             return !row.is_default;
         },
 calculateProfit() {
     const revenue = parseFloat(this.calculateTotal(this.quote.customer_rows)) || 0;
-    const expenses = parseFloat(this.calculateTotal(this.quote.carrier_rows)) || 0;
+    const expenses = this.carrierEditable
+        ? (parseFloat(this.calculateTotal(this.quote.carrier_rows)) || 0)
+        : (parseFloat(this.carrierCostTotal) || 0);
     return (revenue - expenses).toFixed(2);
 },
 
@@ -1191,8 +1323,8 @@ calculateMargin() {
             this.quote[type + '_rows'].push({ 
                 type: 'Miscellaneous', 
                 description: '', 
-                qty: 1, 
-                rate: 0, 
+                qty: 1,
+                rate: '',
                 cost: 0,
                 is_default: false 
             });
@@ -1356,15 +1488,6 @@ freightSubtotal(rows) {
                 return;
             }
 
-            const targetManifestIds = [...new Set([
-                this.massManifestId,
-                ...this.stops.map(stop => stop.manifest_id)
-            ].filter(Boolean))];
-
-            if (targetManifestIds.length > 0 && this.quote.carrier_rows.length > 0) {
-                await this.syncCarrierCostsToManifests(targetManifestIds);
-            }
-
             this.requestSubmit(() => {
                 this.flushFormInputs();
                 document.getElementById('orderForm').submit();
@@ -1376,7 +1499,9 @@ freightSubtotal(rows) {
             this.submissionMode = 'quote';
 
             this.normalizeQuoteRows(this.quote.customer_rows);
-            this.normalizeQuoteRows(this.quote.carrier_rows);
+            if (this.carrierEditable) {
+                this.normalizeQuoteRows(this.quote.carrier_rows);
+            }
 
             this.stops.forEach(stop => {
                 if (stop.shipper.ready_start_at_picker) this.syncStopDateTime(stop, 'shipper', 'start');
@@ -1400,6 +1525,16 @@ freightSubtotal(rows) {
                     stop.expanded = true;
                     siErrors.push(`Stop ${idx + 1}: Special instructions are required.`);
                     formValid = false;
+                }
+
+                // Customer setting: every commodity needs dimensions (cube pricing doesn't use them).
+                if (this.requireDimensions && stop.service_type !== 'cube') {
+                    const blank = v => v === '' || v === null || v === undefined || Number(v) <= 0;
+                    if ((stop.commodities || []).some(c => blank(c.length) || blank(c.width) || blank(c.height))) {
+                        stop.expanded = true;
+                        siErrors.push(`Stop ${idx + 1}: This customer requires length, width and height on every commodity.`);
+                        formValid = false;
+                    }
                 }
             });
 
@@ -1428,43 +1563,6 @@ freightSubtotal(rows) {
             }
 
             return true;
-        },
-
-        async syncCarrierCostsToManifests(targetManifestIds) {
-            try {
-                const urlTemplate = '{{ route('v2.manifests.cost-estimates.store', ['company' => $company->slug, 'manifest' => '__MANIFEST__']) }}';
-                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
-                const payloadRows = this.quote.carrier_rows.map(row => {
-                    const rowType = String(row.type || '').toLowerCase();
-                    return {
-                        type: row.type,
-                        description: row.description,
-                        cost: parseFloat(row.cost) || 0,
-                        percentage: rowType === 'fuel' ? (parseFloat(row.percentage) || 0) : null,
-                    };
-                });
-
-                const requests = targetManifestIds.map(manifestId => {
-                    const url = urlTemplate.replace('__MANIFEST__', manifestId);
-                    return fetch(url, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': csrfToken
-                        },
-                        body: JSON.stringify({ cost_estimates: payloadRows })
-                    }).then(response => {
-                        if (!response.ok) {
-                            throw new Error('Failed to sync costs to manifest ' + manifestId);
-                        }
-                    });
-                });
-
-                await Promise.all(requests);
-            } catch (e) {
-                console.error('Error syncing manifest costs:', e);
-            }
         },
 
         createPendingManifest() {

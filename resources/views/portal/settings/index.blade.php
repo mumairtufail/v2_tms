@@ -5,7 +5,7 @@
 @section('content')
 <div class="mb-8">
     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Profile & Settings</h1>
-    <p class="text-gray-500 dark:text-gray-400 mt-1">Manage your account information and portal preferences</p>
+    <p class="text-gray-500 dark:text-gray-400 mt-1">Manage your sign-in details and your company's portal preferences</p>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -14,27 +14,29 @@
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <div class="flex items-center gap-4 mb-4">
                 <div class="w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-600/20 flex items-center justify-center">
-                    <span class="text-lg font-bold text-primary-600 dark:text-primary-400">
-                        {{ strtoupper(substr($customer->name, 0, 2)) }}
-                    </span>
+                    <span class="text-lg font-bold text-primary-600 dark:text-primary-400">{{ $contact->initials() }}</span>
                 </div>
-                <div>
-                    <p class="font-semibold text-gray-900 dark:text-white">{{ $customer->name }}</p>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ $customer->customer_email }}</p>
+                <div class="min-w-0">
+                    <p class="font-semibold text-gray-900 dark:text-white truncate">{{ $contact->name }}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ $contact->email }}</p>
                 </div>
             </div>
             <dl class="space-y-3 text-sm">
+                <div class="flex justify-between gap-4">
+                    <dt class="text-gray-500 dark:text-gray-400">Company</dt>
+                    <dd class="font-medium text-gray-900 dark:text-white text-right">{{ $customer->name }}</dd>
+                </div>
                 <div class="flex justify-between">
                     <dt class="text-gray-500 dark:text-gray-400">Short Code</dt>
                     <dd class="font-medium text-gray-900 dark:text-white">{{ $customer->short_code ?? '—' }}</dd>
                 </div>
                 <div class="flex justify-between">
                     <dt class="text-gray-500 dark:text-gray-400">Customer Type</dt>
-                    <dd class="font-medium text-gray-900 dark:text-white">{{ ucfirst($customer->customer_type) }}</dd>
+                    <dd class="font-medium text-gray-900 dark:text-white">{{ \App\Models\Customer::TYPES[$customer->customer_type] ?? ucfirst((string) $customer->customer_type) }}</dd>
                 </div>
-                <div class="flex justify-between">
+                <div class="flex justify-between gap-4">
                     <dt class="text-gray-500 dark:text-gray-400">Freight Company</dt>
-                    <dd class="font-medium text-gray-900 dark:text-white">{{ $company->name }}</dd>
+                    <dd class="font-medium text-gray-900 dark:text-white text-right">{{ $company->name }}</dd>
                 </div>
             </dl>
         </div>
@@ -44,68 +46,39 @@
         {{-- Profile form --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">Profile Information</h2>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Update your contact details and billing address</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Your name and the email you sign in with. {{ $company->name }} manages your company's addresses.</p>
 
             <form method="POST" action="{{ route('portal.settings.profile.update', ['company' => $company->slug]) }}" class="space-y-5">
                 @csrf
                 @method('PATCH')
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <div class="sm:col-span-2">
-                        <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company Name</label>
-                        <input type="text" id="name" name="name" value="{{ old('name', $customer->name) }}" required
+                    <div>
+                        <label for="first_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Name</label>
+                        <input type="text" id="first_name" name="first_name" value="{{ old('first_name', $contact->first_name) }}" required
                             class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-primary-500 focus:border-primary-500" />
-                        @error('name')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                    </div>
-
-                    <div class="sm:col-span-2">
-                        <label for="customer_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
-                        <input type="email" id="customer_email" name="customer_email" value="{{ old('customer_email', $customer->customer_email) }}" required
-                            class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-primary-500 focus:border-primary-500" />
-                        @error('customer_email')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                    </div>
-
-                    <div class="sm:col-span-2">
-                        <label for="address" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address</label>
-                        <input type="text" id="address" name="address" value="{{ old('address', $customer->address) }}"
-                            class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-primary-500 focus:border-primary-500" />
-                        @error('address')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        @error('first_name')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
 
                     <div>
-                        <label for="city" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">City</label>
-                        <input type="text" id="city" name="city" value="{{ old('city', $customer->city) }}"
+                        <label for="last_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Name</label>
+                        <input type="text" id="last_name" name="last_name" value="{{ old('last_name', $contact->last_name) }}"
                             class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-primary-500 focus:border-primary-500" />
-                        @error('city')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        @error('last_name')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
 
                     <div>
-                        <label for="state" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">State / Province</label>
-                        <input type="text" id="state" name="state" value="{{ old('state', $customer->state) }}"
+                        <label for="job_title" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Job Title</label>
+                        <input type="text" id="job_title" name="job_title" value="{{ old('job_title', $contact->job_title) }}"
                             class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-primary-500 focus:border-primary-500" />
-                        @error('state')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        @error('job_title')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
 
                     <div>
-                        <label for="postal_code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Postal Code</label>
-                        <input type="text" id="postal_code" name="postal_code" value="{{ old('postal_code', $customer->postal_code) }}"
+                        <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
+                        <input type="email" id="email" name="email" value="{{ old('email', $contact->email) }}" required
                             class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-primary-500 focus:border-primary-500" />
-                        @error('postal_code')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                    </div>
-
-                    <div>
-                        <label for="country" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Country</label>
-                        <input type="text" id="country" name="country" value="{{ old('country', $customer->country) }}"
-                            class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-primary-500 focus:border-primary-500" />
-                        @error('country')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                    </div>
-
-                    <div>
-                        <label for="currency" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Currency</label>
-                        <input type="text" id="currency" name="currency" value="{{ old('currency', $customer->currency ?? 'USD') }}" maxlength="3"
-                            class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-primary-500 focus:border-primary-500 uppercase"
-                            oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')" />
-                        @error('currency')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        @error('email')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
                 </div>
 
@@ -120,7 +93,7 @@
         {{-- Settings form --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">Portal Preferences</h2>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Configure how your account behaves in the portal</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">These apply to everyone at {{ $customer->name }}</p>
 
             <form method="POST" action="{{ route('portal.settings.preferences.update', ['company' => $company->slug]) }}" class="space-y-5">
                 @csrf

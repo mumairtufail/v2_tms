@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Enums\CustomerNotificationEvent;
+use App\Mail\CustomerOrderUpdateMail;
 use App\Models\Company;
 use App\Models\Customer;
 use App\Models\Manifest;
@@ -47,13 +49,33 @@ class NotificationService
         $user->notify(new TmsDatabaseNotification($payload));
     }
 
-    public function notifyCustomer(Customer $customer, array $payload): void
+    /**
+     * Notify the people at a customer: in-app for everyone with portal access,
+     * email for people who opted in to this event on the People tab.
+     */
+    public function notifyCustomer(Customer $customer, array $payload, ?CustomerNotificationEvent $event = null): void
     {
         if (!$customer->is_active || $customer->is_deleted) {
             return;
         }
 
-        $customer->notify(new TmsDatabaseNotification($payload));
+        $customer->loadMissing('company');
+
+        foreach ($customer->contacts()->get() as $contact) {
+            if ($contact->portal_access) {
+                $contact->notify(new TmsDatabaseNotification($payload));
+            }
+
+            if ($event && $contact->wantsEmailFor($event)) {
+                app(MailService::class)->queue(new CustomerOrderUpdateMail(
+                    recipientName: $contact->first_name,
+                    title: $payload['title'] ?? $event->label(),
+                    body: $payload['body'] ?? '',
+                    url: $contact->portal_access ? ($payload['url'] ?? null) : null,
+                    brandName: $customer->company?->name ?? config('app.name'),
+                ), $contact->email, $customer->company_id);
+            }
+        }
     }
 
     public function notifyCompanyUsers(Company $company, array $payload, ?string $permission = null, string $action = 'view'): void
@@ -90,7 +112,7 @@ class NotificationService
             return;
         }
 
-        $this->notifyCustomer($customer, $this->payload(
+        $this->notifyCustomer($customer, event: CustomerNotificationEvent::Quoted, payload: $this->payload(
             type: 'order_quoted',
             title: 'Your order has been quoted',
             body: "Order #{$order->order_number} is ready for review.",
@@ -108,7 +130,7 @@ class NotificationService
             return;
         }
 
-        $this->notifyCustomer($customer, $this->payload(
+        $this->notifyCustomer($customer, event: CustomerNotificationEvent::Booked, payload: $this->payload(
             type: 'order_booked',
             title: 'Your order has been booked',
             body: "Order #{$order->order_number} is booked.",
@@ -218,7 +240,7 @@ class NotificationService
         ), permission: 'orders');
 
         if ($order->customer && in_array($toStatus, ['in_transit', 'delivered', 'cancelled', 'booked'], true)) {
-            $this->notifyCustomer($order->customer, $this->payload(
+            $this->notifyCustomer($order->customer, event: CustomerNotificationEvent::forOrderStatus($toStatus), payload: $this->payload(
                 type: 'order_status_updated',
                 title: 'Order status updated',
                 body: "Order #{$order->order_number} is now {$label}.",

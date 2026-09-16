@@ -114,7 +114,7 @@
                         {{ $customer->name }}
                     </p>
                     <p class="text-[11px] text-gray-500 dark:text-gray-500 truncate mt-0.5">
-                        {{ $customer->customer_email }}
+                        {{ $customer->email }}
                     </p>
                 </div>
             </a>

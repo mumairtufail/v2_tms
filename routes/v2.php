@@ -95,12 +95,31 @@ Route::middleware(['auth', CompanyScope::class])->prefix('{company}')->name('v2.
         Route::get('customers', [\App\Http\Controllers\V2\CustomerController::class, 'index'])->name('customers.index');
         Route::get('customers/generate-short-code', [\App\Http\Controllers\V2\CustomerController::class, 'generateShortCode'])->name('customers.generate-short-code');
         Route::get('customers/{customer}', [\App\Http\Controllers\V2\CustomerController::class, 'show'])->name('customers.show');
+        Route::get('customers/{customer}/commodities/export', [\App\Http\Controllers\V2\CustomerCommodityController::class, 'export'])->name('customers.commodities.export');
+        Route::get('customers/{customer}/commodities/template', [\App\Http\Controllers\V2\CustomerCommodityController::class, 'template'])->name('customers.commodities.template');
     });
     Route::middleware(['permission:customers,update'])->group(function () {
         Route::get('customers/{customer}/edit', [\App\Http\Controllers\V2\CustomerController::class, 'edit'])->name('customers.edit');
         Route::put('customers/{customer}', [\App\Http\Controllers\V2\CustomerController::class, 'update'])->name('customers.update');
         Route::patch('customers/{customer}', [\App\Http\Controllers\V2\CustomerController::class, 'update']);
         Route::post('customers/{customer}/sync-quickbooks', [\App\Http\Controllers\V2\CustomerController::class, 'syncToQuickBooks'])->name('customers.sync-quickbooks');
+        Route::post('customers/{customer}/refresh-balance', [\App\Http\Controllers\V2\CustomerController::class, 'refreshCreditBalance'])->name('customers.refresh-balance');
+        Route::patch('customers/{customer}/deactivate', [\App\Http\Controllers\V2\CustomerController::class, 'deactivate'])->name('customers.deactivate');
+
+        // Customer tabs: people, addresses, accessorials, commodities, accounting
+        Route::post('customers/{customer}/addresses', [\App\Http\Controllers\V2\CustomerAddressController::class, 'store'])->name('customers.addresses.store');
+        Route::put('customers/{customer}/addresses/{address}', [\App\Http\Controllers\V2\CustomerAddressController::class, 'update'])->name('customers.addresses.update');
+        Route::delete('customers/{customer}/addresses/{address}', [\App\Http\Controllers\V2\CustomerAddressController::class, 'destroy'])->name('customers.addresses.destroy');
+        Route::post('customers/{customer}/contacts', [\App\Http\Controllers\V2\CustomerContactController::class, 'store'])->name('customers.contacts.store');
+        Route::put('customers/{customer}/contacts/{contact}', [\App\Http\Controllers\V2\CustomerContactController::class, 'update'])->name('customers.contacts.update');
+        Route::delete('customers/{customer}/contacts/{contact}', [\App\Http\Controllers\V2\CustomerContactController::class, 'destroy'])->name('customers.contacts.destroy');
+        Route::put('customers/{customer}/accessorials', [\App\Http\Controllers\V2\CustomerAccessorialController::class, 'update'])->name('customers.accessorials.update');
+        Route::post('customers/{customer}/commodities', [\App\Http\Controllers\V2\CustomerCommodityController::class, 'store'])->name('customers.commodities.store');
+        Route::post('customers/{customer}/commodities/import', [\App\Http\Controllers\V2\CustomerCommodityController::class, 'import'])->name('customers.commodities.import');
+        Route::delete('customers/{customer}/commodities', [\App\Http\Controllers\V2\CustomerCommodityController::class, 'bulkDestroy'])->name('customers.commodities.bulk-destroy');
+        Route::put('customers/{customer}/commodities/{commodity}', [\App\Http\Controllers\V2\CustomerCommodityController::class, 'update'])->name('customers.commodities.update');
+        Route::delete('customers/{customer}/commodities/{commodity}', [\App\Http\Controllers\V2\CustomerCommodityController::class, 'destroy'])->name('customers.commodities.destroy');
+        Route::put('customers/{customer}/billing-settings', [\App\Http\Controllers\V2\CustomerBillingSettingsController::class, 'update'])->name('customers.billing-settings.update');
     });
     Route::middleware(['permission:customers,delete'])->group(function () {
         Route::delete('customers/{customer}', [\App\Http\Controllers\V2\CustomerController::class, 'destroy'])->name('customers.destroy');

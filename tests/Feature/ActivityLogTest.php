@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\ActivityLogs;
 use App\Models\Company;
 use App\Models\Customer;
+use App\Models\CustomerContact;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -73,11 +74,18 @@ class ActivityLogTest extends TestCase
         $customer = Customer::create([
             'company_id' => $this->company->id,
             'name' => 'Portal Customer',
-            'customer_email' => 'customer@test.com',
-            'password' => Hash::make('password'),
-            'portal' => true,
             'is_active' => true,
             'is_deleted' => false,
+        ]);
+
+        // Portal sign-in is per person at the customer.
+        CustomerContact::create([
+            'company_id' => $this->company->id,
+            'customer_id' => $customer->id,
+            'first_name' => 'Portal',
+            'email' => 'customer@test.com',
+            'password' => Hash::make('password'),
+            'portal_access' => true,
         ]);
 
         $this->post("/{$this->company->slug}/portal/login", [

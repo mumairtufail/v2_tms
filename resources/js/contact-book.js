@@ -47,14 +47,22 @@ export function normalizedKey(name, address1, city, state) {
 export function filterContactBook(entries, query, limit = 8) {
     const q = String(query || '').trim().toLowerCase();
     if (q.length < 2) return [];
+
+    // The order customer's saved addresses (source: 'customer') win over identical
+    // contact book rows and are listed first.
+    const customerKeys = new Set(entries.filter((e) => e.source === 'customer').map((e) => e._key));
+
     return entries
+        .filter((e) => e.source === 'customer' || !customerKeys.has(e._key))
         .filter((e) =>
             `${e.company_name} ${e.address_1} ${e.city} ${e.state}`.toLowerCase().includes(q)
         )
         .sort((a, b) => {
+            const as = a.source === 'customer' ? 0 : 1;
+            const bs = b.source === 'customer' ? 0 : 1;
             const ap = String(a.company_name || '').toLowerCase().startsWith(q) ? 0 : 1;
             const bp = String(b.company_name || '').toLowerCase().startsWith(q) ? 0 : 1;
-            return ap - bp || String(a.company_name || '').localeCompare(String(b.company_name || ''));
+            return as - bs || ap - bp || String(a.company_name || '').localeCompare(String(b.company_name || ''));
         })
         .slice(0, limit);
 }

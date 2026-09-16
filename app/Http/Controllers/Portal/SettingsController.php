@@ -15,27 +15,26 @@ class SettingsController extends Controller
 {
     public function index(Company $company): View
     {
-        $customer = Auth::guard('customer')->user();
+        $contact = Auth::guard('customer')->user();
+        $customer = app('current.customer');
 
-        return view('portal.settings.index', compact('company', 'customer'));
+        return view('portal.settings.index', compact('company', 'customer', 'contact'));
     }
 
+    /** The signed-in person's own profile. */
     public function updateProfile(UpdatePortalProfileRequest $request, Company $company): RedirectResponse
     {
-        $customer = Auth::guard('customer')->user();
-
-        $customer->update($request->validated());
+        Auth::guard('customer')->user()->update($request->validated());
 
         Toast::success('Profile updated successfully.');
 
         return redirect()->route('portal.settings', ['company' => $company->slug]);
     }
 
+    /** Preferences for the whole customer account. */
     public function updateSettings(UpdatePortalSettingsRequest $request, Company $company): RedirectResponse
     {
-        $customer = Auth::guard('customer')->user();
-
-        $customer->update($request->validated());
+        app('current.customer')->update($request->validated());
 
         Toast::success('Settings updated successfully.');
 

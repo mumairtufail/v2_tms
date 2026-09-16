@@ -497,12 +497,12 @@ function costEstimates(initialData, initialRevenue = 0) {
 
     function ensureDefaultRows(rows) {
         if (rows.length === 0 || !FREIGHT_TYPES.includes(rows[0]?.type)) {
-            rows.unshift({ type: 'Freight', description: 'Freight', qty: 1, rate: 0, cost: 0, is_default: true });
+            rows.unshift({ type: 'Freight', description: 'Freight', qty: 1, rate: '', cost: 0, is_default: true });
         } else {
             rows[0].is_default = true;
         }
         if (rows.length < 2 || !FUEL_TYPES.includes(rows[1]?.type)) {
-            rows.splice(1, 0, { type: 'Fuel (surcharge)', description: 'Fuel Surcharge (0%)', qty: 0, rate: 0, cost: 0, is_default: true });
+            rows.splice(1, 0, { type: 'Fuel (surcharge)', description: 'Fuel Surcharge (0%)', qty: '', rate: '', cost: 0, is_default: true });
         } else {
             rows[1].is_default = true;
         }
@@ -512,8 +512,9 @@ function costEstimates(initialData, initialRevenue = 0) {
     let mappedRows = data.map(row => ({
         type:        row.type        || 'Miscellaneous',
         description: row.description || '',
-        qty:         Number(row.qty  || 0),
-        rate:        Number(row.rate || 0),
+        // Blank instead of 0 so the placeholder shows and typing doesn't append to a zero
+        qty:         parseFloat(row.qty)  ? Number(row.qty)  : '',
+        rate:        parseFloat(row.rate) ? Number(row.rate) : '',
         cost:        Number(row.cost ?? row.est_cost ?? 0),
         is_default:  row.is_default  || false,
     }));
@@ -540,7 +541,7 @@ function costEstimates(initialData, initialRevenue = 0) {
             this.rows.forEach(row => {
                 const t = String(row.type || '').toLowerCase();
                 if (t === 'fuel (surcharge)') {
-                    row.rate        = base.toFixed(2);
+                    row.rate        = base ? base.toFixed(2) : '';
                     row.description = `Fuel Surcharge (${row.qty || 0}%)`;
                     row.cost        = (base * ((parseFloat(row.qty) || 0) / 100)).toFixed(2);
                 } else {
@@ -565,8 +566,13 @@ function costEstimates(initialData, initialRevenue = 0) {
             return this.revenue - this.total;
         },
 
+        get marginLabel() {
+            if (!this.revenue) return 'No revenue on this manifest yet';
+            return (this.profit / this.revenue * 100).toFixed(1) + '% margin';
+        },
+
         addRow() {
-            this.rows.push({ type: 'Miscellaneous', description: '', qty: 1, rate: 0, cost: 0, is_default: false });
+            this.rows.push({ type: 'Miscellaneous', description: '', qty: 1, rate: '', cost: 0, is_default: false });
         },
 
         duplicateRow(index) {

@@ -4,6 +4,7 @@ namespace Tests\Feature\Portal;
 
 use App\Models\Company;
 use App\Models\Customer;
+use App\Models\CustomerContact;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -15,6 +16,8 @@ class CustomerPortalLoginTest extends TestCase
     protected Company $company;
 
     protected Customer $customer;
+
+    protected CustomerContact $contact;
 
     protected function setUp(): void
     {
@@ -31,12 +34,32 @@ class CustomerPortalLoginTest extends TestCase
         $this->customer = Customer::create([
             'company_id' => $this->company->id,
             'name' => 'Portal Customer Inc',
-            'customer_email' => 'portal@customer.com',
-            'password' => Hash::make('portal-password'),
-            'short_code' => 'PCI',
-            'portal' => true,
+            'short_code' => 'PCI1',
             'is_active' => true,
             'is_deleted' => false,
+        ]);
+
+        $this->contact = $this->makePerson('portal@customer.com');
+    }
+
+    private function makePerson(string $email, array $overrides = []): CustomerContact
+    {
+        return CustomerContact::create(array_merge([
+            'company_id' => $this->company->id,
+            'customer_id' => $this->customer->id,
+            'first_name' => 'Pat',
+            'last_name' => 'Portal',
+            'email' => $email,
+            'password' => Hash::make('portal-password'),
+            'portal_access' => true,
+        ], $overrides));
+    }
+
+    private function attemptLogin(string $email, string $password = 'portal-password')
+    {
+        return $this->post(route('portal.login', ['company' => $this->company->slug]), [
+            'email' => $email,
+            'password' => $password,
         ]);
     }
 
@@ -47,60 +70,71 @@ class CustomerPortalLoginTest extends TestCase
         $response->assertStatus(200);
     }
 
-    public function test_customer_can_authenticate_with_their_password(): void
+    public function test_person_can_authenticate_with_their_password(): void
     {
-        $response = $this->post(route('portal.login', ['company' => $this->company->slug]), [
-            'email' => $this->customer->customer_email,
-            'password' => 'portal-password',
-        ]);
+        $response = $this->attemptLogin('portal@customer.com');
 
-        $this->assertAuthenticated('customer');
+        $this->assertAuthenticatedAs($this->contact, 'customer');
         $response->assertRedirect(route('portal.dashboard', ['company' => $this->company->slug]));
+        $this->assertNotNull($this->contact->fresh()->last_login_at);
     }
 
-    public function test_customer_cannot_authenticate_with_wrong_password(): void
+    public function test_email_is_matched_case_insensitively(): void
     {
-        $this->post(route('portal.login', ['company' => $this->company->slug]), [
-            'email' => $this->customer->customer_email,
-            'password' => 'wrong-password',
-        ]);
+        $this->attemptLogin('Portal@Customer.com');
+
+        $this->assertAuthenticatedAs($this->contact, 'customer');
+    }
+
+    public function test_person_cannot_authenticate_with_wrong_password(): void
+    {
+        $this->attemptLogin('portal@customer.com', 'wrong-password');
 
         $this->assertGuest('customer');
     }
 
-    public function test_customer_without_portal_flag_cannot_login(): void
+    public function test_person_without_portal_access_cannot_login(): void
     {
-        $this->customer->update(['portal' => false]);
+        $this->contact->update(['portal_access' => false]);
 
-        $this->post(route('portal.login', ['company' => $this->company->slug]), [
-            'email' => $this->customer->customer_email,
-            'password' => 'portal-password',
-        ]);
+        $this->attemptLogin('portal@customer.com');
 
         $this->assertGuest('customer');
     }
 
-    public function test_inactive_customer_cannot_login(): void
+    public function test_person_at_inactive_customer_cannot_login(): void
     {
         $this->customer->update(['is_active' => false]);
 
-        $this->post(route('portal.login', ['company' => $this->company->slug]), [
-            'email' => $this->customer->customer_email,
-            'password' => 'portal-password',
-        ]);
+        $this->attemptLogin('portal@customer.com');
 
         $this->assertGuest('customer');
     }
 
-    public function test_customer_without_password_cannot_login(): void
+    public function test_person_without_password_cannot_login(): void
     {
-        $this->customer->update(['password' => null]);
+        $this->contact->update(['password' => null]);
 
-        $this->post(route('portal.login', ['company' => $this->company->slug]), [
-            'email' => $this->customer->customer_email,
-            'password' => 'portal-password',
-        ]);
+        $this->attemptLogin('portal@customer.com');
 
         $this->assertGuest('customer');
+    }
+
+    public function test_removed_person_cannot_login(): void
+    {
+        $this->contact->delete();
+
+        $this->attemptLogin('portal@customer.com');
+
+        $this->assertGuest('customer');
+    }
+
+    public function test_two_people_at_one_customer_each_have_their_own_login(): void
+    {
+        $second = $this->makePerson('second@customer.com', ['first_name' => 'Sam']);
+
+        $this->attemptLogin('second@customer.com');
+
+        $this->assertAuthenticatedAs($second, 'customer');
     }
 }

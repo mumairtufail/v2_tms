@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Portal;
 
-use App\Models\Customer;
+use App\Models\CustomerContact;
 use App\Services\ActivityLog;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
@@ -36,15 +36,14 @@ class CustomerLoginRequest extends FormRequest
 
         $company = app('current.company');
 
-        $customer = Customer::query()
+        $contact = CustomerContact::withoutGlobalScope('company')
             ->where('company_id', $company->id)
-            ->where('customer_email', $this->email)
-            ->where('portal', true)
-            ->where('is_active', true)
-            ->where('is_deleted', false)
+            ->where('email', strtolower(trim((string) $this->email)))
+            ->where('portal_access', true)
+            ->whereHas('customer', fn ($q) => $q->where('is_active', true)->where('is_deleted', false))
             ->first();
 
-        if (!$customer || !$customer->password || !Hash::check($this->password, $customer->password)) {
+        if (!$contact || !$contact->password || !Hash::check($this->password, $contact->password)) {
             RateLimiter::hit($this->throttleKey());
 
             app(ActivityLog::class)->logAuth('portal.login.failed', [
@@ -59,14 +58,15 @@ class CustomerLoginRequest extends FormRequest
             ]);
         }
 
-        Auth::guard('customer')->login($customer, $this->boolean('remember'));
+        Auth::guard('customer')->login($contact, $this->boolean('remember'));
+        $contact->forceFill(['last_login_at' => now()])->saveQuietly();
 
         RateLimiter::clear($this->throttleKey());
 
         app(ActivityLog::class)->logAuth('portal.login.success', [
             'description' => 'Customer logged into portal',
-            'email' => $customer->customer_email,
-            'customer_id' => $customer->id,
+            'email' => $contact->email,
+            'customer_id' => $contact->customer_id,
             'company_id' => $company->id,
         ]);
     }

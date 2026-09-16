@@ -94,10 +94,14 @@ class ManifestController extends Controller
             'stops',
             'orderStops.order.customer',
             'orderStops.order.quote.costs',
+            'orderStops.order.stops',
             'orderStops.commodities',
             'orderStops.accessorials',
+            'costEstimates',
         ]);
-        
+
+        $financials = $this->manifestService->financialSummary($manifest);
+
         $drivers = \App\Models\User::where('company_id', $company->id)
             ->where('is_active', true)
             ->where('is_deleted', false)
@@ -112,7 +116,7 @@ class ManifestController extends Controller
             ->where('status', 'Available')
             ->get();
 
-        return view('v2.company.manifests.edit', compact('company', 'manifest', 'drivers', 'carriers', 'equipment'));
+        return view('v2.company.manifests.edit', compact('company', 'manifest', 'drivers', 'carriers', 'equipment', 'financials'));
     }
 
     public function update(Request $request, Company $company, Manifest $manifest)
@@ -457,8 +461,6 @@ class ManifestController extends Controller
                     'est_cost' => $cost,
                 ]);
             }
-
-            $this->manifestService->syncOrderQuotesFromManifestCosts($manifest);
         });
 
         return response()->json(['success' => true, 'message' => 'Cost estimates added successfully']);

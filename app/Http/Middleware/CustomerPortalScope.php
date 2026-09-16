@@ -10,18 +10,20 @@ use Symfony\Component\HttpFoundation\Response;
 class CustomerPortalScope
 {
     /**
-     * Ensure the authenticated customer belongs to the route company.
+     * Ensure the signed-in person belongs to the route company and still has portal access.
+     * Binds the person (current.portal_contact) and their customer (current.customer).
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $customer = Auth::guard('customer')->user();
+        /** @var \App\Models\CustomerContact|null $contact */
+        $contact = Auth::guard('customer')->user();
         $company = app('current.company');
 
-        if (!$customer || $customer->company_id !== $company->id) {
+        if (!$contact || (int) $contact->company_id !== (int) $company->id) {
             abort(403, 'You do not have access to this portal.');
         }
 
-        if (!$customer->portal || !$customer->is_active || $customer->is_deleted) {
+        if (!$contact->canUsePortal()) {
             Auth::guard('customer')->logout();
 
             if (! Auth::guard('web')->check()) {
@@ -33,7 +35,8 @@ class CustomerPortalScope
                 ->withErrors(['email' => 'Your portal access has been revoked.']);
         }
 
-        app()->instance('current.customer', $customer);
+        app()->instance('current.portal_contact', $contact);
+        app()->instance('current.customer', $contact->customer);
 
         return $next($request);
     }

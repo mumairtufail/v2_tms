@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests\V2;
 
+use App\Models\Customer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 
+/**
+ * Create customer modal.
+ */
 class CustomerRequest extends FormRequest
 {
     public function authorize(): bool
@@ -15,79 +18,56 @@ class CustomerRequest extends FormRequest
 
     public function rules(): array
     {
-        $isUpdate = $this->isMethod('PUT') || $this->isMethod('PATCH');
-        $company = $this->route('company');
-        $customer = $this->route('customer');
-
-        $portalEnabled = $this->boolean('portal');
-
-        // Password is mandatory when portal access is enabled, unless the
-        // customer already has one (blank on update keeps the current password).
-        $passwordRequired = $portalEnabled && (!$isUpdate || !$customer?->password);
-
         $companyId = app('current.company')?->id;
-        $customerId = $customer instanceof \App\Models\Customer ? $customer->id : ($customer?->id ?? null);
 
         return [
             'name' => ['required', 'string', 'max:255'],
             'short_code' => [
                 'nullable',
                 'string',
-                'max:3',
-                'regex:/^[A-Z0-9]{1,3}$/',
+                'regex:/^[A-Z0-9]{3,4}$/',
                 Rule::unique('customers', 'short_code')
-                    ->where(fn ($q) => $q->where('company_id', $companyId)->where('is_deleted', false))
-                    ->ignore($customerId),
+                    ->where(fn ($q) => $q->where('company_id', $companyId)->where('is_deleted', false)),
             ],
-            'customer_email' => [
-                Rule::requiredIf($portalEnabled),
-                'nullable',
-                'email',
-                'max:255',
-                Rule::unique('customers', 'customer_email')
-                    ->where(fn ($q) => $q->where('company_id', $companyId)->where('is_deleted', false))
-                    ->ignore($customerId),
-            ],
-            'password' => [
-                Rule::requiredIf($passwordRequired),
-                'nullable',
-                'string',
-                'confirmed',
-                Password::min(8)->mixedCase()->numbers()->symbols(),
-            ],
-            'address' => ['nullable', 'string', 'max:255'],
-            'city' => ['nullable', 'string', 'max:100'],
-            'state' => ['nullable', 'string', 'max:100'],
-            'postal_code' => ['nullable', 'string', 'max:20'],
-            'country' => ['nullable', 'string', 'max:100'],
-            'is_active' => ['boolean'],
-            'portal' => ['boolean'],
+            'address_1' => ['required', 'string', 'max:255'],
+            'address_2' => ['nullable', 'string', 'max:255'],
+            'city' => ['required', 'string', 'max:100'],
+            'state' => ['required', 'string', 'max:100'],
+            'postal_code' => ['required', 'string', 'max:20'],
+            'country' => ['required', 'string', 'max:10'],
+            'lat' => ['nullable', 'numeric', 'between:-90,90'],
+            'lng' => ['nullable', 'numeric', 'between:-180,180'],
+            'currency' => ['required', Rule::in(Customer::CURRENCIES)],
+            'customer_type' => ['nullable', Rule::in(array_keys(Customer::TYPES))],
             'quote_required' => ['boolean'],
-            'customer_type' => ['nullable', 'string', 'max:50'],
-            'currency' => ['nullable', 'string', Rule::in(['USD', 'CAD'])],
+            'default_billing_option' => ['required', Rule::in(array_keys(Customer::BILLING_OPTIONS))],
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'name' => 'organization name',
+            'address_1' => 'address 1',
+            'state' => 'province / state',
+            'postal_code' => 'postal code',
         ];
     }
 
     public function messages(): array
     {
         return [
-            'short_code.regex' => 'The short code may only contain letters and numbers (up to 3 characters).',
-            'short_code.unique' => 'This short code is already used by another customer.',
-            'customer_email.required' => 'An email address is required when portal access is enabled.',
-            'customer_email.unique' => 'Another customer is already using this email address.',
-            'password.required' => 'A password is required when portal access is enabled.',
+            'short_code.regex' => 'Short codes are 3 or 4 letters and numbers, like 7ML4.',
+            'short_code.unique' => 'Another customer already uses this short code.',
         ];
     }
 
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'is_active' => $this->boolean('is_active'),
-            'portal' => $this->boolean('portal'),
             'quote_required' => $this->boolean('quote_required'),
-            'short_code' => $this->filled('short_code')
-                ? strtoupper(trim((string) $this->input('short_code')))
-                : null,
+            'short_code' => $this->filled('short_code') ? strtoupper(trim((string) $this->input('short_code'))) : null,
+            'country' => $this->filled('country') ? strtoupper(trim((string) $this->input('country'))) : null,
         ]);
     }
 }

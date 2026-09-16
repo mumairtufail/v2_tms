@@ -17,7 +17,7 @@ $maxWidthClass = [
     x-on:keydown.escape.window="show = false"
     x-show="show"
     x-cloak
-    class="fixed inset-0 z-50 overflow-y-auto"
+    class="fixed inset-0 z-[90] overflow-y-auto"
 >
     <!-- Backdrop -->
     <div 
