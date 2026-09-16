@@ -42,6 +42,16 @@ class Company extends Model
         return $this->hasMany(SmtpSetting::class);
     }
 
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    public function customers(): HasMany
+    {
+        return $this->hasMany(Customer::class);
+    }
+
     public function activeUsers(): HasMany
     {
         return $this->hasMany(User::class)->active();

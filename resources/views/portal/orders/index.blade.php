@@ -67,19 +67,21 @@
                             {{ $order->stops->count() }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                            @php
+                                // One action per row: drafts open in the editor, everything else read-only
+                                $canEditInPortal = $order->status === 'draft' && $order->order_type === 'point_to_point';
+                            @endphp
                             <div class="inline-flex items-center justify-end gap-2">
-                                @if($order->status === 'draft')
-                                <a href="{{ route('portal.orders.edit', ['company' => $company->slug, 'order' => $order]) }}"
-                                   class="text-primary-600 hover:text-primary-500 dark:text-primary-400 font-medium">Edit</a>
-                                @endif
                                 <button type="button"
                                         @click="openLogs({{ $order->id }}, {{ json_encode($order->order_number) }})"
-                                        class="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-all"
-                                        title="View activity logs">
+                                        class="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:text-primary-400 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
+                                        title="Activity">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                 </button>
-                                <a href="{{ route('portal.orders.show', ['company' => $company->slug, 'order' => $order]) }}"
-                                   class="text-primary-600 hover:text-primary-500 dark:text-primary-400 font-medium">View</a>
+                                <a href="{{ $canEditInPortal
+                                        ? route('portal.orders.edit', ['company' => $company->slug, 'order' => $order])
+                                        : route('portal.orders.show', ['company' => $company->slug, 'order' => $order]) }}"
+                                   class="text-primary-600 hover:text-primary-500 dark:text-primary-400 font-medium">{{ $canEditInPortal ? 'Edit' : 'View' }}</a>
                             </div>
                         </td>
                     </tr>
@@ -99,9 +101,11 @@
         @endif
     </div>
 
-    <div x-show="logPanelOpen" class="fixed inset-0 z-50" x-cloak @keydown.escape.window="closeLogs()">
-        <div class="absolute inset-0 transition-opacity"
-             style="background-color: rgba(17, 24, 39, 0.15);"
+    {{-- Full-height slide-over on the right, matching the company side's activity panel.
+         Teleported so the page's own spacing cannot offset it. --}}
+    <template x-teleport="body">
+    <div x-show="logPanelOpen" x-cloak class="fixed inset-0 z-[70]" @keydown.escape.window="closeLogs()">
+        <div class="absolute inset-0 bg-gray-900/30"
              x-show="logPanelOpen"
              x-transition:enter="ease-out duration-200"
              x-transition:enter-start="opacity-0"
@@ -111,55 +115,45 @@
              x-transition:leave-end="opacity-0"
              @click="closeLogs()"></div>
 
-        {{-- Compact floating card anchored top-right (inline sizing: these values aren't in the prebuilt CSS) --}}
-        <aside class="absolute right-4 w-full max-w-sm bg-white dark:bg-gray-900 shadow-2xl rounded-2xl border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden"
-               style="top: 5rem; max-height: calc(100vh - 7rem); width: calc(100% - 2rem);"
+        <aside class="absolute right-0 top-0 h-full w-full sm:w-96 bg-white dark:bg-gray-900 shadow-xl border-l border-gray-200 dark:border-gray-800 flex flex-col"
                x-show="logPanelOpen"
                x-transition:enter="transform transition ease-out duration-200"
-               x-transition:enter-start="translate-x-full opacity-0"
-               x-transition:enter-end="translate-x-0 opacity-100"
+               x-transition:enter-start="translate-x-full"
+               x-transition:enter-end="translate-x-0"
                x-transition:leave="transform transition ease-in duration-150"
-               x-transition:leave-start="translate-x-0 opacity-100"
-               x-transition:leave-end="translate-x-full opacity-0"
-               @click.stop>
-            <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-800 flex items-start justify-between gap-4">
-                <div>
-                    <p class="text-[11px] font-bold uppercase tracking-widest text-gray-400">Order activity</p>
-                    <h2 class="text-lg font-bold text-gray-900 dark:text-white mt-0.5" x-text="logOrderNumber ? ('Order #' + logOrderNumber) : 'Order logs'"></h2>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Who added, updated, or changed this order</p>
+               x-transition:leave-start="translate-x-0"
+               x-transition:leave-end="translate-x-full">
+            <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-800">
+                <div class="min-w-0">
+                    <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Activity</p>
+                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white truncate" x-text="logOrderNumber ? ('Order #' + logOrderNumber) : 'Order activity'"></h2>
                 </div>
-                <button type="button" @click="closeLogs()" class="p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                <button type="button" @click="closeLogs()" title="Close" class="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
 
-            <div class="flex-1 overflow-y-auto px-5 py-5">
-                <template x-if="logsLoading">
-                    <p class="text-sm text-gray-500 dark:text-gray-400 text-center py-10">Loading activity...</p>
-                </template>
+            <div class="flex-1 overflow-y-auto px-4 py-3">
+                <p x-show="logsLoading" class="py-8 text-center text-xs text-gray-500 dark:text-gray-400">Loading activity…</p>
+                <p x-show="!logsLoading && logs.length === 0" class="py-8 text-center text-xs text-gray-500 dark:text-gray-400">No activity recorded for this order yet.</p>
 
-                <template x-if="!logsLoading && logs.length === 0">
-                    <p class="text-sm text-gray-500 dark:text-gray-400 text-center py-10">No activity recorded for this order yet.</p>
-                </template>
-
-                <ol class="relative border-l border-gray-200 dark:border-gray-700 ml-3" x-show="!logsLoading && logs.length > 0">
+                <ol x-show="!logsLoading && logs.length > 0" class="ml-1.5 border-l border-gray-200 dark:border-gray-700">
                     <template x-for="log in logs" :key="log.id">
-                        <li class="mb-6 ml-6">
-                            <span class="absolute -left-3 flex items-center justify-center w-6 h-6 rounded-full ring-4 ring-white dark:ring-gray-900"
-                                  :class="log.successful ? 'bg-primary-100 text-primary-600 dark:bg-primary-900/40 dark:text-primary-300' : 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300'">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            </span>
-                            <p class="text-sm text-gray-900 dark:text-white">
+                        <li class="relative pl-4 pb-3 last:pb-0">
+                            <span class="absolute -left-[5px] top-1.5 h-2.5 w-2.5 rounded-full ring-2 ring-white dark:ring-gray-900"
+                                  :class="log.successful ? 'bg-primary-500' : 'bg-red-500'"></span>
+                            <p class="text-[13px] leading-5 text-gray-900 dark:text-white">
                                 <span class="font-semibold" x-text="log.actor"></span>
-                                <span class="text-gray-600 dark:text-gray-300" x-text="' ' + log.description"></span>
+                                <span class="text-gray-600 dark:text-gray-300" x-text="log.description"></span>
                             </p>
-                            <p class="text-xs text-gray-400 mt-1" x-text="log.created_at_label + ' · ' + log.created_at_human"></p>
+                            <p class="text-[11px] text-gray-400 dark:text-gray-500" :title="log.created_at_label" x-text="log.created_at_human"></p>
                         </li>
                     </template>
                 </ol>
             </div>
         </aside>
     </div>
+    </template>
 </div>
 @endsection
 
