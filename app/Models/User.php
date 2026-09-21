@@ -69,7 +69,7 @@ class User extends Authenticatable
     {
         $broker = config('auth.defaults.passwords');
 
-        app(MailService::class)->queue(
+        $sent = app(MailService::class)->queue(
             new ResetPasswordMail(
                 userName: trim((string) $this->name) ?: 'there',
                 url: route('password.reset', ['token' => $token, 'email' => $this->getEmailForPasswordReset()]),
@@ -79,6 +79,11 @@ class User extends Authenticatable
             $this->email,
             $this->company_id,
         );
+
+        // PasswordResetLinkController tells the user the link could not be sent
+        if (! $sent) {
+            throw new \RuntimeException('Password reset email could not be sent.');
+        }
     }
 
     // Relationships

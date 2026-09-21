@@ -26,8 +26,12 @@ class MailService
     /**
      * Push the email onto the queue. The SMTP account is resolved when the job
      * runs, so switching accounts applies to emails still waiting in the queue.
+     *
+     * Returns false when the email could not be sent. On the sync queue the job
+     * runs inside the request, and a broken mail setup must not fail whatever
+     * triggered the email; the failure is already in the mail log.
      */
-    public function queue(Mailable $mailable, string|array $to, ?int $companyId = null): void
+    public function queue(Mailable $mailable, string|array $to, ?int $companyId = null): bool
     {
         Log::channel('mail')->info('Email queued', [
             'mailable' => class_basename($mailable),
@@ -35,7 +39,15 @@ class MailService
             'company_id' => $companyId,
         ]);
 
-        SendMailJob::dispatch($mailable, $to, $companyId);
+        try {
+            SendMailJob::dispatch($mailable, $to, $companyId);
+        } catch (Throwable $e) {
+            report($e);
+
+            return false;
+        }
+
+        return true;
     }
 
     public function sendNow(Mailable $mailable, string|array $to, ?int $companyId = null): void

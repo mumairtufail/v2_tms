@@ -259,6 +259,26 @@ class CustomerModuleTest extends TestCase
         $this->assertAuthenticatedAs($contact, 'customer');
     }
 
+    public function test_a_broken_mail_setup_does_not_stop_a_person_being_added(): void
+    {
+        // Like production with no SMTP account: the .env fallback points at a server that isn't there
+        config(['mail.default' => 'smtp', 'mail.mailers.smtp.host' => '127.0.0.1', 'mail.mailers.smtp.port' => 1]);
+
+        $customer = $this->makeCustomer();
+
+        $this->actingAs($this->staff)->post($this->url('v2.customers.contacts.store', ['customer' => $customer->id]), [
+            'first_name' => 'Umar',
+            'last_name' => 'Qayyum',
+            'email' => 'umar@example.com',
+            'portal_access' => '1',
+            'password' => 'Str0ng!Pass',
+            'password_confirmation' => 'Str0ng!Pass',
+            'phones' => [['type' => 'mobile', 'number' => '', 'ext' => '']],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame('umar@example.com', $customer->contacts()->firstOrFail()->email);
+    }
+
     public function test_portal_email_must_be_unique_among_portal_people(): void
     {
         $customer = $this->makeCustomer();

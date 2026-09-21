@@ -90,14 +90,19 @@ class NotificationService
             }
 
             if ($contact->wantsEmailFor($event)) {
-                app(MailService::class)->queue(new CustomerOrderUpdateMail(
+                $sent = app(MailService::class)->queue(new CustomerOrderUpdateMail(
                     recipientName: $contact->first_name,
                     title: $payload['title'] ?? $event->label(),
                     body: $payload['body'] ?? '',
                     url: $contact->portal_access ? ($payload['url'] ?? null) : null,
                     brandName: $customer->company?->name ?? config('app.name'),
                 ), $contact->email, $customer->company_id);
-                $emailed++;
+
+                if ($sent) {
+                    $emailed++;
+                } else {
+                    $skipped[$contact->email] = 'email failed to send';
+                }
                 continue;
             }
 

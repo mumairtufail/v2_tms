@@ -30,9 +30,9 @@ class CustomerContactController extends Controller
             return $contact;
         });
 
-        $this->sendPortalWelcome($contact, $company);
-
         Toast::success("Added {$contact->name}.");
+
+        $this->sendPortalWelcome($contact, $company);
 
         return $this->customerTab($company, $customer, 'people');
     }
@@ -53,11 +53,11 @@ class CustomerContactController extends Controller
             $contact->phones()->createMany($phones);
         });
 
+        Toast::success("Saved {$contact->name}.");
+
         if (! $couldUsePortal) {
             $this->sendPortalWelcome($contact->fresh(), $company);
         }
-
-        Toast::success("Saved {$contact->name}.");
 
         return $this->customerTab($company, $customer, 'people');
     }
@@ -85,7 +85,7 @@ class CustomerContactController extends Controller
             return;
         }
 
-        app(\App\Services\MailService::class)->queue(
+        $sent = app(\App\Services\MailService::class)->queue(
             new \App\Mail\PortalWelcomeMail(
                 recipientName: $contact->first_name ?: $contact->name,
                 appName: config('app.name', 'TMS'),
@@ -96,6 +96,10 @@ class CustomerContactController extends Controller
             $contact->email,
             $company->id,
         );
+
+        if (! $sent) {
+            Toast::warning("The welcome email to {$contact->email} could not be sent. Check the SMTP settings.");
+        }
     }
 
     /** @return array{0: array, 1: array} */
