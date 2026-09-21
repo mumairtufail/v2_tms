@@ -3,6 +3,7 @@
 namespace Tests\Feature\Customers;
 
 use App\Http\Controllers\V2\CustomerController;
+use App\Mail\PortalWelcomeMail;
 use App\Models\Accessorial;
 use App\Models\Company;
 use App\Models\Customer;
@@ -15,6 +16,7 @@ use App\Support\AccessorialCategories;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class CustomerModuleTest extends TestCase
@@ -257,6 +259,25 @@ class CustomerModuleTest extends TestCase
             'password' => 'Str0ng!Pass',
         ]);
         $this->assertAuthenticatedAs($contact, 'customer');
+    }
+
+    public function test_new_portal_person_is_emailed_their_sign_in_email_and_password(): void
+    {
+        Mail::fake();
+        $customer = $this->makeCustomer();
+
+        $this->actingAs($this->staff)->post($this->url('v2.customers.contacts.store', ['customer' => $customer->id]), [
+            'first_name' => 'Pat',
+            'email' => 'pat@example.com',
+            'portal_access' => '1',
+            'password' => 'Str0ng!Pass',
+            'password_confirmation' => 'Str0ng!Pass',
+            'phones' => [['type' => 'mobile', 'number' => '', 'ext' => '']],
+        ])->assertSessionHasNoErrors();
+
+        Mail::assertSent(PortalWelcomeMail::class, fn (PortalWelcomeMail $mail) => $mail->hasTo('pat@example.com')
+            && $mail->signInEmail === 'pat@example.com'
+            && $mail->password === 'Str0ng!Pass');
     }
 
     public function test_a_broken_mail_setup_does_not_stop_a_person_being_added(): void

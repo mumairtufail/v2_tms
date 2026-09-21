@@ -10,7 +10,8 @@ use Illuminate\Queue\SerializesModels;
 
 /**
  * Sent to a person at a customer when they are first given portal access.
- * The password is never included — it is set by the company and shared by them.
+ * Includes the password the company just set, when there is one; otherwise it
+ * tells them to ask the company for it.
  */
 class PortalWelcomeMail extends Mailable
 {
@@ -22,6 +23,7 @@ class PortalWelcomeMail extends Mailable
         public string $companyName,
         public string $portalUrl,
         public string $signInEmail,
+        public ?string $password = null,
     ) {
     }
 

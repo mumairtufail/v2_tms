@@ -18,10 +18,20 @@
         <tr>
             <td style="padding:16px;font-size:13px;line-height:22px;color:#4b5563;">
                 <span style="color:#9ca3af;">Sign in with</span> {{ $signInEmail }}<br>
-                <span style="color:#9ca3af;">Password</span> set by {{ $companyName }} — contact them if you don't have it yet
+                @if (filled($password))
+                    <span style="color:#9ca3af;">Password</span> {{ $password }}
+                @else
+                    <span style="color:#9ca3af;">Password</span> set by {{ $companyName }} — contact them if you don't have it yet
+                @endif
             </td>
         </tr>
     </table>
+
+    @if (filled($password))
+        <p style="margin:0 0 24px 0;font-size:13px;line-height:20px;color:#4b5563;">
+            Keep this email private. If you think someone else has seen it, ask {{ $companyName }} to change your password.
+        </p>
+    @endif
 
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
         <tr>

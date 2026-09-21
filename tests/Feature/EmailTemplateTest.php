@@ -98,7 +98,23 @@ class EmailTemplateTest extends TestCase
         $this->assertStringContainsString('Open your portal', $html);
     }
 
-    public function test_the_welcome_email_never_contains_a_password(): void
+    public function test_the_welcome_email_includes_the_password_when_one_was_set(): void
+    {
+        $html = (new PortalWelcomeMail(
+            recipientName: 'Pat',
+            appName: 'TMS',
+            companyName: 'Acme Freight',
+            portalUrl: 'https://example.test/acme/portal/login',
+            signInEmail: 'pat@acme.test',
+            password: 'Str0ng!Pass',
+        ))->render();
+
+        $this->assertStringContainsString('pat@acme.test', $html);
+        $this->assertStringContainsString(e('Str0ng!Pass'), $html);
+        $this->assertStringNotContainsString('set by Acme Freight', $html);
+    }
+
+    public function test_the_welcome_email_without_a_password_says_where_to_get_it(): void
     {
         $html = (new PortalWelcomeMail(
             recipientName: 'Pat',
@@ -108,8 +124,6 @@ class EmailTemplateTest extends TestCase
             signInEmail: 'pat@acme.test',
         ))->render();
 
-        // It explains where the password comes from, rather than including one
         $this->assertStringContainsString('set by Acme Freight', $html);
-        $this->assertStringNotContainsString('type="password"', $html);
     }
 }

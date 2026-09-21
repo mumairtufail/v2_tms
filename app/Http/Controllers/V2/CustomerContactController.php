@@ -32,7 +32,7 @@ class CustomerContactController extends Controller
 
         Toast::success("Added {$contact->name}.");
 
-        $this->sendPortalWelcome($contact, $company);
+        $this->sendPortalWelcome($contact, $company, $request->input('password'));
 
         return $this->customerTab($company, $customer, 'people');
     }
@@ -56,7 +56,7 @@ class CustomerContactController extends Controller
         Toast::success("Saved {$contact->name}.");
 
         if (! $couldUsePortal) {
-            $this->sendPortalWelcome($contact->fresh(), $company);
+            $this->sendPortalWelcome($contact->fresh(), $company, $request->input('password'));
         }
 
         return $this->customerTab($company, $customer, 'people');
@@ -76,10 +76,10 @@ class CustomerContactController extends Controller
     }
 
     /**
-     * Welcome email for someone who can now sign in to the portal.
-     * The password is set by the company, so it is never sent by email.
+     * Welcome email for someone who can now sign in to the portal, with the
+     * password the company just typed in (blank when they kept an existing one).
      */
-    private function sendPortalWelcome(CustomerContact $contact, Company $company): void
+    private function sendPortalWelcome(CustomerContact $contact, Company $company, ?string $password = null): void
     {
         if (! $contact->canUsePortal() || blank($contact->email)) {
             return;
@@ -92,6 +92,7 @@ class CustomerContactController extends Controller
                 companyName: $company->name,
                 portalUrl: route('portal.login', ['company' => $company->slug]),
                 signInEmail: $contact->email,
+                password: filled($password) ? $password : null,
             ),
             $contact->email,
             $company->id,
