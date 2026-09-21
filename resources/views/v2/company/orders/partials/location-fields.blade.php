@@ -97,7 +97,7 @@
         @include('livewire.places-autocomplete')
     </div>
 
-    {{-- Address & Contact: summary row, expandable to the full editable fields --}}
+    {{-- Address, contact & dock hours: summary row, expandable to the full editable fields --}}
     <div class="rounded-md border border-gray-200 dark:border-gray-700 transition-colors"
          :class="[showDetails ? '' : 'bg-gray-50 dark:bg-gray-800/40 hover:bg-gray-100/80 dark:hover:bg-gray-800/70', isGoogleLoading ? 'opacity-60 animate-pulse' : '']">
         <button type="button"
@@ -129,11 +129,19 @@
                             <p class="text-xs text-gray-400 dark:text-gray-500"
                                x-show="!({{ $loc }}.contact_name || {{ $loc }}.phone || {{ $loc }}.email)">No contact added</p>
                         </div>
+                        <div class="flex items-center gap-2">
+                            <svg class="w-3.5 h-3.5 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <p class="text-xs text-gray-600 dark:text-gray-300 truncate"
+                               x-show="{{ $loc }}.opening_time || {{ $loc }}.closing_time"
+                               x-text="'Open ' + ({{ $loc }}.opening_time || '—') + ' – ' + ({{ $loc }}.closing_time || '—')"></p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500"
+                               x-show="!({{ $loc }}.opening_time || {{ $loc }}.closing_time)">No dock hours</p>
+                        </div>
                     </div>
                 </template>
 
                 {{-- Expanded: section label --}}
-                <p x-show="showDetails" class="text-xs font-medium text-gray-700 dark:text-gray-200 leading-5">Address &amp; contact</p>
+                <p x-show="showDetails" class="text-xs font-medium text-gray-700 dark:text-gray-200 leading-5">Address, contact &amp; hours</p>
             </div>
 
             <span class="shrink-0 inline-flex items-center gap-0.5 text-xs font-medium text-gray-500 dark:text-gray-400 leading-5">
@@ -201,24 +209,24 @@
                         <input type="email" x-model="{{ $loc }}.email" class="{{ $inputClass }}" placeholder="email@example.com">
                     </div>
                 </div>
+
+                {{-- Dock Hours –– 24h custom picker, no AM/PM --}}
+                <div class="pt-3 border-t border-gray-100 dark:border-gray-700 grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="{{ $labelClass }}">Opening</label>
+                        <x-time-picker x-model="{{ $loc }}.opening_time" class="mt-1 w-full" />
+                    </div>
+                    <div>
+                        <label class="{{ $labelClass }}">Closing</label>
+                        <x-time-picker x-model="{{ $loc }}.closing_time" class="mt-1 w-full" />
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    {{-- Dock Hours –– 24h custom picker, no AM/PM --}}
-    <div class="grid grid-cols-2 gap-3">
-        <div>
-            <label class="{{ $labelClass }}">Opening</label>
-            <x-time-picker x-model="{{ $loc }}.opening_time" class="mt-1 w-full" />
-        </div>
-        <div>
-            <label class="{{ $labelClass }}">Closing</label>
-            <x-time-picker x-model="{{ $loc }}.closing_time" class="mt-1 w-full" />
-        </div>
-    </div>
-
     {{-- Ready/Requested Window –– 24h custom picker, no AM/PM --}}
-    <div class="pt-4 border-t border-gray-100 dark:border-gray-800">
+    <div>
         <p class="mb-2 text-[10px] font-semibold text-gray-700 dark:text-gray-300 uppercase" title="24-hour format. End must be on or after Start.">
             {{ $prefix === 'shipper' ? 'Ready Window' : 'Requested Window' }}
         </p>
