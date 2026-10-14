@@ -47,6 +47,7 @@ class OrderController extends Controller
             $order = Order::create([
                 'customer_id' => $customer->id,
                 'order_type' => 'point_to_point',
+                'created_via' => 'portal',
                 'company_id' => $company->id,
                 'status' => 'draft',
                 'order_number' => 'TEMP-' . uniqid(),

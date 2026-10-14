@@ -76,6 +76,7 @@ class OrderController extends Controller
             $order = Order::create([
                 'customer_id'  => $customer->id,
                 'order_type'   => $request->order_type,
+                'created_via'  => 'staff',
                 'company_id'   => $company->id,
                 'status'       => 'draft',
                 'order_number' => 'TEMP-' . uniqid(),

@@ -4,6 +4,7 @@ namespace App\Http\Requests\V2;
 
 use App\Models\CustomerContact;
 use App\Models\CustomerContactPhone;
+use App\Support\EmailRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -34,7 +35,7 @@ class CustomerContactRequest extends FormRequest
             'email' => [
                 Rule::requiredIf($portalAccess || $this->boolean('send_invoices') || $this->boolean('cc_on_invoices')),
                 'nullable',
-                'email',
+                ...EmailRules::deliverable(),
                 'max:255',
                 Rule::when($portalAccess, [
                     Rule::unique('customer_contacts', 'email')
@@ -75,6 +76,11 @@ class CustomerContactRequest extends FormRequest
         return [
             'email.required' => 'An email is needed for portal access or invoice emails.',
             'email.unique' => 'Another person with portal access already signs in with this email.',
+            // Covers both halves of email:rfc,dns — bad syntax and a domain that
+            // has no mail server. The domain case is the common one, and the
+            // generic "must be a valid email address" sends people hunting for a
+            // typo in the name rather than the part that is actually wrong.
+            'email.email' => 'That email address does not look deliverable. Check the spelling, especially after the @.',
             'password.required' => 'Set a portal password to turn on portal access.',
         ];
     }

@@ -150,7 +150,7 @@
                             <div class="relative pl-8">
                                 <div class="absolute left-0 w-4 h-4 bg-primary-100 dark:bg-primary-900/30 border-2 border-primary-500 rounded-full"></div>
                                 <p class="text-sm font-medium text-gray-900 dark:text-white">Account Created</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ $user->created_at->format('M d, Y \a\t g:i A') }}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400"><x-local-time :value="$user->created_at" /></p>
                             </div>
                             <div class="relative pl-8">
                                 <div class="absolute left-0 w-4 h-4 bg-gray-100 dark:bg-gray-800 border-2 border-gray-400 rounded-full"></div>
@@ -161,7 +161,7 @@
                             <div class="relative pl-8">
                                 <div class="absolute left-0 w-4 h-4 bg-green-100 dark:bg-green-900/30 border-2 border-green-500 rounded-full"></div>
                                 <p class="text-sm font-medium text-gray-900 dark:text-white">Last Login</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ $user->last_login_at->format('M d, Y \a\t g:i A') }}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400"><x-local-time :value="$user->last_login_at" fallback="Never" /></p>
                             </div>
                             @endif
                         </div>

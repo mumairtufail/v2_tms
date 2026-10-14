@@ -5,10 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Traits\HasActivityLog;
 
 class Company extends Model
 {
-    use HasFactory;
+    use HasFactory, HasActivityLog;
+
+    protected string $activityLabel = 'company';
+    protected string $activityLabelKey = 'name';
     protected $fillable = [
         'name',
         'slug',

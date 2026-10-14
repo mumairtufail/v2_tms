@@ -32,6 +32,7 @@ class RoleController extends Controller
 
         $roles = $query->orderBy('created_at', 'desc')
             ->with('permissions') // Eager load permissions
+            ->withCount('users') // Drives the "assigned users" delete guard in the view
             ->paginate(10)
             ->withQueryString();
 
@@ -108,6 +109,12 @@ class RoleController extends Controller
             abort(403);
         }
 
+        // Admin always carries full access; it is the fallback nothing else
+        // in the company can be locked out from, so its grid is not editable.
+        if ($role->isProtectedAdmin()) {
+            return back()->with('error', 'The Admin role always has full access and its permissions cannot be changed.');
+        }
+
         $request->validate([
             'permissions' => 'array'
         ]);
@@ -144,6 +151,10 @@ class RoleController extends Controller
     {
         if ($role->company_id !== app('current.company')->id) {
             abort(403);
+        }
+
+        if ($role->isProtectedAdmin()) {
+            return back()->with('error', 'The Admin role is created automatically for every company and cannot be deleted.');
         }
 
         if ($role->users()->exists()) {

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Portal;
 
+use App\Support\EmailRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -27,7 +28,7 @@ class UpdatePortalProfileRequest extends FormRequest
             'job_title' => ['nullable', 'string', 'max:100'],
             'email' => [
                 'required',
-                'email',
+                ...EmailRules::deliverable(),
                 'max:255',
                 Rule::unique('customer_contacts', 'email')
                     ->where(fn ($q) => $q->where('company_id', $company->id)->where('portal_access', true)->whereNull('deleted_at'))
@@ -40,6 +41,7 @@ class UpdatePortalProfileRequest extends FormRequest
     {
         return [
             'email.unique' => 'Someone else already signs in with this email.',
+            'email.email' => 'That email address does not look deliverable. Check the spelling, especially after the @.',
         ];
     }
 

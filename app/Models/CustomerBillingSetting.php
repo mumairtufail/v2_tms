@@ -4,12 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Traits\HasActivityLog;
 
 /**
  * Accounting tab defaults for a customer. Saved now; used when invoices are sent.
  */
 class CustomerBillingSetting extends Model
 {
+    use HasActivityLog;
+
+    protected string $activityLabel = 'customer billing setting';
     public const TERMS = [
         'due_on_receipt' => 'Due on receipt',
         'net_7' => 'Net 7',

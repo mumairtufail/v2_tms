@@ -21,9 +21,26 @@
         <env name="APP_ENV" value="testing"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_DRIVER" value="array"/>
-        <!-- <env name="DB_CONNECTION" value="sqlite"/> -->
-        <!-- <env name="DB_DATABASE" value=":memory:"/> -->
+        <!--
+            Tests use RefreshDatabase, which runs migrate:fresh. With this
+            commented out it ran against whatever DB_DATABASE pointed at, so
+            running the suite destroyed the developer's local data.
+
+            It stays on MySQL rather than sqlite because the migrations use
+            MySQL-specific DDL (ALTER ... MODIFY, information_schema) and
+            ->change(), which sqlite cannot run without doctrine/dbal.
+
+            Create it once:  CREATE DATABASE tms_testing;
+        -->
+        <env name="DB_DATABASE" value="tms_testing"/>
         <env name="MAIL_MAILER" value="array"/>
+        <!--
+            Address validation falls back to syntax only. The DNS check in
+            App\Support\EmailRules fails closed, and the example.com addresses
+            the suite uses have no MX record, so every one of them would be
+            rejected. config/mail.php documents turning it off for CI.
+        -->
+        <env name="MAIL_VALIDATE_DNS" value="false"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>

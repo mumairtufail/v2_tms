@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Company;
 use App\Models\Role;
+use App\Services\ActivityLog;
+use App\Support\EmailRules;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -83,7 +85,7 @@ class UserController extends Controller
         $validator = Validator::make($request->all(), [
             'f_name' => 'required|string|max:255',
             'l_name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
+            'email' => ['required', ...EmailRules::deliverable(), 'unique:users,email'],
             'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
             'phone' => 'nullable|string|max:20',
             'company_id' => 'required|exists:companies,id',
@@ -206,15 +208,42 @@ class UserController extends Controller
      */
     public function impersonate(User $user)
     {
+        // Captured before Auth::login swaps the session, otherwise the audit
+        // trail attributes the action to the account being impersonated.
+        $actor = auth()->user();
+
         if ($user->is_super_admin) {
+            app(ActivityLog::class)->logImpersonation(
+                'impersonation.start.denied',
+                $actor,
+                $user,
+                'Attempted to impersonate a super admin and was refused',
+                ['is_successful' => false, 'reason' => 'target is a super admin']
+            );
+
             return redirect()->back()->with('error', 'You cannot impersonate a super admin.');
         }
 
         if (!$user->company) {
+            app(ActivityLog::class)->logImpersonation(
+                'impersonation.start.denied',
+                $actor,
+                $user,
+                'Attempted to impersonate a user with no company and was refused',
+                ['is_successful' => false, 'reason' => 'target has no company']
+            );
+
             return redirect()->back()->with('error', 'This user has no company assigned.');
         }
 
-        session(['impersonating_original_id' => auth()->id()]);
+        app(ActivityLog::class)->logImpersonation(
+            'impersonation.start',
+            $actor,
+            $user,
+            sprintf('%s started impersonating %s', $actor->name, $user->name)
+        );
+
+        session(['impersonating_original_id' => $actor->id]);
 
         Auth::login($user);
 
@@ -227,6 +256,10 @@ class UserController extends Controller
      */
     public function stopImpersonating(Request $request)
     {
+        // The account currently being worn, recorded before the session flips
+        // back so the entry names both sides of the handover.
+        $impersonatedUser = auth()->user();
+
         $originalId = session()->pull('impersonating_original_id');
 
         if (!$originalId) {
@@ -236,9 +269,30 @@ class UserController extends Controller
         $originalUser = User::find($originalId);
 
         if (!$originalUser || !$originalUser->is_super_admin) {
+            if ($originalUser) {
+                app(ActivityLog::class)->logImpersonation(
+                    'impersonation.stop.failed',
+                    $originalUser,
+                    $impersonatedUser,
+                    'Could not return from impersonation; the original account is no longer a super admin',
+                    ['is_successful' => false]
+                );
+            }
+
             Auth::logout();
             return redirect()->route('login')->with('error', 'Session expired. Please log in again.');
         }
+
+        app(ActivityLog::class)->logImpersonation(
+            'impersonation.stop',
+            $originalUser,
+            $impersonatedUser,
+            sprintf(
+                '%s stopped impersonating %s',
+                $originalUser->name,
+                $impersonatedUser->name ?? 'a user'
+            )
+        );
 
         Auth::login($originalUser);
 

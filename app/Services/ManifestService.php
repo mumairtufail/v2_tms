@@ -79,11 +79,19 @@ class ManifestService
      *
      * This is the one place carrier cost is stored, whether it was typed on the manifest
      * or on an order whose stops all sit on this manifest.
+     *
+     * $orderId scopes both the delete and the new rows to that order alone. A manifest
+     * can carry stops from several orders, and carrier cost is typed per order - without
+     * this, replacing order A's rows here also deleted order B's, because both lived in
+     * the same unscoped list and "replace" meant "replace everything". Pass null only
+     * for a genuinely manifest-wide entry (ManifestController::addCostEstimates, or the
+     * manifest edit screen), which stays its own bucket and is never touched by an
+     * order-scoped replace or vice versa.
      */
-    public function replaceCostEstimates(Manifest $manifest, array $rows): void
+    public function replaceCostEstimates(Manifest $manifest, array $rows, ?int $orderId = null): void
     {
-        DB::transaction(function () use ($manifest, $rows) {
-            $manifest->costEstimates()->delete();
+        DB::transaction(function () use ($manifest, $rows, $orderId) {
+            $manifest->costEstimates()->where('order_id', $orderId)->delete();
 
             $freightSubtotal = $this->extractFreightSubtotal($rows);
 
@@ -103,6 +111,7 @@ class ManifestService
                     $calculatedCost = round($freightSubtotal * ($percentage / 100), 2);
 
                     $manifest->costEstimates()->create([
+                        'order_id'    => $orderId,
                         'type'        => $type,
                         'description' => $description ?: "Fuel Surcharge ({$percentage}%)",
                         'qty'         => $percentage,
@@ -118,6 +127,7 @@ class ManifestService
                 }
 
                 $manifest->costEstimates()->create([
+                    'order_id'    => $orderId,
                     'type'        => $type,
                     'description' => $description,
                     'qty'         => $qty,
@@ -161,14 +171,15 @@ class ManifestService
             ->filter()
             ->unique('id')
             ->values()
-            ->map(function ($order) use ($manifest, $manifestCost, $stopsOnManifest) {
+            ->map(function ($order) use ($manifest, $stopsOnManifest) {
                 $stopsHere  = $manifest->orderStops->where('order_id', $order->id)->count();
                 $stopsTotal = $order->stops->count();
 
                 // Share of the order that sits on this manifest
                 $share = $stopsTotal > 0 ? $stopsHere / $stopsTotal : 0.0;
-                // Share of this manifest's own costs that belongs to this order
-                $costShare = $stopsOnManifest > 0 ? $stopsHere / $stopsOnManifest : 0.0;
+                // Share of the manifest's own trip that this order's stops make up -
+                // what any unattributed, manifest-wide cost is split by.
+                $tripShare = $stopsOnManifest > 0 ? $stopsHere / $stopsOnManifest : 0.0;
 
                 // Only the customer side: carrier costs belong to the order, not to this manifest
                 $revenueFull = (float) ($order->quote?->costs ?? collect())
@@ -185,7 +196,7 @@ class ManifestService
                     'share'               => round($share, 4),
                     'revenue_full'        => round($revenueFull, 2),
                     'revenue_share'       => round($revenueFull * $share, 2),
-                    'manifest_cost_share' => round($manifestCost * $costShare, 2),
+                    'manifest_cost_share' => $this->costForOrderOnManifest($manifest, $order->id, $tripShare),
                 ];
             });
 
@@ -199,6 +210,22 @@ class ManifestService
             'profit'        => round($revenue - $manifestCost, 2),
             'margin'        => $revenue > 0 ? round((($revenue - $manifestCost) / $revenue) * 100, 1) : null,
         ];
+    }
+
+    /**
+     * One order's share of a manifest's carrier cost: everything entered specifically for
+     * that order (its own order_id-scoped rows - what it actually typed, in full, never
+     * diluted or clobbered by another order on the same trip) plus its stop-count share of
+     * any manifest-wide cost nobody attributed to an order. Shared by financialSummary and
+     * carrierCostForOrder so the manifest's own numbers and an order's own numbers always
+     * agree.
+     */
+    private function costForOrderOnManifest(Manifest $manifest, int $orderId, float $tripShare): float
+    {
+        $own          = (float) $manifest->costEstimates->where('order_id', $orderId)->sum('est_cost');
+        $unattributed = (float) $manifest->costEstimates->whereNull('order_id')->sum('est_cost');
+
+        return round($own + ($unattributed * $tripShare), 2);
     }
 
     /**
@@ -235,7 +262,10 @@ class ManifestService
                 'is_shared'       => $stopsHere < $stopsOnTrip,
                 'share'           => round($share, 4),
                 'manifest_cost'   => round($manifestCost, 2),
-                'amount'          => round($manifestCost * $share, 2),
+                // This order's own entry on the manifest, not a stop-count slice of
+                // whatever another order on the same trip happened to type last -
+                // see costForOrderOnManifest.
+                'amount'          => $this->costForOrderOnManifest($manifest, $order->id, $share),
             ];
         })->sortBy('code')->values();
 
@@ -294,9 +324,13 @@ class ManifestService
 
     public function removeCarrier(Manifest $manifest, int $carrierId): void
     {
+        // Fetched and deleted one by one rather than a mass delete: a query
+        // builder delete fires no model events, so the removal would never
+        // reach the audit trail. The set is one manifest's carriers.
         ManifestCarrier::where('manifest_id', $manifest->id)
             ->where('carrier_id', $carrierId)
-            ->delete();
+            ->get()
+            ->each->delete();
     }
 
     public function assignEquipment(Manifest $manifest, int $equipmentId): void
@@ -306,19 +340,20 @@ class ManifestService
             'equipment_id' => $equipmentId,
         ]);
 
-        \App\Models\Equipment::where('id', $equipmentId)->update(['status' => 'In Use']);
+        \App\Models\Equipment::find($equipmentId)?->update(['status' => 'In Use']);
     }
 
     public function removeEquipment(Manifest $manifest, int $equipmentId): void
     {
         ManifestEquipment::where('manifest_id', $manifest->id)
             ->where('equipment_id', $equipmentId)
-            ->delete();
+            ->get()
+            ->each->delete();
 
         $stillAssigned = ManifestEquipment::where('equipment_id', $equipmentId)->exists();
 
         if (! $stillAssigned) {
-            \App\Models\Equipment::where('id', $equipmentId)->update(['status' => 'Available']);
+            \App\Models\Equipment::find($equipmentId)?->update(['status' => 'Available']);
         }
     }
 

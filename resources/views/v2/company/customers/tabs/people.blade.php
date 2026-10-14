@@ -40,6 +40,7 @@
         storeUrl: '{{ route('v2.customers.contacts.store', ['company' => $company->slug, 'customer' => $customer->id]) }}',
         updateUrl: '{{ route('v2.customers.contacts.update', ['company' => $company->slug, 'customer' => $customer->id, 'contact' => '__ID__']) }}',
         old: @js($oldPerson),
+        availableNotificationEvents: @js(collect(CustomerNotificationEvent::cases())->filter->isAvailable()->map->value->values()),
     })">
     <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
         <p class="text-sm text-gray-500 dark:text-gray-400">{{ $contacts->count() === 1 ? '1 person' : $contacts->count() . ' people' }}</p>
@@ -80,7 +81,30 @@
                             </div>
                         </div>
                     </td>
-                    <td class="px-4 py-2.5 text-gray-700 dark:text-gray-300">{{ $contact->email ?: '—' }}</td>
+                    <td class="px-4 py-2.5 text-gray-700 dark:text-gray-300">
+                        {{ $contact->email ?: '—' }}
+                        {{-- Delivery outcome of the last email we sent here. A typo'd domain is
+                             rejected at the form, but a real domain with no such mailbox can only
+                             be found by sending — this is where that shows up. --}}
+                        @if($contact->emailFailed())
+                        <span class="mt-0.5 inline-flex items-center gap-1 rounded bg-red-50 dark:bg-red-900/30 px-1.5 py-0.5 text-[11px] font-medium text-red-700 dark:text-red-300"
+                              title="{{ $contact->email_status_reason }}{{ $contact->email_status_at ? ' — ' . $contact->email_status_at->diffForHumans() : '' }}">
+                            <svg class="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                            Undeliverable
+                        </span>
+                        @elseif($contact->emailDelivered())
+                        <span class="mt-0.5 inline-flex items-center gap-1 rounded bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300"
+                              title="Last email delivered{{ $contact->email_status_at ? ' ' . $contact->email_status_at->diffForHumans() : '' }}">
+                            <svg class="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                            Delivered
+                        </span>
+                        @elseif(filled($contact->email))
+                        <span class="mt-0.5 inline-flex items-center rounded bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 text-[11px] font-medium text-gray-500 dark:text-gray-400"
+                              title="Nothing has been emailed to this address yet, so we cannot say whether it works">
+                            Untested
+                        </span>
+                        @endif
+                    </td>
                     <td class="px-4 py-2.5 text-gray-700 dark:text-gray-300 whitespace-nowrap">
                         @forelse($contact->phones as $phone)
                         <p><span class="text-[11px] text-gray-400">{{ CustomerContactPhone::TYPES[$phone->type] ?? 'Phone' }}</span> {{ $phone->display() }}</p>
@@ -140,7 +164,7 @@
                     </div>
                     <div>
                         <label class="{{ $label }}">Email</label>
-                        <input type="email" name="email" x-model="form.email" class="{{ $input }}">
+                        <input type="email" name="email" x-model="form.email" autocomplete="email" class="{{ $input }}">
                         @error('email')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
                     </div>
                     <div class="sm:col-span-2">
@@ -160,7 +184,7 @@
                                     <option value="{{ $value }}">{{ $name }}</option>
                                     @endforeach
                                 </select>
-                                <input type="tel" :name="`phones[${index}][number]`" x-model="phone.number" placeholder="Number" class="flex-1 min-w-0 py-1.5 text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 rounded-md focus:border-primary-500 focus:ring-primary-500">
+                                <input type="tel" :name="`phones[${index}][number]`" x-model="phone.number" placeholder="Number" autocomplete="tel" class="flex-1 min-w-0 py-1.5 text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 rounded-md focus:border-primary-500 focus:ring-primary-500">
                                 <input type="text" :name="`phones[${index}][ext]`" x-model="phone.ext" placeholder="Ext" class="w-20 py-1.5 text-sm border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 rounded-md focus:border-primary-500 focus:ring-primary-500">
                                 <button type="button" @click="form.phones.splice(index, 1)" class="p-1.5 text-gray-400 hover:text-red-600" aria-label="Remove number">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -257,7 +281,13 @@
                                 <tr class="text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400">
                                     <th class="px-3 py-1.5">Notification</th>
                                     <th class="px-3 py-1.5 w-20 text-center">In-app</th>
-                                    <th class="px-3 py-1.5 w-20 text-center">Email</th>
+                                    <th class="px-3 py-1.5 w-20 text-center">
+                                        <label class="inline-flex items-center justify-center gap-1 cursor-pointer" title="Select all">
+                                            <input type="checkbox" :checked="allEmailNotificationsOn" @change="toggleAllEmailNotifications($event.target.checked)"
+                                                   aria-label="Select all email notifications" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                                            <span>Email</span>
+                                        </label>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -362,6 +392,18 @@ function peopleManager(config) {
 
         addPhone() {
             if (this.form.phones.length < 5) this.form.phones.push({ type: 'office', number: '', ext: '' });
+        },
+
+        // "Select all" in the notifications table header. Only the togglable
+        // events count - a row disabled as "Coming soon" has no checkbox to
+        // check, so it must not block the header from reading as fully on.
+        get allEmailNotificationsOn() {
+            return config.availableNotificationEvents.length > 0
+                && config.availableNotificationEvents.every((key) => !!this.form.email_prefs[key]);
+        },
+
+        toggleAllEmailNotifications(checked) {
+            config.availableNotificationEvents.forEach((key) => { this.form.email_prefs[key] = checked; });
         },
 
         generatePassword() {

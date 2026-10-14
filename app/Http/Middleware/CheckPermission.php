@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use App\Services\ActivityLog;
 use App\Services\PermissionService;
 use App\Support\Toast;
 
@@ -30,7 +31,20 @@ class CheckPermission
     protected function handleUnauthorized(Request $request, string $module, string $action)
     {
         $message = "You don't have permission to {$action} {$module}.";
-        
+
+        // Recorded on the way out rather than left to the response code: a
+        // denial is the signal, and repeated ones are how probing looks.
+        app(ActivityLog::class)->logDenied(
+            'permission.denied',
+            "Denied: tried to {$action} {$module} without permission",
+            [
+                'module' => $module,
+                'permission_action' => $action,
+                'route' => $request->route()?->getName() ?? $request->path(),
+                'status_code' => 403,
+            ]
+        );
+
         if ($request->expectsJson()) {
             return response()->json([
                 'error' => 'Insufficient permissions',

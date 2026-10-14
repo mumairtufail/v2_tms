@@ -4,11 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Traits\HasActivityLog;
 use App\Models\Stop; // Added for relationship
 
 class Manifest extends Model
 {
-    use HasFactory;
+    use HasFactory, HasActivityLog;
+
+    protected string $activityLabel = 'manifest';
 
     protected $fillable = [
         'company_id',
@@ -84,6 +87,9 @@ class Manifest extends Model
     // Relationship to order stops
     public function orderStops()
     {
-        return $this->hasMany(OrderStop::class);
+        // See Order::stops() - same table, scoped by manifest_id instead of
+        // order_id; both need the same explicit order so a manifest's stop
+        // list always matches the sequence the order was quoted in.
+        return $this->hasMany(OrderStop::class)->orderBy('sequence_number');
     }
 }

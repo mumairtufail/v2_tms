@@ -7,6 +7,7 @@ use App\Http\Requests\V2\SmtpSettingRequest;
 use App\Models\Company;
 use App\Models\SmtpSetting;
 use App\Services\MailService;
+use App\Support\EmailRules;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -148,7 +149,7 @@ class SmtpSettingController extends Controller
     {
         $this->ensureBelongsToCompany($company, $smtpSetting);
 
-        $validated = $request->validate(['test_to' => ['required', 'email']], [], ['test_to' => 'recipient email']);
+        $validated = $request->validate(['test_to' => ['required', ...EmailRules::deliverable()]], [], ['test_to' => 'recipient email']);
 
         $error = $this->mailService->sendTest($smtpSetting, $validated['test_to']);
 
@@ -162,7 +163,7 @@ class SmtpSettingController extends Controller
      */
     public function testDraft(SmtpSettingRequest $request, Company $company): JsonResponse
     {
-        $validated = $request->validate(['test_to' => ['required', 'email']], [], ['test_to' => 'recipient email']);
+        $validated = $request->validate(['test_to' => ['required', ...EmailRules::deliverable()]], [], ['test_to' => 'recipient email']);
 
         $data = $request->settingData();
         unset($data['is_active']);

@@ -5,9 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
+use App\Models\Traits\HasActivityLog;
 
 class SmtpSetting extends Model
 {
+    use HasActivityLog;
+
+    protected string $activityLabel = 'email setting';
     public const ENCRYPTIONS = [
         'tls'  => 'TLS',
         'ssl'  => 'SSL',

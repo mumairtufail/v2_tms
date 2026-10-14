@@ -231,6 +231,7 @@ Route::middleware(['auth', CompanyScope::class])->prefix('{company}')->name('v2.
     // Activity Logs
     Route::middleware(['permission:logs,view'])->group(function () {
         Route::get('activity-logs', [\App\Http\Controllers\V2\ActivityLogController::class, 'index'])->name('activity-logs.index');
+        Route::get('activity-logs/{log}', [\App\Http\Controllers\V2\ActivityLogController::class, 'show'])->name('activity-logs.show');
     });
 
 });

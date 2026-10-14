@@ -277,7 +277,7 @@
         customers: [],
         loadingCustomers: false,
         submitting: false,
-        orderType: 'sequence',
+        orderType: 'point_to_point',
 
         async fetchCustomers() {
             this.loadingCustomers = true;
@@ -301,25 +301,45 @@
     <x-confirm-modal name="create-order" title="Create New Order">
         <form action="{{ route('v2.orders.store', $company) }}" method="POST" id="createOrderForm" @submit.prevent="submitForm()">
             @csrf
-            <input type="hidden" name="order_type" value="sequence">
+            <input type="hidden" name="order_type" :value="orderType">
             <input type="hidden" name="customer_id" :value="selectedCustomer?.id">
 
             <div class="space-y-5">
 
-                {{-- Order Type (Shuttle Loop only) --}}
+                {{-- Order Type. Two strategies are live (point_to_point, sequence); the
+                     other two mirror the edit screen's "Coming soon" lock rather than
+                     being silently unreachable from this modal. --}}
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Order Type</label>
-                    <div class="flex items-center gap-3 px-4 py-3 rounded-lg border border-primary-200 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/30">
-                        <svg class="w-4 h-4 shrink-0 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                        </svg>
-                        <div>
-                            <p class="text-xs font-semibold text-primary-700 dark:text-primary-300">Shuttle Loop</p>
-                            <p class="text-[10px] text-gray-400 dark:text-gray-500">Sequential chained legs</p>
-                        </div>
-                        <svg class="w-4 h-4 text-primary-600 dark:text-primary-400 ml-auto shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                        </svg>
+                    @php
+                        $createOrderTypes = [
+                            'point_to_point'   => ['label' => 'Origin-to-Destination', 'desc' => '1 pickup / 1 drop'],
+                            'single_shipper'   => ['label' => 'Multi-Destination',     'desc' => '1 origin / multi-drop'],
+                            'single_consignee' => ['label' => 'Milk Run',              'desc' => 'Multi-pickup / 1 drop'],
+                            'sequence'         => ['label' => 'Shuttle Loop',          'desc' => 'Sequential chained legs'],
+                        ];
+                    @endphp
+                    <div class="grid grid-cols-2 gap-2">
+                        @foreach($createOrderTypes as $typeKey => $typeData)
+                        @php($isLocked = !in_array($typeKey, ['sequence', 'point_to_point']))
+                        <button type="button"
+                            @if($isLocked)
+                                @click="window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'This strategy is currently under development.', type: 'info' }}))"
+                            @else
+                                @click="orderType = '{{ $typeKey }}'"
+                            @endif
+                            :class="orderType === '{{ $typeKey }}' ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30' : 'border-gray-200 dark:border-gray-700 {{ $isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:border-gray-300 dark:hover:border-gray-600' }}'"
+                            class="flex items-center gap-2 px-3 py-2.5 rounded-lg border text-left transition-colors"
+                            title="{{ $isLocked ? 'Coming soon' : $typeData['desc'] }}">
+                            <span :class="orderType === '{{ $typeKey }}' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-300 dark:text-gray-600'" class="shrink-0">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                            </span>
+                            <span class="min-w-0">
+                                <span class="block text-xs font-semibold {{ $isLocked ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-200' }}">{{ $typeData['label'] }}</span>
+                                <span class="block text-[10px] text-gray-400 dark:text-gray-500">{{ $isLocked ? 'Coming soon' : $typeData['desc'] }}</span>
+                            </span>
+                        </button>
+                        @endforeach
                     </div>
                 </div>
 

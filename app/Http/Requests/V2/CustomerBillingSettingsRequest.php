@@ -3,6 +3,7 @@
 namespace App\Http\Requests\V2;
 
 use App\Models\CustomerBillingSetting;
+use App\Support\EmailRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -19,7 +20,7 @@ class CustomerBillingSettingsRequest extends FormRequest
             'invoice_terms' => ['nullable', Rule::in(array_keys(CustomerBillingSetting::TERMS))],
             'taxable' => ['boolean'],
             'recipients' => ['array', 'max:' . CustomerBillingSetting::MAX_RECIPIENTS],
-            'recipients.*' => ['email', 'max:255', 'distinct'],
+            'recipients.*' => [...EmailRules::deliverable(), 'max:255', 'distinct'],
             'attach_proof_of_pickup' => ['boolean'],
             'attach_proof_of_delivery' => ['boolean'],
             'attach_commercial_invoice' => ['boolean'],
@@ -31,6 +32,13 @@ class CustomerBillingSettingsRequest extends FormRequest
     public function attributes(): array
     {
         return ['recipients.*' => 'recipient email'];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'recipients.*.email' => 'That recipient address does not look deliverable. Check the spelling, especially after the @.',
+        ];
     }
 
     protected function prepareForValidation(): void

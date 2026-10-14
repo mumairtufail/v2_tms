@@ -164,6 +164,17 @@
                     @if($isPortal)
                         <span class="inline-flex items-center h-8 px-3 rounded-md bg-primary-600 text-sm font-medium text-white">Origin-to-Destination</span>
                         <span class="text-xs text-gray-500 dark:text-gray-400">Customer portal supports origin-to-destination orders only</span>
+                    @elseif($order->isPortalCreated())
+                        {{-- The customer started this order from the portal, where the type is
+                             always origin-to-destination. Switching it here would silently change
+                             what they asked for, so staff see the same locked badge the portal
+                             shows rather than the radiogroup - enforced again server-side in
+                             OrderUpdateService so this can't be bypassed by posting directly. --}}
+                        <span class="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-primary-600 text-sm font-medium text-white">
+                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
+                            Origin-to-Destination
+                        </span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">Customer created this order; its type can't be changed</span>
                     @else
                         <div class="flex max-w-full overflow-x-auto gap-0.5 p-0.5 rounded-lg bg-gray-100 dark:bg-gray-800" role="radiogroup" aria-label="Order type">
                             @foreach($orderTypes as $typeKey => $typeData)
@@ -390,7 +401,7 @@
                                                 <div class="flex-1 flex flex-col gap-4 p-4">
                                                     <div class="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-2 gap-x-3 gap-y-4">
                                                         <div class="col-span-2">
-                                                            <label class="{{ $billLabel }}">Container Number <span class="text-red-500">*</span></label>
+                                                            <label class="{{ $billLabel }}">Container Number</label>
                                                             <input type="text" x-model="stop.billing.container_number" placeholder="e.g. MSCU1234567"
                                                                    :readonly="Boolean(topContainerNumber && topContainerNumber.trim())"
                                                                    :class="[stop._containerError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 dark:border-gray-700 focus:border-primary-500 focus:ring-primary-500', (topContainerNumber && topContainerNumber.trim()) ? 'bg-gray-50 dark:bg-gray-800/60 text-gray-500' : 'dark:bg-gray-800']"
@@ -429,25 +440,17 @@
                                                         </div>
                                                     </div>
 
-                                                    {{-- ── Special Instructions (Required) ── --}}
+                                                    {{-- ── Special Instructions (optional) ── --}}
                                                     <div class="pt-4 border-t border-gray-100 dark:border-gray-800">
                                                         <label class="block text-[10px] font-semibold text-gray-700 dark:text-gray-300 uppercase">
-                                                            Special Instructions <span class="text-red-500">*</span>
+                                                            Special Instructions
                                                         </label>
                                                         <textarea
                                                             x-model="stop.special_instructions"
                                                             rows="3"
                                                             placeholder="Special handling, pickup, or delivery instructions for this leg…"
-                                                            :class="stop._siError
-                                                                ? 'border-red-400 focus:border-red-500 focus:ring-red-400 bg-red-50 dark:bg-red-900/10'
-                                                                : 'border-gray-200 dark:border-gray-700 focus:ring-primary-500 focus:border-primary-500'"
-                                                            @input="stop._siError = false"
-                                                            class="mt-2 h-28 block w-full text-sm rounded-md dark:bg-gray-800 dark:text-gray-200 placeholder:text-gray-400 transition-colors resize-none"
+                                                            class="mt-2 h-28 block w-full text-sm rounded-md border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 placeholder:text-gray-400 focus:ring-primary-500 focus:border-primary-500 transition-colors resize-none"
                                                         ></textarea>
-                                                        <p x-show="stop._siError" class="mt-1 text-xs text-red-500 flex items-center gap-1">
-                                                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
-                                                            Special instructions are required for this leg.
-                                                        </p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1533,17 +1536,16 @@ freightSubtotal(rows) {
             }
 
             // ── Validate required fields ────────────────────────────────────
+            // Special instructions used to be force-required on every leg here, which
+            // blocked "Submit to Quote" with no obvious cause for any order that never
+            // had one filled in - including every order a customer submits from the
+            // portal, where this field is never shown. It is optional free text, so it
+            // no longer gates submission; only genuine per-customer requirements do.
             let formValid = true;
             const siErrors = [];
 
             this.stops.forEach((stop, idx) => {
                 stop._containerError = false;
-                stop._siError = !stop.special_instructions || !stop.special_instructions.trim();
-                if (stop._siError) {
-                    stop.expanded = true;
-                    siErrors.push(`Stop ${idx + 1}: Special instructions are required.`);
-                    formValid = false;
-                }
 
                 // Customer setting: every commodity needs dimensions (cube pricing doesn't use them).
                 if (this.requireDimensions && stop.service_type !== 'cube') {

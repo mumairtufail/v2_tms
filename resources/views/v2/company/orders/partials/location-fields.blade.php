@@ -13,7 +13,11 @@
             initialQuery: {{ $loc }}.company_name,
             prefix: '{{ $prefix }}',
             stopIndex: stopIndex,
-            contactBookUrl: '{{ route('v2.contact-book.index', array_filter(['company' => $company->slug, 'customer_id' => $order->customer_id ?? null])) }}'
+            {{-- The contact book is the staff address list (v2.contact-book.index needs
+                 the staff 'auth' guard); a customer in the portal has no access to it and
+                 the request just 401'd in the console. Portal gets no contact-book
+                 suggestions, which is correct - it's not their data to see. --}}
+            contactBookUrl: {!! $isPortal ? "''" : "'" . route('v2.contact-book.index', array_filter(['company' => $company->slug, 'customer_id' => $order->customer_id ?? null])) . "'" !!}
         }),
         _stopIndex: stopIndex,
         showDetails: false,

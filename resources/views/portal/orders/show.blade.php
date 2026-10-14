@@ -47,7 +47,7 @@
                 <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
                     {{ $order->order_type_label }}
                     @if($order->ref_number) · Ref {{ $order->ref_number }} @endif
-                    @if($order->created_at) · Placed {{ $order->created_at->format('M j, Y') }} @endif
+                    @if($order->created_at) · Placed <x-local-time :value="$order->created_at" format="date" /> @endif
                 </p>
             </div>
 
@@ -176,11 +176,14 @@
                 </div>
                 <dl class="divide-y divide-gray-100 dark:divide-gray-700/60">
                     @php
+                        // orders.manifest_id is not kept in sync by the order save flow -
+                        // Order::manifests() (via order_stops.manifest_id) is the reliable
+                        // source, same as the orders list and the admin screens use.
                         $details = array_filter([
                             'Reference' => $order->ref_number,
                             'PO number' => $order->customer_po_number,
                             'Container' => $order->container_number,
-                            'Manifest' => $order->manifest?->code,
+                            'Manifest' => $order->manifests->pluck('code')->filter()->implode(', ') ?: null,
                         ]);
                     @endphp
                     @forelse($details as $label => $value)

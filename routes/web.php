@@ -50,6 +50,7 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\IsSuperAdmin::class]
     Route::resource('users', App\Http\Controllers\Admin\UserController::class);
     Route::post('/users/{user}/impersonate', [App\Http\Controllers\Admin\UserController::class, 'impersonate'])->name('users.impersonate');
     Route::get('/logs', [App\Http\Controllers\Admin\ActivityLogController::class, 'index'])->name('logs');
+    Route::get('/logs/{log}', [App\Http\Controllers\Admin\ActivityLogController::class, 'show'])->name('logs.show');
     Route::get('/settings', [App\Http\Controllers\Admin\SystemSettingsController::class, 'index'])->name('settings.index');
     Route::get('/settings/branding', [App\Http\Controllers\Admin\SystemSettingsController::class, 'branding'])->name('settings.branding');
     Route::put('/settings/branding', [App\Http\Controllers\Admin\SystemSettingsController::class, 'updateBranding'])->name('settings.branding.update');

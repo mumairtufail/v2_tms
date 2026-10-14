@@ -4,10 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Traits\HasActivityLog;
 
 class Plugin extends Model
 {
-    use HasFactory;
+    use HasFactory, HasActivityLog;
+
+    protected string $activityLabel = 'plugin';
+    protected string $activityLabelKey = 'name';
 
     protected $fillable = [
         'name',

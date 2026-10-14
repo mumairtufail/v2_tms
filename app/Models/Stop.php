@@ -4,11 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Traits\HasActivityLog;
 use App\Models\Manifest; // Added for relationship
 
 class Stop extends Model
 {
-    use HasFactory;
+    use HasFactory, HasActivityLog;
+
+    protected string $activityLabel = 'stop';
 
     protected $fillable = [
         'location',

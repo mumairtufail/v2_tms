@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Models\Traits\HasActivityLog;
 
 /**
  * A person at a customer (People tab). People with portal access sign in
@@ -17,7 +18,10 @@ use Illuminate\Notifications\Notifiable;
  */
 class CustomerContact extends Authenticatable
 {
-    use BelongsToCompany, Notifiable, SoftDeletes;
+    use BelongsToCompany, Notifiable, SoftDeletes, HasActivityLog;
+
+    protected string $activityLabel = 'customer contact';
+    protected string $activityLabelKey = 'name';
 
     protected $fillable = [
         'company_id',
@@ -36,6 +40,9 @@ class CustomerContact extends Authenticatable
         'notification_prefs',
         'password',
         'last_login_at',
+        'email_status',
+        'email_status_at',
+        'email_status_reason',
     ];
 
     protected $hidden = [
@@ -51,6 +58,7 @@ class CustomerContact extends Authenticatable
         'cc_on_invoices' => 'boolean',
         'notification_prefs' => 'array',
         'last_login_at' => 'datetime',
+        'email_status_at' => 'datetime',
         'password' => 'hashed',
     ];
 
@@ -96,5 +104,22 @@ class CustomerContact extends Authenticatable
         return $event->isAvailable()
             && filled($this->email)
             && (bool) ($this->preferences()[$event->value]['email'] ?? false);
+    }
+
+    /**
+     * Whether the last email to this person bounced or was rejected.
+     *
+     * The usual reason an address "doesn't work" despite looking fine: a real
+     * domain with no such mailbox, which no amount of validation can catch up
+     * front. Written by MailService::recordDelivery.
+     */
+    public function emailFailed(): bool
+    {
+        return $this->email_status === 'failed';
+    }
+
+    public function emailDelivered(): bool
+    {
+        return $this->email_status === 'sent';
     }
 }

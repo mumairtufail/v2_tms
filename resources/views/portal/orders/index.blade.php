@@ -9,11 +9,17 @@
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">My Orders</h1>
             <p class="text-gray-500 dark:text-gray-400 mt-1">Track and view your shipment orders</p>
         </div>
-        <form method="POST" action="{{ route('portal.orders.store', ['company' => $company->slug]) }}">
+        {{-- A plain submit button here created a new draft order on every click -
+             a double-click, a slow page, or a repeat click before the redirect
+             lands all added another blank order. The button disables itself the
+             instant it is clicked, so only the first submission goes through. --}}
+        <form method="POST" action="{{ route('portal.orders.store', ['company' => $company->slug]) }}"
+              x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
-            <button type="submit" class="inline-flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium rounded-lg transition-colors">
+            <button type="submit" :disabled="submitting"
+                    class="inline-flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                New Order
+                <span x-text="submitting ? 'Creating…' : 'New Order'"></span>
             </button>
         </form>
     </div>
@@ -45,9 +51,19 @@
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                     @forelse($orders as $order)
+                    @php
+                        // One action per row: drafts open in the editor, everything else read-only
+                        $canEditInPortal = $order->status === 'draft' && $order->order_type === 'point_to_point';
+                        $rowTarget = $canEditInPortal
+                            ? route('portal.orders.edit', ['company' => $company->slug, 'order' => $order])
+                            : route('portal.orders.show', ['company' => $company->slug, 'order' => $order]);
+                        // orders.manifest_id is not kept in sync by the order save flow - Order::manifests()
+                        // (via order_stops.manifest_id) is the reliable source, same fix as orders/show.blade.php.
+                        $orderManifestCodes = $order->manifests->pluck('code')->filter()->implode(', ');
+                    @endphp
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-medium text-gray-900 dark:text-white">{{ $order->order_number }}</div>
+                            <a href="{{ $rowTarget }}" class="text-sm font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 hover:underline">{{ $order->order_number }}</a>
                             @if($order->ref_number)
                             <div class="text-xs text-gray-500 dark:text-gray-400">Ref: {{ $order->ref_number }}</div>
                             @endif
@@ -61,16 +77,12 @@
                             {{ $order->order_type_label }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                            {{ $order->manifest?->code ?? '—' }}
+                            {{ $orderManifestCodes ?: '—' }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                             {{ $order->stops->count() }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
-                            @php
-                                // One action per row: drafts open in the editor, everything else read-only
-                                $canEditInPortal = $order->status === 'draft' && $order->order_type === 'point_to_point';
-                            @endphp
                             <div class="inline-flex items-center justify-end gap-2">
                                 <button type="button"
                                         @click="openLogs({{ $order->id }}, {{ json_encode($order->order_number) }})"
@@ -78,9 +90,13 @@
                                         title="Activity">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                 </button>
-                                <a href="{{ $canEditInPortal
-                                        ? route('portal.orders.edit', ['company' => $company->slug, 'order' => $order])
-                                        : route('portal.orders.show', ['company' => $company->slug, 'order' => $order]) }}"
+                                @if($canEditInPortal)
+                                <a href="{{ $rowTarget }}" title="Edit"
+                                   class="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:text-primary-400 dark:hover:bg-primary-900/20 rounded-lg transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                </a>
+                                @endif
+                                <a href="{{ $rowTarget }}"
                                    class="text-primary-600 hover:text-primary-500 dark:text-primary-400 font-medium">{{ $canEditInPortal ? 'Edit' : 'View' }}</a>
                             </div>
                         </td>
@@ -146,7 +162,7 @@
                                 <span class="font-semibold" x-text="log.actor"></span>
                                 <span class="text-gray-600 dark:text-gray-300" x-text="log.description"></span>
                             </p>
-                            <p class="text-[11px] text-gray-400 dark:text-gray-500" :title="log.created_at_label" x-text="log.created_at_human"></p>
+                            <p class="text-[11px] text-gray-400 dark:text-gray-500" :title="log.created_at ? window.localTime(log.created_at, 'datetime') : log.created_at_label" x-text="log.created_at_human"></p>
                         </li>
                     </template>
                 </ol>

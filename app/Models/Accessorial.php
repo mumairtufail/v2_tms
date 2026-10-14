@@ -5,10 +5,14 @@ use App\Models\Traits\BelongsToCompany;
 use App\Support\AccessorialCategories;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Traits\HasActivityLog;
 
 class Accessorial extends Model
 {
-    use BelongsToCompany, HasFactory;
+    use BelongsToCompany, HasFactory, HasActivityLog;
+
+    protected string $activityLabel = 'accessorial';
+    protected string $activityLabelKey = 'name';
 
     protected $fillable = [
         'company_id',

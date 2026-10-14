@@ -5,9 +5,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Models\Traits\HasActivityLog;
 
 class Role extends Model
 {
+    use HasActivityLog;
+
+    protected string $activityLabel = 'role';
+    protected string $activityLabelKey = 'name';
+
     protected $fillable = [
         'name',
         'company_id',
@@ -40,6 +46,18 @@ class Role extends Model
     public function rolePermissions()
     {
         return $this->hasMany(\App\Models\RolePermission::class);
+    }
+
+    /**
+     * The "admin" role is created automatically for every company
+     * (RolePermissionService::createDefaultRolesForCompany) and is relied on
+     * to always carry full access. It cannot be deleted, and its permission
+     * grid cannot be edited away from full access - both guarded here so
+     * every caller (controller, console, future API) gets the same answer.
+     */
+    public function isProtectedAdmin(): bool
+    {
+        return strtolower($this->name) === 'admin';
     }
 
     // Helper methods

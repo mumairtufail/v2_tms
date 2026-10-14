@@ -13,10 +13,28 @@ use App\Mail\ResetPasswordMail;
 use App\Services\MailService;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\Traits\HasActivityLog;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, Notifiable, HasFactory;
+    use HasApiTokens, Notifiable, HasFactory, HasActivityLog;
+
+    protected string $activityLabel = 'user';
+    protected string $activityLabelKey = 'name';
+
+    /**
+     * Sign-in bookkeeping. These change on every login and produced a second,
+     * meaningless "Updated user" entry beside the authentication one.
+     */
+    protected array $activityIgnore = [
+        'last_login_at',
+        'remember_token',
+        'remember_token_expires_at',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+        'current_login_ip',
+        'last_seen_at',
+    ];
 
     protected $fillable = [
         'name',

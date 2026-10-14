@@ -28,6 +28,17 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Address autocomplete fires on every keystroke across every shipper/consignee
+        // field on a multi-stop order, plus the customer search box on the same page -
+        // that traffic was sharing the generic 60/min 'api' budget with every other /api
+        // route, so an active data-entry session could exhaust it and "search" would go
+        // quiet with no results. Google Places gets its own, much larger budget instead
+        // of competing with everything else under /api (routes/api.php excludes it from
+        // 'throttle:api' and applies this one directly).
+        RateLimiter::for('google-places', function (Request $request) {
+            return Limit::perMinute(300)->by($request->user()?->id ?: $request->ip());
+        });
+
         $this->routes(function () {
             Route::middleware('api')
                 ->prefix('api')

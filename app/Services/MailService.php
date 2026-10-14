@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Jobs\SendMailJob;
 use App\Mail\SmtpTestMail;
+use App\Models\CustomerContact;
 use App\Models\SmtpSetting;
 use Illuminate\Contracts\Mail\Mailer as MailerContract;
 use Illuminate\Mail\Mailable;
@@ -70,17 +71,71 @@ class MailService
                 'mailable' => class_basename($mailable),
                 'to' => $to,
             ]);
+
+            $this->recordDelivery($to, $companyId, null);
         } catch (Throwable $e) {
+            $reason = $setting ? $this->friendlyError($e, $setting) : $e->getMessage();
+
             Log::channel('mail')->error('Email failed', [
                 'mailable' => class_basename($mailable),
                 'to' => $to,
                 'company_id' => $companyId,
                 'account' => $setting ? "{$setting->name} ({$setting->host})" : 'system default (.env)',
-                'reason' => $setting ? $this->friendlyError($e, $setting) : $e->getMessage(),
+                'reason' => $reason,
                 'error' => $e->getMessage(),
             ]);
 
+            $this->recordDelivery($to, $companyId, $reason);
+
             throw $e;
+        }
+    }
+
+    /**
+     * Stamp the outcome of a send onto any person at a customer who holds that
+     * address, so "does this address actually exist?" is answerable from the
+     * People tab instead of only from storage/logs/mail-*.log.
+     *
+     * This lives here because sendNow is the one place a real send happens, so it
+     * covers the sync queue and a worker alike. It is best-effort by design: a
+     * problem writing the status must never turn a delivered email into an
+     * exception, nor stop the rethrow that drives the retry.
+     *
+     * Note this records the *transport* outcome. A server that accepts a message
+     * and bounces it asynchronously still looks like 'sent' here — catching that
+     * needs webhook feedback from the provider, which is a separate piece of work.
+     */
+    private function recordDelivery(string|array $to, ?int $companyId, ?string $failureReason): void
+    {
+        try {
+            $addresses = collect((array) $to)
+                ->map(fn ($address) => is_string($address) ? strtolower(trim($address)) : null)
+                ->filter()
+                ->unique()
+                ->all();
+
+            if ($addresses === []) {
+                return;
+            }
+
+            // withoutGlobalScope('company'): that scope reads a request-scoped config
+            // value, so leaving it on would silently filter here on the sync queue and
+            // not in a worker. The company is filtered explicitly instead, so this
+            // behaves the same either way.
+            CustomerContact::query()
+                ->withoutGlobalScope('company')
+                ->whereIn('email', $addresses)
+                ->when($companyId !== null, fn ($query) => $query->where('company_id', $companyId))
+                ->update([
+                    'email_status' => $failureReason === null ? 'sent' : 'failed',
+                    'email_status_at' => now(),
+                    'email_status_reason' => $failureReason ? Str::limit($failureReason, 480) : null,
+                ]);
+        } catch (Throwable $e) {
+            Log::channel('mail')->warning('Could not record email delivery status', [
+                'to' => $to,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 

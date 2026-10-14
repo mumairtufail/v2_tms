@@ -79,7 +79,6 @@
                                 class="mt-1 w-full"
                                 @input="fetchShortcode($event.target.value)"
                             />
-                            <x-input-error :messages="$errors->get('name')" class="mt-2" />
                         </div>
 
                         <!-- Short Code -->
@@ -117,7 +116,6 @@
                                 maxlength="20"
                                 class="mt-1 w-full"
                             />
-                            <x-input-error :messages="$errors->get('phone')" class="mt-2" />
                         </div>
                     </div>
                 </div>

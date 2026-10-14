@@ -50,7 +50,7 @@
                             <span class="font-semibold" x-text="log.actor"></span>
                             <span class="text-gray-600 dark:text-gray-300" x-text="log.description"></span>
                         </p>
-                        <p class="text-[11px] text-gray-400 dark:text-gray-500" :title="log.created_at_label" x-text="log.created_at_human"></p>
+                        <p class="text-[11px] text-gray-400 dark:text-gray-500" :title="log.created_at ? window.localTime(log.created_at, 'datetime') : log.created_at_label" x-text="log.created_at_human"></p>
                     </li>
                 </template>
             </ol>

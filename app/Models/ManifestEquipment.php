@@ -4,10 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Traits\HasActivityLog;
 
 class ManifestEquipment extends Model
 {
-    use HasFactory;
+    use HasFactory, HasActivityLog;
+
+    protected string $activityLabel = 'manifest equipment';
     
     protected $table = 'manifest_equipment';
     

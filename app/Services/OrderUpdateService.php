@@ -51,6 +51,12 @@ class OrderUpdateService
 
             if ($forceOrderType) {
                 $validated['order_type'] = $forceOrderType;
+            } elseif (! $portal && $order->isPortalCreated()) {
+                // The customer started this one from the portal, where it is
+                // always origin-to-destination. Staff editing it afterwards
+                // must not be able to switch that away - enforced here, not
+                // only in the form, so a direct POST can't bypass the lock.
+                $validated['order_type'] = $order->order_type;
             }
 
             $topContainerNumber = trim((string) ($validated['container_number'] ?? ''));
@@ -312,7 +318,11 @@ class OrderUpdateService
 
         $stopsToDelete = array_diff($existingStopIds, $processedStopIds);
         if (!empty($stopsToDelete)) {
-            \App\Models\OrderStop::whereIn('id', $stopsToDelete)->delete();
+            // Deleted through the model so each removal is audited; a mass
+            // delete here would drop stops off an order with no trace.
+            \App\Models\OrderStop::whereIn('id', $stopsToDelete)
+                ->get()
+                ->each->delete();
             $log->info('Deleted stops', ['count' => count($stopsToDelete)]);
         }
     }
@@ -451,7 +461,7 @@ class OrderUpdateService
             return;
         }
 
-        app(ManifestService::class)->replaceCostEstimates($manifest, $carrierRows);
+        app(ManifestService::class)->replaceCostEstimates($manifest, $carrierRows, $order->id);
 
         // It now lives on the manifest, so the order's copy is dropped rather than double counted
         $order->quote?->costs()->where('category', 'carrier')->delete();

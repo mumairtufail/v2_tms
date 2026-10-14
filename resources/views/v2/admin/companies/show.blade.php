@@ -72,7 +72,7 @@
                     </div>
                     <div>
                         <span class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Created At</span>
-                        <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $company->created_at->format('M d, Y \a\t H:i') }}</span>
+                        <span class="text-sm font-medium text-gray-900 dark:text-white"><x-local-time :value="$company->created_at" /></span>
                     </div>
                 </div>
             </div>

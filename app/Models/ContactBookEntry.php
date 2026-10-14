@@ -4,10 +4,13 @@ namespace App\Models;
 
 use App\Models\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Traits\HasActivityLog;
 
 class ContactBookEntry extends Model
 {
-    use BelongsToCompany;
+    use BelongsToCompany, HasActivityLog;
+
+    protected string $activityLabel = 'contact book entry';
 
     protected $fillable = [
         'company_id',

@@ -53,7 +53,7 @@
 
         <!-- Dark Mode Toggle -->
         <button 
-            @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)"
+            @click="darkMode = !darkMode; localStorage.setItem('{{ 'darkMode:user:' . (auth()->id() ?? 'guest') }}', darkMode)"
             class="relative flex items-center justify-center w-10 h-10 rounded-xl text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 transition-all duration-300"
             :title="darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
         >

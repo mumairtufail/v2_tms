@@ -15,6 +15,7 @@
               old: @js($oldValues),
           })"
           @google-place-selected.window="if ($event.detail.targetPrefix === 'customer') applyPlace($event.detail)"
+          @open-modal.window="if ($event.detail === 'create-customer') resetForm()"
           class="flex flex-col max-h-[calc(100dvh-3rem)]">
         @csrf
         <input type="hidden" name="_form" value="create-customer">
@@ -185,6 +186,26 @@ function customerCreateForm(config) {
         ensureOptions() {
             if (this.f.state && !config.knownStates.includes(this.f.state) && !this.extraStates.includes(this.f.state)) this.extraStates.push(this.f.state);
             if (this.f.country && !config.knownCountries.includes(this.f.country) && !this.extraCountries.includes(this.f.country)) this.extraCountries.push(this.f.country);
+        },
+
+        // The modal is only hidden (x-show), never destroyed, so closing it
+        // via Cancel/backdrop/Escape and reopening left every field, the
+        // short-code lock and the company search box still full of the last
+        // entry. Re-opening now wipes the form back to its defaults, the
+        // same way a fresh page load would.
+        resetForm() {
+            this.f = {
+                name: '', short_code: '', address_1: '', address_2: '', city: '', state: '',
+                postal_code: '', country: '', lat: '', lng: '', currency: '',
+                customer_type: 'other', quote_required: '1', default_billing_option: 'third_party',
+            };
+            this.shortCodeTouched = false;
+            this.extraStates = [];
+            this.extraCountries = [];
+
+            window.dispatchEvent(new CustomEvent('autocomplete-reset', {
+                detail: { targetPrefix: 'customer', targetIndex: 0 },
+            }));
         },
     };
 }

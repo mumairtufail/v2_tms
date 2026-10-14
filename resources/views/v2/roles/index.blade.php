@@ -48,11 +48,19 @@
                         {{ $role->permissions()->count() }} modules
                     </td>
                     <td class="px-3 py-2 text-right">
+                        @php
+                            $isAdminRole = $role->isProtectedAdmin();
+                            $roleUsersCount = $role->users_count ?? $role->users()->count();
+                        @endphp
                         <div class="flex items-center justify-end gap-1">
-                            <!-- Permissions Button -->
+                            <!-- Permissions Button. Admin's grid is locked: it always carries full
+                                 access, so there is nothing here to edit (RoleController::updatePermissions
+                                 rejects the request regardless; this just saves the round trip). -->
                             @if(auth()->user()->hasPermission('roles', 'update'))
-                            <x-tooltip text="Manage Permissions" position="top">
-                                <button type="button" @click="$dispatch('open-modal', 'permissions-role-{{ $role->id }}')" class="p-1 text-gray-400 hover:text-blue-600">
+                            <x-tooltip :text="$isAdminRole ? 'Admin always has full access and cannot be edited' : 'Manage Permissions'" position="top">
+                                <button type="button"
+                                    @if($isAdminRole) disabled @else @click="$dispatch('open-modal', 'permissions-role-{{ $role->id }}')" @endif
+                                    class="p-1 {{ $isAdminRole ? 'text-gray-300 dark:text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-blue-600' }}">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11.536 19.464a3 3 0 01-.879.879l-2.121 2.121h-3v-3l2.121-2.121a3 3 0 01.879-.879L13.257 14.257A6 6 0 0119.5 13h.002z"/></svg>
                                 </button>
                             </x-tooltip>
@@ -65,10 +73,20 @@
                             </x-tooltip>
                             @endif
 
-                            <!-- Delete Button -->
+                            <!-- Delete Button. Admin can never be deleted; a role with assigned
+                                 users is blocked with a dedicated error modal that names why,
+                                 rather than opening the normal delete-confirm dialog. -->
                             @if(auth()->user()->hasPermission('roles', 'delete'))
-                            <x-tooltip text="Delete Role" position="top">
-                                <button type="button" @click="$dispatch('open-modal', 'delete-role-{{ $role->id }}')" class="p-1 text-gray-400 hover:text-red-600">
+                            <x-tooltip :text="$isAdminRole ? 'The Admin role cannot be deleted' : 'Delete Role'" position="top">
+                                <button type="button"
+                                    @if($isAdminRole)
+                                        disabled
+                                    @elseif($roleUsersCount > 0)
+                                        @click="$dispatch('open-modal', 'role-in-use-{{ $role->id }}')"
+                                    @else
+                                        @click="$dispatch('open-modal', 'delete-role-{{ $role->id }}')"
+                                    @endif
+                                    class="p-1 {{ $isAdminRole ? 'text-gray-300 dark:text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-red-600' }}">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                 </button>
                             </x-tooltip>
@@ -239,6 +257,27 @@
             @csrf @method('DELETE')
             <button type="submit" class="px-3 py-1.5 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg">Delete</button>
         </form>
+    </x-slot>
+</x-confirm-modal>
+
+<!-- Role In Use Modal. Shown instead of the delete-confirm dialog when the
+     role still has users on it - deleting would silently strip their access,
+     so the only way forward is unassigning them first. The server enforces
+     the same rule (RoleController::destroy), this is the UI-level warning. -->
+<x-confirm-modal name="role-in-use-{{ $role->id }}" title="Can't delete this role">
+    <div class="flex items-start gap-3">
+        <div class="shrink-0 w-9 h-9 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+            <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+        </div>
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+            <strong>{{ $role->name }}</strong> is currently assigned to
+            <strong>{{ $role->users_count ?? $role->users()->count() }} {{ \Illuminate\Support\Str::plural('user', $role->users_count ?? $role->users()->count()) }}</strong>.
+            Deleting it would remove their permissions, so it can't be deleted while anyone is on it.
+            Reassign {{ (($role->users_count ?? $role->users()->count()) === 1) ? 'that user' : 'those users' }} to another role first, then try again.
+        </p>
+    </div>
+    <x-slot name="footer">
+        <button type="button" @click="$dispatch('close-modal', 'role-in-use-{{ $role->id }}')" class="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg">Got it</button>
     </x-slot>
 </x-confirm-modal>
 @endforeach

@@ -58,7 +58,6 @@
                                 placeholder="John"
                                 class="mt-1 w-full"
                             />
-                            <x-input-error :messages="$errors->get('f_name')" class="mt-2" />
                         </div>
 
                         <!-- Last Name -->
@@ -73,7 +72,6 @@
                                 placeholder="Doe"
                                 class="mt-1 w-full"
                             />
-                            <x-input-error :messages="$errors->get('l_name')" class="mt-2" />
                         </div>
 
                         <!-- Email -->
@@ -91,8 +89,6 @@
                             />
                             @if(isset($user))
                                 <p class="mt-1 text-xs text-gray-500">Email address cannot be changed.</p>
-                            @else
-                                <x-input-error :messages="$errors->get('email')" class="mt-2" />
                             @endif
                         </div>
 
@@ -108,7 +104,6 @@
                                 autocomplete="tel"
                                 class="mt-1 w-full"
                             />
-                            <x-input-error :messages="$errors->get('phone')" class="mt-2" />
                         </div>
                     </div>
                 </div>

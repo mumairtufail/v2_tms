@@ -1,5 +1,11 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true', sidebarMobileOpen: false }" :class="{ 'dark': darkMode }">
+@php
+    // Same reasoning as the staff layout: namespace by the signed-in
+    // customer so one portal account's theme choice doesn't leak into
+    // another's when both use the same browser.
+    $themeStorageKey = 'darkMode:customer:' . (auth('customer')->id() ?? 'guest');
+@endphp
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" x-data="{ darkMode: localStorage.getItem('{{ $themeStorageKey }}') === 'true', sidebarMobileOpen: false }" :class="{ 'dark': darkMode }">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -51,6 +57,8 @@
             </main>
         </div>
     </div>
+
+    @include('partials.local-time')
 
     @stack('scripts')
 </body>

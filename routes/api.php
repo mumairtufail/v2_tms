@@ -34,7 +34,10 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/customers/{customer}', [App\Http\Controllers\Api\CustomerController::class, 'viewcustomers']);
 });
 
-Route::prefix('google/places')->group(function () {
+// Its own rate budget (RouteServiceProvider) rather than sharing the generic
+// 60/min 'api' limit with customer search and everything else under /api -
+// see the comment there for why.
+Route::prefix('google/places')->withoutMiddleware(['throttle:api'])->middleware('throttle:google-places')->group(function () {
     Route::post('autocomplete', [GooglePlacesController::class, 'autocomplete']);
     Route::get('{placeId}', [GooglePlacesController::class, 'details']);
 });

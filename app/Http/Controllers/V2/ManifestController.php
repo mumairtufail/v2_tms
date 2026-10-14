@@ -349,14 +349,20 @@ class ManifestController extends Controller
         $manifest->equipments()->sync($equipmentIds);
 
         if ($equipmentIds->isNotEmpty()) {
-            \App\Models\Equipment::whereIn('id', $equipmentIds)->update(['status' => 'In Use']);
+            // One model update per row instead of a single mass update: a
+            // query builder update fires no model events, so the status change
+            // would be invisible to the audit trail. An equipment sync touches
+            // a handful of rows, so the extra queries are not a concern.
+            \App\Models\Equipment::whereIn('id', $equipmentIds)
+                ->get()
+                ->each(fn ($equipment) => $equipment->update(['status' => 'In Use']));
         }
 
         $previouslyAssigned->diff($equipmentIds)->each(function (int $equipmentId) {
             $stillAssigned = \App\Models\ManifestEquipment::where('equipment_id', $equipmentId)->exists();
 
             if (! $stillAssigned) {
-                \App\Models\Equipment::where('id', $equipmentId)->update(['status' => 'Available']);
+                \App\Models\Equipment::find($equipmentId)?->update(['status' => 'Available']);
             }
         });
 

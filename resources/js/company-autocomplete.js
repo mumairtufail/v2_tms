@@ -32,6 +32,24 @@ export default function companyAutocomplete(config = {}) {
                     this.showDropdown = false;
                 }
             });
+
+            // A modal around this component (e.g. "Create customer") may be
+            // reopened without a page reload after Cancel, so Alpine's state
+            // survives. Listen for an explicit reset rather than relying on
+            // the modal's own open-modal event, since several autocompletes
+            // for different prefixes can share one page.
+            window.addEventListener('autocomplete-reset', (event) => {
+                if (event.detail?.targetPrefix !== this.prefix) return;
+                if (this.stopIndex !== null && event.detail?.targetIndex !== undefined && event.detail.targetIndex !== this.stopIndex) return;
+
+                this.query = '';
+                this.results = [];
+                this.googleResults = [];
+                this.googleError = '';
+                this.showDropdown = false;
+                this.lastSearched = '';
+                this.mode = 'local';
+            });
         },
 
         async search() {

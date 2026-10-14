@@ -131,4 +131,23 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Address validation
+    |--------------------------------------------------------------------------
+    |
+    | When on, any address the app will actually send to is checked for a real
+    | mail domain (MX, then A/AAAA) as well as valid syntax — see
+    | App\Support\EmailRules. That is what rejects a typo'd domain at the form
+    | instead of discovering it from a bounce days later.
+    |
+    | It costs one DNS lookup per submitted address, and the check fails closed:
+    | if DNS cannot be reached, every address looks invalid. Turn it off where
+    | there is no outbound DNS (offline development, CI) and only the syntax
+    | check runs.
+    |
+    */
+
+    'validate_dns' => env('MAIL_VALIDATE_DNS', true),
+
 ];

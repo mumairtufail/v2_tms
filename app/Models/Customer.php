@@ -10,10 +10,14 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
+use App\Models\Traits\HasActivityLog;
 
 class Customer extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasActivityLog;
+
+    protected string $activityLabel = 'customer';
+    protected string $activityLabelKey = 'name';
 
     public const LOCATION_SHARING = [
         'Do not share' => 'Do not share',
