@@ -113,12 +113,33 @@ class CustomerPortalOrderTest extends TestCase
         $response->assertStatus(403);
     }
 
+    public function test_opening_new_order_does_not_create_an_order(): void
+    {
+        $before = Order::count();
+
+        $this->actingAs($this->contact, 'customer')
+            ->get(route('portal.orders.create', ['company' => $this->company->slug]))
+            ->assertOk()
+            ->assertSee('Not saved yet');
+
+        $this->assertSame($before, Order::count());
+    }
+
+    public function test_an_empty_post_from_an_old_new_order_button_creates_nothing(): void
+    {
+        $before = Order::count();
+
+        $this->actingAs($this->contact, 'customer')
+            ->post(route('portal.orders.store', ['company' => $this->company->slug]))
+            ->assertRedirect(route('portal.orders.create', ['company' => $this->company->slug]));
+
+        $this->assertSame($before, Order::count());
+    }
+
     public function test_customer_can_create_draft_order(): void
     {
         $response = $this->actingAs($this->contact, 'customer')
-            ->post(route('portal.orders.store', ['company' => $this->company->slug]));
-
-        $response->assertRedirect();
+            ->post(route('portal.orders.store', ['company' => $this->company->slug]), $this->newOrderPayload(draft: true));
 
         $order = Order::query()
             ->where('customer_id', $this->customer->id)
@@ -128,10 +149,44 @@ class CustomerPortalOrderTest extends TestCase
 
         $this->assertNotNull($order);
         $this->assertSame('point_to_point', $order->order_type);
+        $this->assertSame('portal', $order->created_via);
+        $this->assertSame('REF-NEW-1', $order->ref_number);
         $response->assertRedirect(route('portal.orders.edit', [
             'company' => $this->company->slug,
             'order' => $order->id,
         ]));
+    }
+
+    public function test_a_rejected_first_save_leaves_no_order_behind(): void
+    {
+        $this->customer->update(['require_dimensions' => true]);
+        $before = Order::count();
+
+        $this->actingAs($this->contact, 'customer')
+            ->from(route('portal.orders.create', ['company' => $this->company->slug]))
+            ->post(route('portal.orders.store', ['company' => $this->company->slug]), $this->newOrderPayload(draft: false))
+            ->assertRedirect(route('portal.orders.create', ['company' => $this->company->slug]))
+            ->assertSessionHasErrors('stops');
+
+        $this->assertSame($before, Order::count());
+    }
+
+    protected function newOrderPayload(bool $draft): array
+    {
+        return [
+            'order_type' => 'point_to_point',
+            'ref_number' => 'REF-NEW-1',
+            'save_as_draft' => $draft ? '1' : '0',
+            'submission_mode' => $draft ? 'draft' : 'new',
+            'stops' => json_encode([[
+                'stop_type' => 'pickup',
+                'service_type' => 'truckload',
+                'shipper' => ['company_name' => 'Origin Co'],
+                'consignee' => ['company_name' => 'Dest Co'],
+                'commodities' => [['description' => 'Pallets', 'quantity' => 1, 'length' => null, 'width' => null, 'height' => null]],
+            ]]),
+            'quote_data' => '{}',
+        ];
     }
 
     public function test_customer_can_edit_draft_order(): void

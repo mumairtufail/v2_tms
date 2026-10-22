@@ -118,7 +118,7 @@
                     <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <span class="text-sm text-gray-600 dark:text-gray-400">Joined</span>
                         <span class="text-sm font-medium text-gray-900 dark:text-white">
-                            {{ $user->created_at->format('M d, Y') }}
+                            {{ \App\Support\DisplayTime::format($user->created_at, 'M d, Y') }}
                         </span>
                     </div>
                 </div>

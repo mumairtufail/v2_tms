@@ -90,6 +90,14 @@ class OrderUpdateService
                 ));
             }
 
+            // The customer's "require dimensions" setting was only checked in the
+            // browser, and only on the staff quote path: the portal's Submit Order
+            // and any direct request skipped it. Drafts stay exempt so work in
+            // progress can always be saved.
+            if (! $saveAsDraft) {
+                $this->assertDimensionsPresent($order, $stopsData, $ordersLog);
+            }
+
             if ($portal) {
                 $nextStatus = $saveAsDraft ? 'draft' : 'new';
             } else {
@@ -193,6 +201,49 @@ class OrderUpdateService
             ]);
 
             return back()->with('error', 'Failed to update order: ' . $e->getMessage())->withInput();
+        }
+    }
+
+    /**
+     * Mirrors checkOrderBeforeSubmit() in the order form. Cube-priced stops do
+     * not use dimensions, so they are skipped there and here.
+     *
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    protected function assertDimensionsPresent(Order $order, mixed $stopsData, $log): void
+    {
+        if (! $order->customer?->require_dimensions || ! is_array($stopsData)) {
+            return;
+        }
+
+        $blank = fn ($value) => $value === null || $value === '' || ! is_numeric($value) || (float) $value <= 0;
+        $messages = [];
+
+        foreach (array_values($stopsData) as $index => $stop) {
+            if (! is_array($stop) || ($stop['service_type'] ?? null) === 'cube') {
+                continue;
+            }
+
+            foreach ((array) ($stop['commodities'] ?? []) as $commodity) {
+                if (! is_array($commodity)) {
+                    continue;
+                }
+
+                if ($blank($commodity['length'] ?? null) || $blank($commodity['width'] ?? null) || $blank($commodity['height'] ?? null)) {
+                    $messages[] = 'Stop '.($index + 1).': This customer requires length, width and height on every commodity.';
+                    break;
+                }
+            }
+        }
+
+        if ($messages !== []) {
+            $log->warning('Order submission blocked: missing commodity dimensions', [
+                'order_id' => $order->id,
+                'customer_id' => $order->customer_id,
+                'stops' => $messages,
+            ]);
+
+            throw \Illuminate\Validation\ValidationException::withMessages(['stops' => $messages]);
         }
     }
 

@@ -75,7 +75,7 @@
                         <div class="grid grid-cols-2 gap-4 mt-6 text-xs">
                             <div>
                                 <span class="text-gray-400 font-bold block uppercase tracking-wider">Date</span>
-                                <span class="text-gray-900 dark:text-white font-bold">{{ date('M d, Y') }}</span>
+                                <span class="text-gray-900 dark:text-white font-bold">{{ \App\Support\DisplayTime::now()->format('M d, Y') }}</span>
                             </div>
                             <div>
                                 <span class="text-gray-400 font-bold block uppercase tracking-wider">Contact</span>

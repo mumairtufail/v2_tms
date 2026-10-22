@@ -27,6 +27,8 @@ Route::prefix('{company}/portal')->name('portal.')->middleware(['portal.company'
         Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
+        // create must come before orders/{order}, or "create" is read as an order id
+        Route::get('orders/create', [OrderController::class, 'create'])->name('orders.create');
         Route::post('orders', [OrderController::class, 'store'])->name('orders.store');
         Route::get('orders/{order}/edit', [OrderController::class, 'edit'])->name('orders.edit');
         Route::get('orders/{order}/activity-logs', [OrderController::class, 'activityLogs'])->name('orders.activity-logs');

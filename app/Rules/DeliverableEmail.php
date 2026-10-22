@@ -18,10 +18,11 @@ use Illuminate\Support\Facades\Log;
  * produce the same unhelpful "must be a valid email address". The person is
  * left guessing which half to fix.
  *
- * Three outcomes are distinguished here:
+ * Four outcomes are distinguished here:
  *   - the text is not an address at all
  *   - the domain does not exist
  *   - the domain exists but refuses mail (Null MX, RFC 7505)
+ *   - the domain exists but publishes no mail server (no MX; usually parked)
  *
  * Unlike the bare dns rule this one fails OPEN when the lookup itself cannot
  * be completed. A DNS blip should not stop staff adding a customer; only a
@@ -58,9 +59,26 @@ class DeliverableEmail implements ValidationRule
             return;
         }
 
-        match ($this->inspectDomain($domain)) {
+        $result = $this->inspectDomain($domain);
+
+        // A domain with an address record but no MX passes under RFC 5321's
+        // fallback, unless the stricter setting is on (the default).
+        if ($result === 'no_mx' && ! config('mail.require_mx', true)) {
+            $result = 'ok';
+        }
+
+        if ($result !== 'ok') {
+            Log::channel('mail')->info('Email address rejected at validation', [
+                'field' => $attribute,
+                'domain' => $domain,
+                'reason' => $result,
+            ]);
+        }
+
+        match ($result) {
             'no_domain' => $fail("We couldn't find the domain \"{$domain}\". Check the spelling after the @."),
             'no_mail' => $fail("The domain \"{$domain}\" is not set up to receive email. Use an address at a domain that accepts mail."),
+            'no_mx' => $fail("The domain \"{$domain}\" has no mail server, so nothing sent to this address would arrive. Check the spelling after the @, or use a different address."),
             default => null,
         };
     }
@@ -88,12 +106,12 @@ class DeliverableEmail implements ValidationRule
     }
 
     /**
-     * @return string 'ok' | 'no_domain' | 'no_mail'
+     * @return string 'ok' | 'no_domain' | 'no_mail' | 'no_mx'
      */
     protected function inspectDomain(string $domain): string
     {
         return Cache::remember(
-            'email-domain:'.strtolower($domain),
+            'email-domain:v2:'.strtolower($domain),
             self::CACHE_TTL,
             fn () => $this->lookup($domain)
         );
@@ -123,10 +141,11 @@ class DeliverableEmail implements ValidationRule
                 return $targets === [] ? 'no_mail' : 'ok';
             }
 
-            // No MX is still deliverable if the domain resolves: RFC 5321 falls
-            // back to the address record.
+            // No MX but the domain resolves. RFC 5321 would fall back to the
+            // address record, but that is nearly always a parked domain, so it
+            // is reported separately and validate() decides (mail.require_mx).
             if (@checkdnsrr($domain, 'A') || @checkdnsrr($domain, 'AAAA')) {
-                return 'ok';
+                return 'no_mx';
             }
 
             return @checkdnsrr($domain, 'NS') ? 'no_mail' : 'no_domain';

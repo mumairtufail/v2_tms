@@ -13,7 +13,7 @@
         ['Password', '••••••••••••'],
         ['Server address', $setting->host],
         ['Port & encryption', $setting->port . ' · ' . $setting->encryption_label],
-        ['Added', $setting->created_at?->format('M j, Y')],
+        ['Added', \App\Support\DisplayTime::format($setting->created_at, 'M j, Y')],
         ['Last updated', $setting->updated_at?->diffForHumans()],
     ];
 @endphp

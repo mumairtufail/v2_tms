@@ -101,12 +101,9 @@ class AnalyticsController extends Controller
      */
     private function resolveRange(string $range): array
     {
-        $now = now();
-
-        return match ($range) {
-            'week' => [$now->copy()->startOfWeek(), $now->copy()->endOfWeek()],
-            'month' => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()],
-            default => [$now->copy()->startOfDay(), $now->copy()->endOfDay()],
-        };
+        // "Today" is the driver's working day on the system clock (Mountain
+        // Time), not the UTC day, which ends at 5 or 6 PM local. Returned in
+        // UTC to match the stored timestamps.
+        return \App\Support\DisplayTime::range($range);
     }
 }

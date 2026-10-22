@@ -9,19 +9,14 @@
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">My Orders</h1>
             <p class="text-gray-500 dark:text-gray-400 mt-1">Track and view your shipment orders</p>
         </div>
-        {{-- A plain submit button here created a new draft order on every click -
-             a double-click, a slow page, or a repeat click before the redirect
-             lands all added another blank order. The button disables itself the
-             instant it is clicked, so only the first submission goes through. --}}
-        <form method="POST" action="{{ route('portal.orders.store', ['company' => $company->slug]) }}"
-              x-data="{ submitting: false }" @submit="submitting = true">
-            @csrf
-            <button type="submit" :disabled="submitting"
-                    class="inline-flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                <span x-text="submitting ? 'Creating…' : 'New Order'"></span>
-            </button>
-        </form>
+        {{-- Opens an empty form. Nothing is saved until Save as Draft or Submit
+             Order is pressed there, so clicking this and backing out leaves no
+             blank draft behind. --}}
+        <a href="{{ route('portal.orders.create', ['company' => $company->slug]) }}"
+           class="inline-flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium rounded-lg transition-colors">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            New Order
+        </a>
     </div>
 
     <form method="GET" class="flex flex-col sm:flex-row gap-3">
@@ -162,7 +157,7 @@
                                 <span class="font-semibold" x-text="log.actor"></span>
                                 <span class="text-gray-600 dark:text-gray-300" x-text="log.description"></span>
                             </p>
-                            <p class="text-[11px] text-gray-400 dark:text-gray-500" :title="log.created_at ? window.localTime(log.created_at, 'datetime') : log.created_at_label" x-text="log.created_at_human"></p>
+                            <p class="text-[11px] text-gray-400 dark:text-gray-500" x-text="(log.created_at ? window.localTime(log.created_at, 'datetime') : log.created_at_label) + ' · ' + log.created_at_human"></p>
                         </li>
                     </template>
                 </ol>

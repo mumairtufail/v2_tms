@@ -242,6 +242,13 @@ class MailService
             return "Couldn't connect to {$setting->host} on port {$setting->port}. Check the server address and port. Some hosting providers also block outgoing email ports.";
         }
 
+        // Checked before the generic 550 branch below: a 550 about the RECIPIENT
+        // used to be reported as a problem with the sending account, which sent
+        // people to the SMTP settings when the real fault was the address.
+        if (Str::contains($lower, ['5.1.1', '5.1.10', 'user unknown', 'unknown user', 'no such user', 'recipient address rejected', 'mailbox unavailable', 'mailbox not found', 'does not exist', 'invalid recipient', 'recipient not found', 'undeliverable'])) {
+            return 'The receiving mail server says this address does not exist. Check the spelling of the email address.';
+        }
+
         if (Str::contains($lower, ['550', '553', '554', 'sender', 'not owned', 'not allowed to send', 'relay'])) {
             return "The server refused to send from {$setting->from_address}. Make sure this address belongs to (or is verified for) the account you signed in with.";
         }

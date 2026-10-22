@@ -19,6 +19,10 @@ class DriverOrderStatusHistoryResource extends JsonResource
             'to_status_label' => OrderStatus::tryFrom((string) $this->to_status)?->label() ?? $this->to_status,
             'note' => $this->note,
             'created_at' => $this->created_at,
+            // Ready to show as is, on the same clock as the website (Mountain
+            // Time), so the app does not fall back to the phone's own zone.
+            'created_at_display' => \App\Support\DisplayTime::format($this->created_at),
+            'timezone' => \App\Support\DisplayTime::tz(),
         ];
     }
 }

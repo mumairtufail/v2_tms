@@ -1,6 +1,6 @@
 @extends(($isPortal ?? false) ? 'portal.layouts.app' : 'v2.layouts.app')
 
-@section('title', isset($order) ? "Edit Order #{$order->order_number}" : "New Order Draft")
+@section('title', $order->exists ? "Edit Order #{$order->order_number}" : "New Order")
 
 @section('content')
 @php
@@ -8,9 +8,14 @@
     $ordersIndexRoute = $isPortal
         ? route('portal.orders.index', ['company' => $company->slug])
         : route('v2.orders.index', $company);
-    $orderUpdateRoute = $isPortal
-        ? route('portal.orders.update', ['company' => $company->slug, 'order' => $order->id])
-        : route('v2.orders.update', ['company' => $company->slug, 'order' => $order->id]);
+    // A portal order that has not been saved yet posts to store(), which
+    // creates it on the first Save as Draft / Submit Order.
+    $isUnsaved = ! $order->exists;
+    $orderUpdateRoute = match (true) {
+        $isPortal && $isUnsaved => route('portal.orders.store', ['company' => $company->slug]),
+        $isPortal => route('portal.orders.update', ['company' => $company->slug, 'order' => $order->id]),
+        default => route('v2.orders.update', ['company' => $company->slug, 'order' => $order->id]),
+    };
 @endphp
 <script>
     window.googleMapsApiKey = @json(config('services.google.maps_api_key'));
@@ -20,7 +25,7 @@
     @if(!$isPortal)
     <x-v2-breadcrumb :items="[
         ['label' => 'Orders', 'url' => $ordersIndexRoute],
-        ['label' => isset($order) ? 'Edit Order' : 'New Order']
+        ['label' => $order->exists ? 'Edit Order' : 'New Order']
     ]" />
     @endif
 
@@ -50,9 +55,13 @@
             <div class="min-w-0">
                 <div class="flex flex-wrap items-center gap-2">
                     <h1 class="text-xl font-bold text-gray-900 dark:text-white">
-                        {{ isset($order) ? 'Order #' . $order->order_number : ($isPortal ? 'New Order' : 'New Order Draft') }}
+                        {{ $order->exists ? 'Order #' . $order->order_number : 'New Order' }}
                     </h1>
-                    <span class="inline-flex items-center px-2 py-0.5 text-[11px] font-semibold rounded-full border {{ $statusClass }}">{{ $statusLabel }}</span>
+                    @if($isUnsaved)
+                        <span class="inline-flex items-center px-2 py-0.5 text-[11px] font-semibold rounded-full border bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700">Not saved yet</span>
+                    @else
+                        <span class="inline-flex items-center px-2 py-0.5 text-[11px] font-semibold rounded-full border {{ $statusClass }}">{{ $statusLabel }}</span>
+                    @endif
                 </div>
                 <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400 truncate">
                     @if($isPortal)
@@ -104,7 +113,9 @@
     {{-- 4. Main Form --}}
     <form id="orderForm" action="{{ $orderUpdateRoute }}" method="POST" @submit.prevent>
         @csrf
-        @method('PATCH')
+        @unless($isUnsaved)
+            @method('PATCH')
+        @endunless
         <input type="hidden" name="order_type" value="{{ $isPortal ? 'point_to_point' : $order->order_type }}">
         <input type="hidden" name="save_as_draft" x-bind:value="saving ? '1' : '0'">
         <input type="hidden" name="submission_mode" x-bind:value="submissionMode">
@@ -778,17 +789,42 @@ function orderForm() {
         contactBookCandidates: [],
         contactBookPayload: '[]',
         _pendingSubmit: null,
+        _submitLocked: false,
+        // False on the portal's New Order screen, where nothing is saved yet
+        orderExists: @json($order->exists),
+        _initialSnapshot: null,
         massManifestId: '',
         showNewManifestConfirm: false,
         submissionMode: 'new',
-        formErrors: [],
+        // Seeded with anything the server rejected, so it shows in the same banner
+        formErrors: @json($errors->all()),
         orderStatus: @json($order->status),
         orderType: @json($order->order_type),
         topContainerNumber: @json(old('container_number', $order->container_number ?? '')),
 
         init() {
+            window.addEventListener('pageshow', (event) => {
+                if (event.persisted) {
+                    this._submitLocked = false;
+                    this.saving = false;
+                    this.submitting = false;
+                }
+            });
+
             if (this.stops.length === 0) {
                 this.addStop();
+            }
+
+            // Leaving a new order that was never saved loses what was typed, and
+            // there is no draft to come back to any more, so ask first.
+            if (!this.orderExists) {
+                this.$nextTick(() => { this._initialSnapshot = JSON.stringify(this.stops); });
+                window.addEventListener('beforeunload', (event) => {
+                    if (this._submitLocked || this._initialSnapshot === null) return;
+                    if (JSON.stringify(this.stops) === this._initialSnapshot) return;
+                    event.preventDefault();
+                    event.returnValue = '';
+                });
             }
 
             this.manifests = (this.manifests || []).map(manifest => ({
@@ -1364,7 +1400,15 @@ freightSubtotal(rows) {
 },
 
         // ── Contact book: offer to save new addresses right before submit ──────
-        async requestSubmit(submitFn) {
+        async requestSubmit(rawSubmitFn) {
+            // One submission per page load. A double click on Save as Draft for an
+            // order that does not exist yet would otherwise create it twice.
+            const submitFn = () => {
+                if (this._submitLocked) return;
+                this._submitLocked = true;
+                rawSubmitFn();
+            };
+
             if (this.isPortal) {
                 this.contactBookPayload = '[]';
                 submitFn();
@@ -1473,6 +1517,10 @@ freightSubtotal(rows) {
         },
 
         submitAsNew() {
+            if (!this.checkOrderBeforeSubmit()) {
+                this.revealFormErrors();
+                return;
+            }
             this.submissionMode = 'new';
             this.requestSubmit(() => {
                 this.flushFormInputs();
@@ -1500,6 +1548,12 @@ freightSubtotal(rows) {
         },
 
         openConfirmModal() {
+            // Nothing inside the quote modal can fix a missing dimension or a bad
+            // date, so check first and only open it for an order that can be quoted.
+            if (!this.checkOrderBeforeSubmit()) {
+                this.revealFormErrors();
+                return;
+            }
             this.showProcessModal = true;
         },
 
@@ -1535,14 +1589,29 @@ freightSubtotal(rows) {
                 this.applyTopContainerNumberToAllStops();
             }
 
-            // ── Validate required fields ────────────────────────────────────
-            // Special instructions used to be force-required on every leg here, which
-            // blocked "Submit to Quote" with no obvious cause for any order that never
-            // had one filled in - including every order a customer submits from the
-            // portal, where this field is never shown. It is optional free text, so it
-            // no longer gates submission; only genuine per-customer requirements do.
-            let formValid = true;
-            const siErrors = [];
+            if (!this.checkOrderBeforeSubmit()) {
+                this.submitting = false;
+                // The banner lives on the page, behind this modal. Leaving the modal
+                // open meant the message was there but nobody could see it, and
+                // Publish Quote looked like it did nothing. Close it and point at
+                // the problem; the quote figures stay as typed for the next open.
+                this.showProcessModal = false;
+                this.revealFormErrors();
+                return false;
+            }
+
+            return true;
+        },
+
+        // ── Submit-time checks shared by every way an order leaves this page ─────
+        // Special instructions used to be force-required on every leg here, which
+        // blocked "Submit to Quote" with no obvious cause for any order that never
+        // had one filled in - including every order a customer submits from the
+        // portal, where this field is never shown. It is optional free text, so it
+        // no longer gates submission; only genuine per-customer requirements do.
+        // OrderUpdateService repeats the dimension rule on the server.
+        checkOrderBeforeSubmit() {
+            const errors = [];
 
             this.stops.forEach((stop, idx) => {
                 stop._containerError = false;
@@ -1552,37 +1621,30 @@ freightSubtotal(rows) {
                     const blank = v => v === '' || v === null || v === undefined || Number(v) <= 0;
                     if ((stop.commodities || []).some(c => blank(c.length) || blank(c.width) || blank(c.height))) {
                         stop.expanded = true;
-                        siErrors.push(`Stop ${idx + 1}: This customer requires length, width and height on every commodity.`);
-                        formValid = false;
+                        errors.push(`Stop ${idx + 1}: This customer requires length, width and height on every commodity.`);
                     }
                 }
             });
 
-            // ── Validate date logic ─────────────────────────────────────────
-            if (!this.validateAllDates()) {
-                formValid = false;
-            }
+            const datesValid = this.validateAllDates();
+            this.formErrors = [...errors, ...this.formErrors];
 
-            this.formErrors = [...siErrors, ...this.formErrors];
+            return errors.length === 0 && datesValid;
+        },
 
-            if (!formValid) {
-                this.submitting = false;
-                // Wait for Alpine to re-render error elements then scroll to first visible one
-                setTimeout(() => {
-                    const errBanner = document.getElementById('form-error-banner');
-                    if (errBanner) {
-                        errBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        return;
-                    }
-                    // Fallback: find first visible date-error or red-border element
-                    const candidates = [...document.querySelectorAll('[data-date-error], .border-red-400')];
-                    const visible = candidates.find(el => el.offsetParent !== null && el.textContent.trim());
-                    if (visible) visible.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 150);
-                return false;
-            }
-
-            return true;
+        revealFormErrors() {
+            // Wait for Alpine to render the banner (and close any modal), then bring it into view
+            setTimeout(() => {
+                const errBanner = document.getElementById('form-error-banner');
+                if (errBanner && errBanner.offsetParent !== null) {
+                    errBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return;
+                }
+                // Fallback: find first visible date-error or red-border element
+                const candidates = [...document.querySelectorAll('[data-date-error], .border-red-400')];
+                const visible = candidates.find(el => el.offsetParent !== null && el.textContent.trim());
+                if (visible) visible.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 200);
         },
 
         createPendingManifest() {

@@ -80,6 +80,8 @@ class RolePermissionService
         
         // Admin Role
         $adminRole = $this->createRole('admin', $company->id);
+        // Protection follows this flag, not the name (see Role::isProtectedAdmin).
+        $adminRole->forceFill(['is_system' => true])->save();
         $adminPermissions = [];
         foreach ($permissions as $permission) {
             $adminPermissions[$permission->id] = [

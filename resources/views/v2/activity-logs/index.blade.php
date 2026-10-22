@@ -29,6 +29,9 @@
                     Who did what in {{ $company->name ?? 'your company' }}
                 @endif
             </p>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                Times are shown in {{ \App\Support\DisplayTime::label() }} ({{ \App\Support\DisplayTime::abbreviation() }}). Hover any time to see it in UTC.
+            </p>
         </div>
         @if($technical)
         <span class="self-start sm:self-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
@@ -158,7 +161,9 @@
                     @if($technical)
                     <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 hidden xl:table-cell">Source</th>
                     @endif
-                    <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 hidden md:table-cell">When</th>
+                    <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 hidden md:table-cell">
+                        When <span class="font-normal text-gray-400" title="Times are shown in {{ \App\Support\DisplayTime::label() }}. Hover a time to see it in UTC.">({{ \App\Support\DisplayTime::abbreviation() }})</span>
+                    </th>
                     <th class="w-20 px-3 py-2.5"></th>
                 </tr>
             </thead>
@@ -335,7 +340,9 @@ function activityLogView(config) {
                 { label: 'Outcome', value: d.successful === undefined ? null : (d.successful ? 'Completed' : 'Did not complete') },
                 { label: 'Company', value: d.company },
                 { label: 'Record', value: d.subject },
-                { label: 'When', value: d.created_at },
+                // Same clock as the list and the drawer heading. This row used to
+                // print the server's UTC string, so one entry showed two times.
+                { label: 'When', value: d.created_at_iso ? window.localTime(d.created_at_iso, 'datetime-seconds') : d.created_at },
             ];
             if (config.technical) {
                 rows.push(

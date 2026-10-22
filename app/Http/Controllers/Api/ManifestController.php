@@ -38,7 +38,7 @@ class ManifestController extends Controller
                     'manifest_number' => $manifest->code,
                     'customer_name' => $manifest->drivers->first()->name ?? 'No driver assigned',
                     'status' => $manifest->status ?? 'Active',
-                    'created_at' => $manifest->created_at->format('M j, Y')
+                    'created_at' => \App\Support\DisplayTime::format($manifest->created_at, 'M j, Y')
                 ];
             });
             

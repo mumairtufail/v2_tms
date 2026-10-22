@@ -155,7 +155,7 @@
                             <div class="relative pl-8">
                                 <div class="absolute left-0 w-4 h-4 bg-gray-100 dark:bg-gray-800 border-2 border-gray-400 rounded-full"></div>
                                 <p class="text-sm font-medium text-gray-900 dark:text-white">Last Updated</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ $user->updated_at->format('M d, Y \a\t g:i A') }}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ \App\Support\DisplayTime::format($user->updated_at, 'M d, Y \a\t g:i A') }}</p>
                             </div>
                             @if($user->last_login_at)
                             <div class="relative pl-8">

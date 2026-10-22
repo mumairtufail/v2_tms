@@ -37,7 +37,10 @@
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/30">
                     <td class="px-3 py-2 text-gray-500">{{ $roles->firstItem() + $index }}</td>
                     <td class="px-3 py-2 font-medium text-gray-900 dark:text-white">
-                        <x-search-highlight :text="$role->name" :search="request('search')" />
+                        <x-search-highlight :text="$role->display_name" :search="request('search')" />
+                        @if($role->isProtectedAdmin())
+                            <span class="ml-1.5 px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 align-middle" title="Created with the company. It always has full access and cannot be renamed or deleted.">Built-in</span>
+                        @endif
                     </td>
                     <td class="px-3 py-2 text-gray-500">
                         <span class="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded-full text-xs">
@@ -65,9 +68,13 @@
                                 </button>
                             </x-tooltip>
 
-                            <!-- Edit Button -->
-                            <x-tooltip text="Edit Role Name" position="top">
-                                <button type="button" @click="$dispatch('open-modal', 'edit-role-{{ $role->id }}')" class="p-1 text-gray-400 hover:text-primary-600">
+                            <!-- Edit Button. The built-in Admin role keeps its name: renaming it
+                                 used to switch off its protection (RoleController::update refuses
+                                 it regardless; this just explains it before the click). -->
+                            <x-tooltip :text="$isAdminRole ? 'The Admin role is built in, so its name cannot be changed' : 'Edit Role Name'" position="top">
+                                <button type="button"
+                                    @if($isAdminRole) disabled aria-disabled="true" @else @click="$dispatch('open-modal', 'edit-role-{{ $role->id }}')" @endif
+                                    class="p-1 {{ $isAdminRole ? 'text-gray-300 dark:text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-primary-600' }}">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                 </button>
                             </x-tooltip>
@@ -105,6 +112,13 @@
     </x-table-container>
 </div>
 
+@if(session('open_role_modal'))
+{{-- A rejected create/rename comes back here with its dialog reopened and the
+     reason under the field. Validation errors are not shown as toasts, so
+     before this the dialog simply closed and nothing appeared to happen. --}}
+<div x-data x-init="$nextTick(() => $dispatch('open-modal', @js(session('open_role_modal'))))"></div>
+@endif
+
 <!-- Create Role Modal -->
 <x-modal name="create-role-modal" maxWidth="md">
     <div class="p-6">
@@ -112,9 +126,16 @@
         <form action="{{ route('v2.roles.store', app('current.company')) }}" method="POST">
             @csrf
             <div class="space-y-4">
+                @php $createHasError = session('open_role_modal') === 'create-role-modal'; @endphp
                 <div>
                     <x-input-label for="create_name" value="Role Name" :required="true" />
-                    <x-text-input id="create_name" name="name" class="w-full mt-1" required placeholder="e.g. Dispatcher" />
+                    <input type="text" id="create_name" name="name" maxlength="255" required placeholder="e.g. Dispatcher"
+                           value="{{ $createHasError ? old('name') : '' }}"
+                           @if($createHasError) aria-invalid="true" aria-describedby="create_name_error" @endif
+                           class="w-full mt-1 px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border {{ $createHasError ? 'border-red-400 dark:border-red-600' : 'border-gray-200 dark:border-gray-700' }} rounded-lg text-gray-900 dark:text-white placeholder-gray-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+                    @if($createHasError)
+                        <p id="create_name_error" class="mt-1.5 text-sm text-red-600 dark:text-red-400">{{ $errors->roleForm->first('name') }}</p>
+                    @endif
                 </div>
             </div>
             <div class="mt-6 flex justify-end gap-3">
@@ -133,9 +154,16 @@
         <form action="{{ route('v2.roles.update', ['company' => app('current.company'), 'role' => $role->id]) }}" method="POST">
             @csrf @method('PUT')
             <div class="space-y-4">
+                @php $editHasError = session('open_role_modal') === 'edit-role-'.$role->id; @endphp
                 <div>
                     <x-input-label for="edit_name_{{ $role->id }}" value="Role Name" :required="true" />
-                    <x-text-input id="edit_name_{{ $role->id }}" name="name" value="{{ $role->name }}" class="w-full mt-1" required />
+                    <input type="text" id="edit_name_{{ $role->id }}" name="name" maxlength="255" required
+                           value="{{ $editHasError ? old('name') : $role->name }}"
+                           @if($editHasError) aria-invalid="true" aria-describedby="edit_name_{{ $role->id }}_error" @endif
+                           class="w-full mt-1 px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border {{ $editHasError ? 'border-red-400 dark:border-red-600' : 'border-gray-200 dark:border-gray-700' }} rounded-lg text-gray-900 dark:text-white placeholder-gray-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+                    @if($editHasError)
+                        <p id="edit_name_{{ $role->id }}_error" class="mt-1.5 text-sm text-red-600 dark:text-red-400">{{ $errors->roleForm->first('name') }}</p>
+                    @endif
                 </div>
             </div>
             <div class="mt-6 flex justify-end gap-3">

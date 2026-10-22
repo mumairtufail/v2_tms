@@ -48,7 +48,7 @@
                 </div>
                 <div class="px-4 py-3 flex justify-between items-center">
                     <span class="text-xs text-gray-500">Member since</span>
-                    <span class="text-sm text-gray-700 dark:text-gray-300">{{ $user->created_at->format('M d, Y') }}</span>
+                    <span class="text-sm text-gray-700 dark:text-gray-300">{{ \App\Support\DisplayTime::format($user->created_at, 'M d, Y') }}</span>
                 </div>
                 <div class="px-4 py-3 flex justify-between items-center">
                     <span class="text-xs text-gray-500">Last login</span>

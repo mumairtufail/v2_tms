@@ -1,13 +1,15 @@
 {{--
-    A UTC timestamp rendered in the viewer's own timezone.
+    A stored UTC timestamp shown on the system clock (Mountain Time, see
+    App\Support\DisplayTime), with the zone abbreviation on formats that show
+    a clock.
 
         <x-local-time :value="$log->created_at" />
         <x-local-time :value="$log->created_at" format="short" class="text-xs" />
         <x-local-time :value="$setting->last_tested_at" format="date" fallback="Never" />
 
-    The text rendered here is the UTC fallback; resources/views/partials/local-time.blade.php
-    rewrites it in the browser. That partial must be present on the page — it is
-    included by the v2 and portal layouts.
+    Rendered on the server, so it is already correct without scripts. The
+    partial resources/views/partials/local-time.blade.php adds the UTC tooltip
+    and formats times that Alpine renders later (log drawer, order activity).
 
     Only use this for a genuine UTC instant (a Carbon-cast model column). Order
     stop times are stored as pre-formatted local wall-clock strings, so shifting
@@ -22,32 +24,21 @@
 ])
 
 @php
-    try {
-        $localTimeDate = $value instanceof \DateTimeInterface
-            ? \Illuminate\Support\Carbon::instance($value)
-            : (filled($value) ? \Illuminate\Support\Carbon::parse($value) : null);
-    } catch (\Throwable) {
-        // An unparseable value must not take the page down.
-        $localTimeDate = null;
-    }
+    $localTimeDate = \App\Support\DisplayTime::in($value);
 
-    $localTimeFallbackFormat = match ($format) {
+    $localTimeFormat = match ($format) {
         'datetime-seconds' => 'M j, Y g:i:s A',
         'short' => 'M j, g:i A',
         'date' => 'M j, Y',
         'time' => 'g:i A',
         default => 'M j, Y g:i A',
     };
-
-    // Only worth saying on a format that shows a clock. On a date-only fallback
-    // "UTC" is just noise, and this text is only ever seen before the script runs.
-    $localTimeFallbackSuffix = $format === 'date' ? '' : ' UTC';
 @endphp
 
 @if($localTimeDate)
-    <time datetime="{{ $localTimeDate->toIso8601String() }}"
-          data-local-time="{{ $format }}"
-          {{ $attributes }}>{{ $localTimeDate->format($localTimeFallbackFormat) }}{{ $localTimeFallbackSuffix }}</time>
+    <time datetime="{{ $localTimeDate->copy()->utc()->toIso8601String() }}"
+          title="{{ $localTimeDate->format('l, F j, Y g:i:s A T') }}&#10;{{ $localTimeDate->copy()->utc()->format('M j, Y g:i:s A') }} UTC"
+          {{ $attributes }}>{{ \App\Support\DisplayTime::format($localTimeDate, $localTimeFormat) }}</time>
 @else
     <span {{ $attributes }}>{{ $fallback }}</span>
 @endif

@@ -150,4 +150,22 @@ return [
 
     'validate_dns' => env('MAIL_VALIDATE_DNS', true),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Require an MX record
+    |--------------------------------------------------------------------------
+    |
+    | RFC 5321 lets a domain with no MX record fall back to its A record, and
+    | the DNS check used to accept those. In practice that is almost always a
+    | parked or for-sale domain (kjfdngkdj@jkfg.com resolved to a parking page)
+    | and mail to it is rejected, so the person was saved and then the welcome
+    | email failed. With this on, a domain must publish an MX record to pass.
+    |
+    | Only applies while validate_dns is on. Turn it off if you genuinely send to
+    | a domain that receives mail on its A record.
+    |
+    */
+
+    'require_mx' => env('MAIL_REQUIRE_MX', true),
+
 ];

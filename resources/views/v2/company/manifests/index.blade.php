@@ -177,7 +177,7 @@
                 <p class="text-sm text-gray-500 dark:text-gray-400">
                      A new manifest will be created with today's date and "Pending" status.
                 </p>
-                <input type="hidden" name="start_date" value="{{ date('Y-m-d') }}">
+                <input type="hidden" name="start_date" value="{{ \App\Support\DisplayTime::now()->format('Y-m-d') }}">
             </div>
 
             <div class="mt-6 flex justify-end gap-3">

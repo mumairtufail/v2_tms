@@ -56,6 +56,32 @@ class DeliverableEmailTest extends TestCase
         $this->assertStringContainsString('example.com', $message);
     }
 
+    public function test_a_domain_with_no_mail_server_is_rejected(): void
+    {
+        // A parked domain: it resolves, but publishes no MX. Mail to it fails
+        // after the person has already been saved, so it is refused here.
+        $rule = new class extends \App\Rules\DeliverableEmail {
+            protected function lookup(string $domain): string { return 'no_mx'; }
+        };
+
+        $v = Validator::make(['email' => 'kjfdngkdj@jkfg.com'], ['email' => [$rule]]);
+
+        $this->assertTrue($v->fails());
+        $this->assertStringContainsString('has no mail server', $v->errors()->first('email'));
+        $this->assertStringContainsString('jkfg.com', $v->errors()->first('email'));
+    }
+
+    public function test_no_mx_is_accepted_when_the_strict_check_is_off(): void
+    {
+        config(['mail.require_mx' => false]);
+
+        $rule = new class extends \App\Rules\DeliverableEmail {
+            protected function lookup(string $domain): string { return 'no_mx'; }
+        };
+
+        $this->assertFalse(Validator::make(['email' => 'a@parked.test'], ['email' => [$rule]])->fails());
+    }
+
     public function test_a_deliverable_address_passes(): void
     {
         $this->assertNull($this->messageFor('someone@gmail.com'));

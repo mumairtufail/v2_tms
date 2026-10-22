@@ -262,7 +262,7 @@
                     <div class="meta-grid">
                         <div class="meta-item">
                             <span class="meta-label">Date:</span>
-                            <span class="meta-value">{{ date('M d, Y') }}</span>
+                            <span class="meta-value">{{ \App\Support\DisplayTime::now()->format('M d, Y') }}</span>
                         </div>
                         <div class="meta-item">
                             <span class="meta-label">Prepared By:</span>
@@ -459,7 +459,7 @@
 
         <div class="footer">
             By accepting this rate confirmation, the carrier agrees to all terms and conditions of the Broker-Carrier Agreement.<br>
-            Generated on {{ date('M d, Y H:i:s') }} | Rate Confirmation Document
+            Generated on {{ \App\Support\DisplayTime::format(now(), 'M d, Y H:i:s') }} | Rate Confirmation Document
         </div>
     </div>
 </body>

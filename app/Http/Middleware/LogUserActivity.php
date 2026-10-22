@@ -53,7 +53,9 @@ class LogUserActivity
 
         // A read has no body worth keeping; its query string is the payload.
         if ($isRead) {
-            $query = $request->query();
+            // An empty filter form submits every field blank, which used to be
+            // stored as {"to":null,"from":null,...} and shown as if it meant something.
+            $query = array_filter($request->query(), fn ($value) => $value !== null && $value !== '' && $value !== []);
             if (! empty($query)) {
                 $context['query'] = $query;
             }

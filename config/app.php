@@ -74,6 +74,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Display Timezone
+    |--------------------------------------------------------------------------
+    |
+    | Everything is stored in UTC (above) and shown to people in this zone:
+    | screens, activity logs, emails, PDFs, date filters and "today" ranges.
+    | See App\Support\DisplayTime. Use an IANA name so daylight saving is
+    | handled (America/Edmonton switches between MST and MDT on its own).
+    |
+    | Order pickup and delivery windows are NOT converted; they are stored as
+    | the local time at the shipper or consignee.
+    |
+    */
+
+    'display_timezone' => env('APP_DISPLAY_TIMEZONE', 'America/Edmonton'),
+
+    'display_timezone_label' => env('APP_DISPLAY_TIMEZONE_LABEL', 'Mountain Time'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |

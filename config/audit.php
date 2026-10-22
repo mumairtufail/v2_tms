@@ -76,6 +76,15 @@ return [
     'excluded_read_paths' => [
         '*/notifications',
         '*/dashboard',
+        // Reading the trail must not write to it. Every visit, summary tile
+        // click, filter and detail drawer used to add a "Viewed the activity
+        // logs list" row, so the counts on the page climbed while someone was
+        // only looking at them. Covers the company view, a single entry, the
+        // order activity panel (staff and portal) and the super admin view.
+        '*/activity-logs',
+        '*/activity-logs/*',
+        'admin/logs',
+        'admin/logs/*',
     ],
 
     /*

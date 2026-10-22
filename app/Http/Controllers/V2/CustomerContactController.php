@@ -12,6 +12,7 @@ use App\Models\CustomerContact;
 use App\Support\Toast;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CustomerContactController extends Controller
 {
@@ -98,9 +99,30 @@ class CustomerContactController extends Controller
             $company->id,
         );
 
-        if (! $sent) {
-            Toast::warning("The welcome email to {$contact->email} could not be sent. Check the SMTP settings.");
+        if ($sent) {
+            return;
         }
+
+        // The person IS saved at this point; only the email failed. Say both,
+        // and give the actual reason when the send already ran (sync queue)
+        // instead of always blaming the SMTP settings.
+        $reason = $contact->fresh()?->email_status === 'failed'
+            ? $contact->fresh()->email_status_reason
+            : null;
+
+        Log::channel('mail')->warning('Portal welcome email not sent after saving contact', [
+            'contact_id' => $contact->id,
+            'customer_id' => $contact->customer_id,
+            'company_id' => $company->id,
+            'email' => $contact->email,
+            'reason' => $reason,
+        ]);
+
+        Toast::warning(
+            "{$contact->name} was saved, but the welcome email to {$contact->email} could not be sent. "
+            .($reason ? rtrim($reason, '.').'.' : 'Check the email settings.')
+            .' Their portal password still works, so you can share it with them directly.'
+        );
     }
 
     /** @return array{0: array, 1: array} */

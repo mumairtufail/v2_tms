@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\ActivityLogs;
 use App\Models\Company;
 use App\Models\Order;
+use App\Support\DisplayTime;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -86,13 +87,7 @@ class ActivityLogListingService
             $query->noteworthy();
         }
 
-        if ($request->filled('from')) {
-            $query->whereDate('created_at', '>=', $request->from);
-        }
-
-        if ($request->filled('to')) {
-            $query->whereDate('created_at', '<=', $request->to);
-        }
+        $this->applyDateRange($query, $request);
 
         return $query->orderByDesc('created_at')->paginate(20)->withQueryString();
     }
@@ -115,7 +110,7 @@ class ActivityLogListingService
                     'severity' => $log->severity,
                     'created_at' => $log->created_at?->toIso8601String(),
                     'created_at_human' => $log->created_at?->diffForHumans(),
-                    'created_at_label' => $log->created_at?->format('M j, Y g:i A'),
+                    'created_at_label' => DisplayTime::format($log->created_at),
                 ];
             })
             ->values();
@@ -178,10 +173,9 @@ class ActivityLogListingService
             'ip_address' => $log->ip_address,
             'user_agent' => $log->user_agent,
             'session_id' => $log->session_id,
-            // created_at stays a formatted UTC string as a fallback; created_at_iso
-            // carries the instant so the drawer can show it in the viewer's own
-            // timezone (see resources/views/partials/local-time.blade.php).
-            'created_at' => $log->created_at?->format('M j, Y g:i:s A'),
+            // Already on the system clock; created_at_iso carries the instant for
+            // the drawer's window.localTime (resources/views/partials/local-time).
+            'created_at' => DisplayTime::format($log->created_at, 'M j, Y g:i:s A'),
             'created_at_iso' => $log->created_at?->toIso8601String(),
             'created_at_human' => $log->created_at?->diffForHumans(),
             'changes' => $log->data['changes'] ?? null,
@@ -211,8 +205,7 @@ class ActivityLogListingService
     {
         $base = fn () => ActivityLogs::query()->when($companyId, fn ($q) => $q->forCompany($companyId))
             ->unless($privileged, fn ($q) => $q->visibleToCompany())
-            ->when($request->filled('from'), fn ($q) => $q->whereDate('created_at', '>=', $request->from))
-            ->when($request->filled('to'), fn ($q) => $q->whereDate('created_at', '<=', $request->to));
+            ->tap(fn ($q) => $this->applyDateRange($q, $request));
 
         return [
             'total' => $base()->count(),
@@ -223,5 +216,33 @@ class ActivityLogListingService
             // that support access happened at all.
             'impersonated' => $privileged ? $base()->whereNotNull('impersonator_id')->count() : null,
         ];
+    }
+
+    /**
+     * From/To are calendar days on the system clock (Mountain Time), not UTC
+     * days. Rows are stored in UTC, and whereDate() compared the stored UTC
+     * date, so filtering "Oct 22" picked up the evening of Oct 21 and lost the
+     * last hours of Oct 22. Each day is widened to midnight-to-midnight on the
+     * display clock and converted to UTC before it reaches the query.
+     *
+     * Bad input never breaks the page: an unparseable date is ignored and a
+     * reversed range is swapped.
+     */
+    protected function applyDateRange($query, Request $request): void
+    {
+        $from = DisplayTime::dayBounds($request->input('from'));
+        $to = DisplayTime::dayBounds($request->input('to'));
+
+        if ($from && $to && $from[0]->greaterThan($to[0])) {
+            [$from, $to] = [$to, $from];
+        }
+
+        if ($from) {
+            $query->where('created_at', '>=', $from[0]);
+        }
+
+        if ($to) {
+            $query->where('created_at', '<=', $to[1]);
+        }
     }
 }

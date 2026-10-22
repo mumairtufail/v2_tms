@@ -150,7 +150,7 @@ class ActivityLogAuditTest extends TestCase
     {
         config(['audit.log_reads' => true]);
 
-        $this->actingAs($this->superAdmin)->get(route('admin.logs'));
+        $this->actingAs($this->superAdmin)->get(route('admin.settings.index'));
 
         $this->flushAuditLog();
 
@@ -159,6 +159,20 @@ class ActivityLogAuditTest extends TestCase
             'category' => 'read',
             'method' => 'GET',
         ]);
+    }
+
+    public function test_viewing_the_activity_log_does_not_add_to_it(): void
+    {
+        config(['audit.log_reads' => true]);
+
+        // The page, a summary tile (a filtered reload) and an empty filter form
+        $this->actingAs($this->superAdmin)->get(route('admin.logs'));
+        $this->actingAs($this->superAdmin)->get(route('admin.logs', ['status' => 'failed']));
+        $this->actingAs($this->superAdmin)->get(route('admin.logs', ['search' => '', 'from' => '', 'to' => '']));
+
+        $this->flushAuditLog();
+
+        $this->assertDatabaseMissing('activity_logs', ['category' => 'read']);
     }
 
     public function test_read_logging_can_be_turned_off(): void

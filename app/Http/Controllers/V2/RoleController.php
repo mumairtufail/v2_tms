@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\Permission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 class RoleController extends Controller
@@ -43,19 +44,29 @@ class RoleController extends Controller
 
     public function store(Request $request, $company)
     {
-        $validated = $request->validate([
+        $request->merge(['name' => trim((string) $request->input('name'))]);
+
+        $validator = Validator::make($request->all(), [
             'name' => [
                 'required',
                 'string',
                 'max:255',
                 Rule::unique('roles')->where('company_id', app('current.company')->id),
                 function (string $attribute, mixed $value, \Closure $fail) {
-                    if (in_array(strtolower((string) $value), ['admin', 'super_admin'], true)) {
-                        $fail('This role name is reserved.');
+                    if (Role::isReservedName($value)) {
+                        $fail('"'.$value.'" is reserved for the built-in Admin role. Choose another name.');
                     }
                 },
             ],
+        ], [
+            'name.unique' => 'A role with this name already exists.',
         ]);
+
+        if ($validator->fails()) {
+            // Reopen the Create dialog with the message, rather than closing it
+            // and leaving the person to guess why nothing was added.
+            return back()->withErrors($validator, 'roleForm')->withInput()->with('open_role_modal', 'create-role-modal');
+        }
 
         try {
             Role::create([
@@ -78,20 +89,49 @@ class RoleController extends Controller
             abort(403);
         }
 
-        $request->validate([
+        $request->merge(['name' => trim((string) $request->input('name'))]);
+        $modal = 'edit-role-'.$role->id;
+
+        // The built-in Admin role keeps its name. Renaming it used to switch off
+        // every protection (it was recognised by name), and renaming it back was
+        // then refused as a reserved name, so a company could not undo it.
+        if ($role->isProtectedAdmin()) {
+            if (Role::normaliseName($request->input('name')) === Role::normaliseName($role->name)) {
+                return back()->with('info', 'No changes to save.');
+            }
+
+            Log::warning('Rename of protected Admin role refused', [
+                'role_id' => $role->id,
+                'company_id' => $role->company_id,
+                'attempted_name' => $request->input('name'),
+                'user_id' => auth()->id(),
+            ]);
+
+            return back()
+                ->withErrors(['name' => 'The Admin role is built in and cannot be renamed. To use a different name, create a new role and give it the permissions you need.'], 'roleForm')
+                ->withInput()
+                ->with('open_role_modal', $modal);
+        }
+
+        $validator = Validator::make($request->all(), [
             'name' => [
                 'required',
                 'string',
                 'max:255',
                 Rule::unique('roles')->where('company_id', app('current.company')->id)->ignore($role->id),
-                function (string $attribute, mixed $value, \Closure $fail) use ($role) {
-                    if (in_array(strtolower((string) $value), ['admin', 'super_admin'], true)
-                        && ! in_array(strtolower($role->name), ['admin', 'super_admin'], true)) {
-                        $fail('This role name is reserved.');
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    if (Role::isReservedName($value)) {
+                        $fail('"'.$value.'" is reserved for the built-in Admin role. Choose another name.');
                     }
                 },
             ],
+        ], [
+            'name.unique' => 'A role with this name already exists.',
         ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator, 'roleForm')->withInput()->with('open_role_modal', $modal);
+        }
 
         try {
             $role->update(['name' => $request->name]);
@@ -158,7 +198,7 @@ class RoleController extends Controller
         }
 
         if ($role->users()->exists()) {
-            return back()->with('error', 'Cannot delete role because it has assigned users.');
+            return back()->with('error', 'This role is still assigned to users. Move them to another role first.');
         }
 
         try {

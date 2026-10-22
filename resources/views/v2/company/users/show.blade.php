@@ -45,7 +45,7 @@
                 </div>
                 <div>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Joined</p>
-                    <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $user->created_at->format('M d, Y') }}</p>
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">{{ \App\Support\DisplayTime::format($user->created_at, 'M d, Y') }}</p>
                 </div>
                 <div>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Last Login</p>
